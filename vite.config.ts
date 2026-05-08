@@ -147,7 +147,7 @@ function vitePluginManusDebugCollector(): Plugin {
         });
       });
     },
-  };
+  } as Plugin;
 }
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
