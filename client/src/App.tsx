@@ -11,11 +11,13 @@ import ContactsEntry from "./pages/ContactsEntry";
 import MessagingPage from "./pages/MessagingPage.tsx";
 import RequestScheduling from "./pages/RequestScheduling";
 import AccountManagement from "./pages/AccountManagement";
+import AccountEntry from "./pages/AccountEntry";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      <Route path={"/account-entry"} component={AccountEntry} />
       <Route path={"/account"}>
         <AccountAuthProvider>
           <AccountManagement />

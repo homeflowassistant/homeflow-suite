@@ -46,14 +46,16 @@ export function AccountAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const locId = params.get('locationId');
+    let locId = params.get('locationId');
     
-    if (!locId) {
-      setError('No locationId provided');
+    // Handle edge cases: empty string, whitespace, or template variables
+    if (!locId || locId.trim() === '' || locId.includes('{{') || locId.includes('}}')) {
+      setError('Invalid or missing locationId in URL');
       setLoading(false);
       return;
     }
     
+    locId = locId.trim();
     setLocationId(locId);
     fetchLocationToken(locId);
   }, []);
