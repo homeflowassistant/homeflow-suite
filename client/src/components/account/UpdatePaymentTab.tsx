@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { getBackendUrl } from '@/lib/backend';
 import { useGhlApi } from '@/hooks/useGhlApi';
 import { Card, SkeletonCard, ErrorState } from '@/components/account/AccountSharedUI';
 import { formatCurrency, intervalToLabel } from '@/lib/accountManagement.utils';
@@ -52,7 +53,7 @@ export function UpdatePaymentTab({ locationId }: UpdatePaymentTabProps) {
   const fetchCurrentPlan = async () => {
     try {
       setLoadingPlan(true);
-      const response = await fetch(`/api/saas/plan?locationId=${locationId}`);
+      const response = await fetch(getBackendUrl(`/api/saas/plan?locationId=${encodeURIComponent(locationId)}`));
 
       if (!response.ok) {
         throw new Error('Failed to fetch current plan');
@@ -76,7 +77,7 @@ export function UpdatePaymentTab({ locationId }: UpdatePaymentTabProps) {
   const fetchPlans = async () => {
     try {
       setLoadingPlans(true);
-      const response = await fetch('/api/saas/plans');
+      const response = await fetch(getBackendUrl('/api/saas/plans'));
 
       if (!response.ok) {
         throw new Error('Failed to fetch plans');
@@ -101,7 +102,7 @@ export function UpdatePaymentTab({ locationId }: UpdatePaymentTabProps) {
     try {
       setUpdatingStripe(true);
 
-      const response = await fetch('/api/saas/update-subscription', {
+      const response = await fetch(getBackendUrl('/api/saas/update-subscription'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,7 +129,7 @@ export function UpdatePaymentTab({ locationId }: UpdatePaymentTabProps) {
     try {
       setUpdatingPlan(true);
 
-      const response = await fetch('/api/saas/update-subscription', {
+      const response = await fetch(getBackendUrl('/api/saas/update-subscription'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -160,7 +161,7 @@ export function UpdatePaymentTab({ locationId }: UpdatePaymentTabProps) {
     try {
       setPausingAccount(true);
 
-      const response = await fetch('/api/saas/pause', {
+      const response = await fetch(getBackendUrl('/api/saas/pause'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

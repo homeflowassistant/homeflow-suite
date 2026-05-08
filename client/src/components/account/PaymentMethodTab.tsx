@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useGhlApi } from '@/hooks/useGhlApi';
+import { getBackendUrl } from '@/lib/backend';
 import {
   Card,
   Badge,
@@ -78,7 +79,7 @@ export function PaymentMethodTab({ locationId }: PaymentMethodTabProps) {
     try {
       setLoadingPlan(true);
       setErrorPlan(null);
-      const response = await fetch(`/api/saas/plan?locationId=${locationId}`);
+      const response = await fetch(getBackendUrl(`/api/saas/plan?locationId=${encodeURIComponent(locationId)}`));
 
       if (!response.ok) {
         throw new Error('Failed to fetch plan data');

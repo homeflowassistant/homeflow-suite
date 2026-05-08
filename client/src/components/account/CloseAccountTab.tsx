@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { getBackendUrl } from '@/lib/backend';
 import { Card, WarningBanner } from '@/components/account/AccountSharedUI';
 import { formatDate } from '@/lib/accountManagement.utils';
 
@@ -23,7 +24,7 @@ export function CloseAccountTab({ locationId }: CloseAccountTabProps) {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/saas/disable', {
+      const response = await fetch(getBackendUrl('/api/saas/disable'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId }),
@@ -47,7 +48,7 @@ export function CloseAccountTab({ locationId }: CloseAccountTabProps) {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/saas/pause', {
+      const response = await fetch(getBackendUrl('/api/saas/pause'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +80,7 @@ export function CloseAccountTab({ locationId }: CloseAccountTabProps) {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/location/delete', {
+      const response = await fetch(getBackendUrl('/api/location/delete'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

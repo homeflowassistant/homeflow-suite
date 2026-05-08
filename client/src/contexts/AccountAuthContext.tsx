@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getBackendUrl } from '@/lib/backend';
 
 export interface AccountAuthContextType {
   locationId: string | null;
@@ -21,10 +22,11 @@ export function AccountAuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/auth/location-token?locationId=${locId}`);
+      const response = await fetch(getBackendUrl(`/api/auth/location-token?locationId=${encodeURIComponent(locId)}`));
       
       if (!response.ok) {
-        throw new Error('Failed to fetch location token');
+        const body = await response.text().catch(() => '');
+        throw new Error(body || 'Failed to fetch location token');
       }
       
       const data = await response.json();
