@@ -88,7 +88,9 @@ export default function AccountManagement() {
       <TopNavBar activeTab={activeTab} onTabChange={setActiveTab} />
       
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {activeTab === 'payment-method' && <PaymentMethodTab locationId={locationId} />}
+        {activeTab === 'payment-method' && (
+          <PaymentMethodTab locationId={locationId} onAddPaymentMethod={() => setActiveTab('update-payment')} />
+        )}
         {activeTab === 'update-payment' && <UpdatePaymentTab locationId={locationId} />}
         {activeTab === 'manage-users' && (
           <ManageUsersTab locationId={locationId} onAddUserClick={() => setActiveTab('add-user')} />
