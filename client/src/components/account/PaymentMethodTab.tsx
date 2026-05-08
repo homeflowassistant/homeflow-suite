@@ -81,6 +81,11 @@ export function PaymentMethodTab({ locationId }: PaymentMethodTabProps) {
       const response = await fetch(getBackendUrl(`/api/saas/plan?locationId=${encodeURIComponent(locationId)}`));
 
       if (!response.ok) {
+        if (response.status === 404) {
+          setErrorPlan('No payment plan found for this location. Please connect a payment method.');
+          setPlanData(null);
+          return;
+        }
         throw new Error('Failed to fetch plan data');
       }
 
