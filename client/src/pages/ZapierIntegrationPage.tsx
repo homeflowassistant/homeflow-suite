@@ -182,8 +182,4 @@ export default function ZapierIntegrationPage() {
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 93c2f8c319338b304ff3b423b0df5a5cd28c28a9
