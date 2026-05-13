@@ -11,7 +11,7 @@ import MessagingPage from "./pages/MessagingPage.tsx";
 import RequestScheduling from "./pages/RequestScheduling";
 import AccountManagement from "./pages/AccountManagement";
 import AccountEntry from "./pages/AccountEntry";
-import ZapierIntegrationPage from "./pages/ZapierIntegrationPage";
+import ZapierIntegrationPage from "./pages/ZapierIntegrationPage.tsx";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
