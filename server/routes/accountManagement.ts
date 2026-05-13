@@ -416,6 +416,41 @@ router.get('/saas/plans', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/verify-location
+ * Body: { locationId }
+ * Verify that a location exists using the Agency Private Token and return basic info (name)
+ */
+router.post('/verify-location', async (req: Request, res: Response) => {
+  try {
+    const { locationId } = req.body;
+
+    if (!locationId || typeof locationId !== 'string') {
+      return res.status(400).json({ error: 'locationId is required' });
+    }
+
+    const agencyPrivateToken = await getValidAgencyToken();
+
+    const result = await ghlRequest({
+      method: 'GET',
+      path: `/saas-api/public-api/locations/${encodeURIComponent(locationId)}`,
+      token: agencyPrivateToken,
+    });
+
+    // Normalize response: prefer result.location.name or result.name
+    const locationName = (result && (result.location?.name || result.name)) || null;
+
+    if (!locationName) {
+      return res.status(404).json({ error: 'Location not found' });
+    }
+
+    res.json({ success: true, name: locationName, raw: result });
+  } catch (error: any) {
+    console.error('Verify location error:', error?.response?.data || error.message || error);
+    res.status(error.response?.status || 500).json({ error: error.message || 'Failed to verify location' });
+  }
+});
+
+/**
  * PUT /api/saas/update-subscription
  * Update plan or Stripe details (Agency OAuth Token via proxy)
  */
