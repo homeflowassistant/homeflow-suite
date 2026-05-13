@@ -11,6 +11,7 @@ import MessagingPage from "./pages/MessagingPage.tsx";
 import RequestScheduling from "./pages/RequestScheduling";
 import AccountManagement from "./pages/AccountManagement";
 import AccountEntry from "./pages/AccountEntry";
+import ZapierIntegrationPage from "./pages/ZapierIntegrationPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/account-entry"} component={AccountEntry} />
       <Route path={"/account"} component={AccountManagement} />
       <Route path={"/request-scheduling"} component={RequestScheduling} />
+      <Route path={"/integrate"} component={ZapierIntegrationPage} />
       <Route path={"/messaging"} component={MessagingPage} />
       <Route path={"/contacts"} component={ContactsEntry} />
       <Route path={"/"} component={Home} />

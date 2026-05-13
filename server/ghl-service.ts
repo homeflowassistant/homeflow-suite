@@ -855,7 +855,98 @@ export async function getValidAccessToken(
   return installation.accessToken;
 }
 
+/**
+ * Force a refresh of the token for a location and persist the rotated refresh token.
+ */
+export async function refreshInstallationAccessToken(locationId: string): Promise<string> {
+  const installation = await getInstallation(locationId);
+  if (!installation) {
+    throw new Error(`No GHL installation found for location: ${locationId}`);
+  }
+
+  const newTokens = await refreshAccessToken(installation.refreshToken);
+  await upsertInstallation(newTokens, locationId);
+  return newTokens.access_token;
+}
+
 // ─── GHL API Calls ───────────────────────────────────────────────────
+
+function cleanObject<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== null && entry !== "")
+  ) as T;
+}
+
+export interface GHLUpsertContactResponse {
+  new?: boolean;
+  contact?: {
+    id?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export async function upsertContactWithTag(
+  locationId: string,
+  contact: {
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    tags?: string[];
+    source?: string;
+  },
+  options: { retryOnUnauthorized?: boolean } = {}
+): Promise<GHLUpsertContactResponse> {
+  const baseBody = cleanObject({
+    locationId,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    name: contact.name,
+    email: contact.email,
+    phone: contact.phone,
+    tags: contact.tags ?? ["trigger-royal-review"],
+    source: contact.source ?? "zapier",
+  });
+
+  const postContact = async (accessToken: string) => {
+    const response = await fetch(`${GHL_BASE_URL}/contacts/upsert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify(baseBody),
+    });
+
+    const body = await response.json().catch(() => ({}));
+    return { response, body };
+  };
+
+  let accessToken = await getValidAccessToken(locationId);
+  let { response, body } = await postContact(accessToken);
+
+  if (!response.ok && response.status === 401 && options.retryOnUnauthorized !== false) {
+    accessToken = await refreshInstallationAccessToken(locationId);
+    const retry = await postContact(accessToken);
+    response = retry.response;
+    body = retry.body;
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      typeof body === "object" && body !== null && typeof (body as Record<string, unknown>).message === "string"
+        ? String((body as Record<string, unknown>).message)
+        : `Failed to upsert contact: ${response.status}`;
+
+    throw new Error(errorMessage);
+  }
+
+  return body as GHLUpsertContactResponse;
+}
 
 /**
  * Create a single contact in GHL.

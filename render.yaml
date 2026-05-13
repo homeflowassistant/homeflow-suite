@@ -3,7 +3,7 @@ services:
     name: addcontact-server
     runtime: node
     plan: free
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm build
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm run build
     startCommand: pnpm start
     envVars:
       - key: NODE_VERSION

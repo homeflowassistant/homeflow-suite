@@ -1,5 +1,5 @@
 export function getBackendBaseUrl(): string {
-  return (import.meta.env.VITE_API_URL || "https://addcontact-server.onrender.com").replace(/\/$/, "");
+  return (import.meta.env.VITE_API_URL || "https://addcontact-m9i2.onrender.com").replace(/\/$/, "");
 }
 
 export function getBackendUrl(path: string): string {
