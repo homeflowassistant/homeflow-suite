@@ -591,7 +591,17 @@ const customFieldCache = new Map<string, Map<string, string>>();
  * Converts to lowercase and replaces spaces/hyphens with underscores.
  */
 function normalizeFieldName(name: string): string {
-  return name.toLowerCase().replace(/[\s\-]/g, "_");
+  // Convert camelCase to snake_case, replace spaces/hyphens/other non-alphanumerics with
+  // underscores, collapse multiple underscores, trim leading/trailing underscores,
+  // and lowercase the result. This makes matching robust against keys like
+  // "initialRequestDelay", "initial-request-delay", or "Initial Request Delay".
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[\s\-]+/g, "_")
+    .replace(/[^a-zA-Z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+    .toLowerCase();
 }
 
 /**
@@ -669,8 +679,16 @@ export async function getCustomFieldIdByName(
 
     customFieldCache.set(locationId, fieldMap);
 
-    // Return the requested field
-    return fieldMap.get(normalizedPattern) ?? null;
+    // Return the requested field; if not found, log available fields to help debugging
+    const found = fieldMap.get(normalizedPattern) ?? null;
+    if (!found) {
+      const available = Array.from(fieldMap.keys()).slice(0, 50).join(", ");
+      console.warn(
+        `[GHL] Custom field not found for pattern "${fieldNamePattern}". Available fields: ${available}`
+      );
+    }
+
+    return found;
   } catch (error) {
     console.error(`[GHL] Error discovering custom field "${fieldNamePattern}":`, error);
     return null;
@@ -728,19 +746,24 @@ export async function upsertGhlCustomValue(
   const data = (await getResponse.json()) as { customValues?: Record<string, unknown>[] };
   const customValues = data.customValues ?? [];
 
-  // Find existing custom value by matching name defensively
+  // Find existing custom value by matching name/key defensively using the same normalizer
   let existingId: string | undefined;
+  const normalizedTarget = normalizeFieldName(name);
   for (const customValue of customValues) {
-    const fieldKey = typeof customValue.fieldKey === "string" ? customValue.fieldKey : "";
-    const fieldName = typeof customValue.name === "string" ? customValue.name : "";
-    const normalizedName = name.toLowerCase().replace(/[\s-]/g, "_");
-    const normalizedKey = fieldKey.toLowerCase().replace(/[\s-]/g, "_");
-    const normalizedFieldName = fieldName.toLowerCase().replace(/[\s-]/g, "_");
+    const keyCandidates = [
+      typeof customValue.fieldKey === "string" ? customValue.fieldKey : undefined,
+      typeof customValue.key === "string" ? customValue.key : undefined,
+      typeof customValue.name === "string" ? customValue.name : undefined,
+    ].filter(Boolean) as string[];
 
-    if (normalizedKey === normalizedName || normalizedFieldName === normalizedName || fieldKey === name || fieldName === name) {
-      existingId = typeof customValue.id === "string" ? customValue.id : undefined;
-      break;
+    for (const candidate of keyCandidates) {
+      if (normalizeFieldName(candidate) === normalizedTarget || candidate === name) {
+        existingId = typeof customValue.id === "string" ? customValue.id : undefined;
+        break;
+      }
     }
+
+    if (existingId) break;
   }
 
   // Determine URL and HTTP method
@@ -751,6 +774,9 @@ export async function upsertGhlCustomValue(
   const method = existingId ? "PUT" : "POST";
 
   // Upsert the custom value
+  // Include `key` alongside `name` in the payload to match GHL API that may expect a key field for lookups
+  const payload: Record<string, unknown> = { name, value, key: name };
+
   const upsertResponse = await fetch(url, {
     method,
     headers: {
@@ -759,7 +785,7 @@ export async function upsertGhlCustomValue(
       Authorization: `Bearer ${accessToken}`,
       Version: GHL_API_VERSION,
     },
-    body: JSON.stringify({ name, value }),
+    body: JSON.stringify(payload),
   });
 
   if (!upsertResponse.ok) {
@@ -770,6 +796,11 @@ export async function upsertGhlCustomValue(
 
   const upsertData = (await upsertResponse.json()) as Record<string, unknown>;
   const customValue = upsertData.customValue ?? upsertData;
+
+  if (!customValue) {
+    const available = customValues.map((v) => (typeof v.name === "string" ? v.name : typeof v.key === "string" ? v.key : "<unknown>")).slice(0,50).join(", ");
+    console.warn(`[GHL] upsertGhlCustomValue could not parse response for "${name}". Available values: ${available}`);
+  }
 
   return {
     id: typeof customValue.id === "string" ? customValue.id : existingId ?? "",
