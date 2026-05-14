@@ -6,7 +6,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import ContactsPage from "./pages/ContactsPage";
-import ContactsEntry from "./pages/ContactsEntry";
 import MessagingPage from "./pages/MessagingPage.tsx";
 import RequestScheduling from "./pages/RequestScheduling";
 import AccountManagement from "./pages/AccountManagement";
@@ -22,7 +21,7 @@ function Router() {
       <Route path={"/request-scheduling"} component={RequestScheduling} />
       <Route path={"/integrate"} component={ZapierIntegrationPage} />
       <Route path={"/messaging"} component={MessagingPage} />
-      <Route path={"/contacts"} component={ContactsEntry} />
+      <Route path={"/contacts"} component={RequestScheduling} />
       <Route path={"/"} component={Home} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

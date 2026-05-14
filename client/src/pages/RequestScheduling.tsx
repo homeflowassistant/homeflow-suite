@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Link2, Loader2, RefreshCw, Save, ShieldOff, ShieldCheck, Clock3 } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import "./RequestScheduling.css";
 
@@ -96,7 +94,7 @@ export default function RequestScheduling() {
   };
 
   const handleTogglePause = async () => {
-    showToast("Pause/Resume is only available when a contact is selected.", true);
+    showToast("Pause/Resume is not available on this page.", true);
   };
   if (!locationId) {
     return (
@@ -107,37 +105,8 @@ export default function RequestScheduling() {
           </div>
           <h1 className="text-xl font-semibold text-foreground">Request Scheduling</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">?locationId=YOUR_LOCATION_ID</code> parameter.
+            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/contacts?locationId=YOUR_LOCATION_ID</code> URL.
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
-        <div className="max-w-lg text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mx-auto">
-            <AlertCircle className="h-7 w-7 text-rose-600" />
-          </div>
-          <h1 className="text-xl font-semibold text-foreground">API Connection Error</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">We were unable to contact the backend for the request scheduling page.</p>
-          {errorMessage ? <p className="text-xs text-muted-foreground">{errorMessage}</p> : null}
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" onClick={() => settingsQuery.refetch()}>Retry</Button>
-          </div>
         </div>
       </div>
     );
@@ -146,7 +115,7 @@ export default function RequestScheduling() {
   return (
     <div className="rs-main">
       <div className="rs-shell">
-        <header className="border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10 mb-6 rounded-t-xl border border-border border-b-0">
+        <header className="bg-background/95 backdrop-blur-sm sticky top-0 z-10 mb-6 rounded-t-xl border border-border">
           <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3 rounded-t-xl">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
