@@ -21,7 +21,7 @@ function Router() {
       <Route path={"/request-scheduling"} component={RequestScheduling} />
       <Route path={"/integrate"} component={ZapierIntegrationPage} />
       <Route path={"/messaging"} component={MessagingPage} />
-      <Route path={"/contacts"} component={RequestScheduling} />
+      <Route path={"/contacts"} component={ContactsEntry} />
       <Route path={"/"} component={Home} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

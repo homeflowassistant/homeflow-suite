@@ -104,8 +104,8 @@ export default function RequestScheduling() {
             <Link2 className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-xl font-semibold text-foreground">Request Scheduling</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/contacts?locationId=YOUR_LOCATION_ID</code> URL.
+            <p className="text-sm text-muted-foreground leading-relaxed">
+            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/request-scheduling?locationId=YOUR_LOCATION_ID</code> URL.
           </p>
         </div>
       </div>
