@@ -18,14 +18,13 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   3: "3",
 };
 
-function useLocationAndContactId() {
+function useLocationAndParams() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       locationId: params.get("locationId") || "",
-      contactId: params.get("contactId") || "",
       initialRequestScheduling: params.get("initial_request_scheduling") || "",
-      serviceType: params.get("service_type") || "",
+      followUpLimit: params.get("follow_up_limit") || "",
     };
   }, []);
 }
@@ -52,22 +51,11 @@ function serviceTypeToIndex(value: string): number {
 }
 
 export default function RequestScheduling() {
-  const { locationId, contactId, initialRequestScheduling, serviceType } = useLocationAndContactId();
+  const { locationId, initialRequestScheduling, followUpLimit } = useLocationAndParams();
   const [initialTiming, setInitialTiming] = useState(0);
   const [followUpCount, setFollowUpCount] = useState(3);
-  const [isPaused, setIsPaused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMode, setSaveMode] = useState<"contact-fields" | "custom-values">("contact-fields");
 
-  // Query for contact custom fields (existing pattern)
-  const settingsQuery = trpc.requestScheduling.getSettings.useQuery(
-    { locationId, contactId },
-    { enabled: !!locationId && !!contactId && saveMode === "contact-fields" }
-  );
-  
-  // Mutation for saving to contact fields
-  const saveMutation = trpc.requestScheduling.saveSettings.useMutation();
-  
   // Mutation for saving to location custom values
   const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
@@ -75,65 +63,28 @@ export default function RequestScheduling() {
     toast(message, { style: isError ? { background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" } : undefined });
   }, []);
 
-  // Determine save mode based on available parameters
-  useEffect(() => {
-    if (initialRequestScheduling || serviceType) {
-      setSaveMode("custom-values");
-    } else {
-      setSaveMode("contact-fields");
-    }
-  }, [initialRequestScheduling, serviceType]);
-
-  // Load from contact fields (existing behavior)
-  useEffect(() => {
-    const data = settingsQuery.data;
-    if (!data || saveMode !== "contact-fields") return;
-
-    setInitialTiming(data.initialTiming);
-    setFollowUpCount(data.followUpCount);
-    setIsPaused(data.isPaused);
-  }, [settingsQuery.data, saveMode]);
-
   // Preload from URL query parameters (custom values)
   useEffect(() => {
-    if (saveMode !== "custom-values") return;
-
     if (initialRequestScheduling) {
       const idx = timingCustomValueToIndex(initialRequestScheduling);
       setInitialTiming(idx);
     }
 
-    if (serviceType) {
-      const idx = serviceTypeToIndex(serviceType);
-      setFollowUpCount(idx);
+    if (followUpLimit) {
+      const val = parseInt(followUpLimit, 10);
+      if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
     }
-  }, [initialRequestScheduling, serviceType, saveMode]);
-
-  const isLoading = saveMode === "contact-fields" && settingsQuery.isLoading;
-  const isError = saveMode === "contact-fields" && settingsQuery.isError;
-  const errorMessage = saveMode === "contact-fields" && settingsQuery.error instanceof Error ? settingsQuery.error.message : undefined;
+  }, [initialRequestScheduling, followUpLimit]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      if (saveMode === "custom-values") {
-        // Save to location custom values
-        await saveCustomValuesMutation.mutateAsync({
-          locationId,
-          initialRequestScheduling: TIMING_CUSTOM_VALUES[initialTiming],
-          serviceType: FOLLOWUP_CUSTOM_VALUES[followUpCount],
-        });
-      } else {
-        // Save to contact fields (existing behavior)
-        await saveMutation.mutateAsync({
-          locationId,
-          contactId,
-          initialTiming,
-          followUpCount,
-          isPaused,
-        });
-        await settingsQuery.refetch();
-      }
+      // Save to location-level custom values
+      await saveCustomValuesMutation.mutateAsync({
+        locationId,
+        initialRequestScheduling: TIMING_LABELS[initialTiming],
+        followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
+      });
       
       showToast("Settings saved successfully.");
     } catch (error) {
@@ -145,32 +96,9 @@ export default function RequestScheduling() {
   };
 
   const handleTogglePause = async () => {
-    if (saveMode === "custom-values") {
-      showToast("Pause/Resume is not available with custom values mode.", true);
-      return;
-    }
-
-    const next = !isPaused;
-    setIsPaused(next);
-
-    try {
-      await saveMutation.mutateAsync({
-        locationId,
-        contactId,
-        initialTiming,
-        followUpCount,
-        isPaused: next,
-      });
-
-      showToast(next ? "Review requests paused. Contacts removed from both automations." : "Review requests resumed successfully.");
-      await settingsQuery.refetch();
-    } catch {
-      setIsPaused(!next);
-      showToast("Error updating pause state. Please try again.", true);
-    }
+    showToast("Pause/Resume is only available when a contact is selected.", true);
   };
-
-  if (!locationId || !contactId) {
+  if (!locationId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <div className="max-w-lg text-center space-y-4">
@@ -179,7 +107,7 @@ export default function RequestScheduling() {
           </div>
           <h1 className="text-xl font-semibold text-foreground">Request Scheduling</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">?locationId=YOUR_LOCATION_ID&amp;contactId=YOUR_CONTACT_ID</code> parameter.
+            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">?locationId=YOUR_LOCATION_ID</code> parameter.
           </p>
         </div>
       </div>
@@ -239,13 +167,11 @@ export default function RequestScheduling() {
             <h2 className="rs-title">Initial Request Scheduling</h2>
             <p className="rs-subtitle">Choose when to send review requests to your contacts after receiving their information.</p>
 
-            {saveMode === "custom-values" && (
-              <div className="rs-info-box" style={{ marginBottom: "12px" }}>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.initial_request_scheduling}}"}</code>.
-                </p>
-              </div>
-            )}
+            <div className="rs-info-box" style={{ marginBottom: "12px" }}>
+              <p className="text-xs text-muted-foreground">
+                <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.initial_request_scheduling}}"}</code>.
+              </p>
+            </div>
 
             <div className="rs-display-value">{TIMING_LABELS[initialTiming]}</div>
 
@@ -289,13 +215,11 @@ export default function RequestScheduling() {
             <h2 className="rs-title">Follow-up Requests</h2>
             <p className="rs-subtitle">Select the number of follow-up requests to send if no response is received.</p>
 
-            {saveMode === "custom-values" && (
-              <div className="rs-info-box" style={{ marginBottom: "12px" }}>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.service_type}}"}</code>.
-                </p>
-              </div>
-            )}
+            <div className="rs-info-box" style={{ marginBottom: "12px" }}>
+              <p className="text-xs text-muted-foreground">
+                <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.follow_up_limit}}"}</code>.
+              </p>
+            </div>
 
             <div className="rs-display-value">
               {followUpCount === 0 ? "No Follow-ups" : `${followUpCount} Follow-up${followUpCount > 1 ? "s" : ""}`}

@@ -156,8 +156,8 @@ export const requestSchedulingRouter = router({
         initialRequestScheduling: z.enum(["Within 24 Hours", "24 Hours", "48 Hours", "1 Week"], {
           errorMap: () => ({ message: 'initialRequestScheduling must be one of: "Within 24 Hours", "24 Hours", "48 Hours", "1 Week"' }),
         }),
-        serviceType: z.enum(["0", "1", "2", "3"], {
-          errorMap: () => ({ message: 'serviceType must be one of: "0", "1", "2", "3"' }),
+        followUpLimit: z.enum(["0", "1", "2", "3"], {
+          errorMap: () => ({ message: 'followUpLimit must be one of: "0", "1", "2", "3"' }),
         }),
       })
     )
@@ -171,27 +171,26 @@ export const requestSchedulingRouter = router({
             message: "Location ID cannot be empty",
           });
         }
-
-        // Upsert both custom values
-        const [initialResults, serviceResults] = await Promise.all([
+        // Upsert both custom values at location level
+        const [initialResults, followUpResults] = await Promise.all([
           upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
-          upsertGhlCustomValue(locationId, "service_type", input.serviceType),
+          upsertGhlCustomValue(locationId, "follow_up_limit", input.followUpLimit),
         ]);
 
         return {
           success: true,
           saved: {
             initial_request_scheduling: initialResults.value,
-            service_type: serviceResults.value,
+            follow_up_limit: followUpResults.value,
           },
           results: {
             initial_request_scheduling: {
               action: "created_or_updated",
               id: initialResults.id,
             },
-            service_type: {
+            follow_up_limit: {
               action: "created_or_updated",
-              id: serviceResults.id,
+              id: followUpResults.id,
             },
           },
         };
