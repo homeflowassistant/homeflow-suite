@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getLocationAccessToken } from "../helpers/tokenHelper";
-import { getCustomFieldIdByName, upsertGhlCustomValue } from "../ghl-service";
+import { upsertGhlCustomValue } from "../ghl-service";
 
 const TIMING_MAP = {
   0: "within_24h",
@@ -26,36 +26,7 @@ function ghlHeaders(accessToken: string) {
   };
 }
 
-/**
- * Discover custom field IDs for a location by name.
- * These field IDs are generic across subaccounts and are discovered at runtime.
- */
-async function getRequestSchedulingFieldIds(locationId: string): Promise<{
-  initialDelayFieldId: string;
-  followUpLimitFieldId: string;
-}> {
-  const initialDelayFieldId = await getCustomFieldIdByName(locationId, "initial_request_delay");
-  const followUpLimitFieldId = await getCustomFieldIdByName(locationId, "follow_up_limit");
 
-  if (!initialDelayFieldId) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Custom field 'initial_request_delay' not found in your GHL account. Please create this field in Settings > Custom Fields.",
-    });
-  }
-
-  if (!followUpLimitFieldId) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Custom field 'follow_up_limit' not found in your GHL account. Please create this field in Settings > Custom Fields.",
-    });
-  }
-
-  return {
-    initialDelayFieldId,
-    followUpLimitFieldId,
-  };
-}
 
 export const requestSchedulingRouter = router({
   getSettings: publicProcedure
@@ -115,36 +86,29 @@ export const requestSchedulingRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const { initialDelayFieldId, followUpLimitFieldId } = await getRequestSchedulingFieldIds(input.locationId.trim());
-      const accessToken = await getLocationAccessToken(input.locationId.trim());
+      const locationId = input.locationId.trim();
       const contactId = input.contactId.trim();
 
-      await fetch(`https://services.leadconnectorhq.com/contacts/${encodeURIComponent(contactId)}`, {
-        method: "PUT",
-        headers: ghlHeaders(accessToken),
-        body: JSON.stringify({
-          customFields: [
-            {
-              id: initialDelayFieldId,
-              key: "initial_request_delay",
-              field_value: TIMING_MAP[input.initialTiming],
-            },
-            {
-              id: followUpLimitFieldId,
-              key: "follow_up_limit",
-              field_value: input.followUpCount,
-            },
-          ],
-        }),
-      }).then(async (response) => {
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Failed to update request scheduling settings: ${response.status} ${errorBody}`,
-          });
-        }
-      });
+      try {
+        // Save request scheduling as location-level custom values
+        // (These are accessible via {{custom_values.initial_request_scheduling}} in GHL templates)
+        const delayValue = TIMING_MAP[input.initialTiming];
+        const followUpValue = String(input.followUpCount);
+
+        await Promise.all([
+          upsertGhlCustomValue(locationId, "initial_request_scheduling", delayValue),
+          upsertGhlCustomValue(locationId, "follow_up_limit", followUpValue),
+        ]);
+      } catch (error) {
+        console.error("[requestScheduling.saveSettings] Error saving custom values:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save request scheduling values: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+
+      // Handle pause/resume tag on the contact
+      const accessToken = await getLocationAccessToken(locationId);
 
       if (input.isPaused) {
         const response = await fetch(`https://services.leadconnectorhq.com/contacts/${encodeURIComponent(contactId)}/tags`, {
