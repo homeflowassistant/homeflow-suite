@@ -21,6 +21,8 @@ import {
   sendTestMessage,
   processContact,
   getValidAccessToken,
+  getPipelines,
+  hasOpportunityInStatus,
   type GHLContactData,
   type GHLContactStatusFilter,
 } from "../ghl-service";
@@ -273,5 +275,38 @@ export const ghlRouter = router({
           message: error instanceof Error ? error.message : "Connection failed",
         };
       }
+    }),
+
+  /**
+   * Fetch pipelines for a location.
+   * Used to find the Review pipeline ID dynamically.
+   */
+  getPipelines: publicProcedure
+    .input(z.object({ locationId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const pipelines = await getPipelines(input.locationId.trim());
+      return pipelines;
+    }),
+
+  /**
+   * Check if a contact has a won opportunity in a specific pipeline.
+   * Used to determine "Clicked" status.
+   */
+  hasWonOpportunity: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+        pipelineId: z.string().min(1),
+      })
+    )
+    .query(async ({ input }) => {
+      const hasWon = await hasOpportunityInStatus(
+        input.locationId.trim(),
+        input.contactId.trim(),
+        input.pipelineId.trim(),
+        "won"
+      );
+      return { hasWon };
     }),
 });

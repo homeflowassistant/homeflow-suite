@@ -211,16 +211,49 @@ function hasReviewWorkflow(workflows: string[]): boolean {
 }
 
 function determineContactStatus(contact: Record<string, unknown>): GHLListedContact["smsStatus"] {
+  // Check DND first
   const dnd = Boolean(contact.dnd);
-  const tags = getContactTags(contact);
-  const activeWorkflows = getContactWorkflows(contact, "activeWorkflows");
-  const finishedWorkflows = getContactWorkflows(contact, "finishedWorkflows");
-
   if (dnd) return "Do Not Contact";
-  if (hasClickedTag(tags)) return "Clicked";
-  if (hasReviewWorkflow(activeWorkflows)) return "Follow up";
-  if (hasReviewWorkflow(finishedWorkflows)) return "Finished";
 
+  // Check tags using normalized comparison
+  const rawTags = contact.tags ?? [];
+  if (!Array.isArray(rawTags)) {
+    // If no tags, return Finished as default
+    return "Finished";
+  }
+
+  const normalizedTags = rawTags
+    .map((tag) => {
+      if (typeof tag === "string") return tag.toLowerCase().trim();
+      if (tag && typeof tag === "object") {
+        const name = (tag as Record<string, unknown>).name ?? (tag as Record<string, unknown>).tag ?? "";
+        return String(name).toLowerCase().trim();
+      }
+      return "";
+    })
+    .filter(Boolean);
+
+  // Check for active workflow tags (highest priority after DND)
+  const hasActiveReviewTag = normalizedTags.some(
+    (tag) =>
+      tag === "review_reactivation_active" ||
+      tag === "review_request_active"
+  );
+  if (hasActiveReviewTag) return "Follow up";
+
+  // Check for finished workflow tags
+  const hasFinishedReviewTag = normalizedTags.some(
+    (tag) =>
+      tag === "review_reactivation_finished" ||
+      tag === "review_request_finished"
+  );
+  if (hasFinishedReviewTag) return "Finished";
+
+  // Check for "clicked" tag for backward compatibility
+  const hasClickedTag = normalizedTags.some((tag) => tag === "clicked");
+  if (hasClickedTag) return "Clicked";
+
+  // Default to Finished
   return "Finished";
 }
 
@@ -355,6 +388,90 @@ export async function searchContacts(
       pageLimit,
     },
   };
+}
+
+// ─── Pipelines & Opportunities (Tag-Based Status) ──────────────────
+
+/**
+ * Fetch pipelines for a location.
+ * Used to find the Review pipeline ID dynamically.
+ */
+export async function getPipelines(
+  locationId: string
+): Promise<Array<{ id: string; name: string }>> {
+  const accessToken = await getValidAccessToken(locationId);
+
+  const response = await fetch(`${GHL_BASE_URL}/opportunities/pipelines?locationId=${encodeURIComponent(locationId)}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[GHL] Failed to fetch pipelines: ${response.status} ${errorBody}`);
+    return [];
+  }
+
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const pipelinesArray = Array.isArray(body.pipelines)
+    ? body.pipelines
+    : Array.isArray(body.data)
+      ? body.data
+      : [];
+
+  return pipelinesArray
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((pipeline) => ({
+      id: typeof pipeline.id === "string" ? pipeline.id : "",
+      name: typeof pipeline.name === "string" ? pipeline.name : "",
+    }))
+    .filter((p) => p.id && p.name);
+}
+
+/**
+ * Search opportunities for a contact in a specific pipeline with a given status.
+ * Returns true if at least one matching opportunity exists.
+ */
+export async function hasOpportunityInStatus(
+  locationId: string,
+  contactId: string,
+  pipelineId: string,
+  status: string
+): Promise<boolean> {
+  const accessToken = await getValidAccessToken(locationId);
+
+  const response = await fetch(
+    `${GHL_BASE_URL}/opportunities/search?location_id=${encodeURIComponent(locationId)}&contact_id=${encodeURIComponent(contactId)}&pipeline_id=${encodeURIComponent(pipelineId)}&status=${encodeURIComponent(status)}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(
+      `[GHL] Failed to search opportunities for contact ${contactId}: ${response.status} ${errorBody}`
+    );
+    return false;
+  }
+
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const opportunities = Array.isArray(body.opportunities)
+    ? body.opportunities
+    : Array.isArray(body.data)
+      ? body.data
+      : [];
+
+  return Array.isArray(opportunities) && opportunities.length > 0;
 }
 
 export async function getMessagingContext(locationId: string): Promise<GHLMessagingContext> {

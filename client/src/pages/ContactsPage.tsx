@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -24,6 +24,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import {
+  calculateReviewContactStatus,
+  findReviewPipelineId,
+  type ReviewContactStatus,
+} from "@shared/reviewStatus";
 
 const STATUS_FILTERS = [
   { key: "stopped", label: "Stopped" },
@@ -32,7 +37,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number]["key"];
-type ContactStatus = "Follow up" | "Clicked" | "Do Not Contact" | "Finished";
+type ContactStatus = "Follow up" | "Clicked" | "Do Not Contact" | "Finished" | "DND" | "";
 
 function statusStyles(status: ContactStatus) {
   switch (status) {
@@ -49,6 +54,7 @@ function statusStyles(status: ContactStatus) {
         className: "bg-emerald-50 text-emerald-700 border-emerald-200",
       };
     case "Do Not Contact":
+    case "DND":
       return {
         label: "Do Not Contact",
         icon: Ban,
@@ -78,6 +84,17 @@ function StatusBadge({ status }: { status: ContactStatus }) {
   );
 }
 
+// Enhanced contact type with calculated status
+interface EnhancedContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  smsStatus: ContactStatus;
+  emailStatus: ContactStatus;
+  dateAdded: string;
+}
+
 export default function ContactsPage() {
   const locationId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -88,6 +105,8 @@ export default function ContactsPage() {
   const [appliedSearch, setAppliedSearch] = useState("");
   const [activeFilters, setActiveFilters] = useState<StatusFilter[]>([]);
   const [cursorHistory, setCursorHistory] = useState<(string[] | undefined)[]>([]);
+  const [enhancedContacts, setEnhancedContacts] = useState<Map<string, ContactStatus>>(new Map());
+  const [reviewPipelineId, setReviewPipelineId] = useState<string | null>(null);
 
   const currentCursor = cursorHistory[cursorHistory.length - 1];
 
@@ -95,6 +114,23 @@ export default function ContactsPage() {
     { locationId },
     { enabled: !!locationId, refetchInterval: 60000 }
   );
+
+  // Fetch pipelines to find Review pipeline ID
+  const pipelinesQuery = trpc.ghl.getPipelines.useQuery(
+    { locationId },
+    {
+      enabled: !!locationId && connectionQuery.data?.connected === true,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Update reviewPipelineId when pipelines are fetched
+  useEffect(() => {
+    if (pipelinesQuery.data) {
+      const reviewId = findReviewPipelineId(pipelinesQuery.data);
+      setReviewPipelineId(reviewId);
+    }
+  }, [pipelinesQuery.data]);
 
   const contactsQuery = trpc.ghl.listContacts.useQuery(
     {
@@ -107,9 +143,81 @@ export default function ContactsPage() {
     {
       enabled: !!locationId && connectionQuery.data?.connected === true,
       refetchOnWindowFocus: false,
-      keepPreviousData: true,
+      placeholderData: (previousData) => previousData,
     }
   );
+
+  // Query for checking won opportunities (needs to be called per contact)
+  const wonOpportunityQuery = trpc.ghl.hasWonOpportunity.useQuery(
+    {
+      locationId,
+      contactId: "",
+      pipelineId: reviewPipelineId || "",
+    },
+    {
+      enabled: false, // We'll call this manually for each contact
+    }
+  );
+
+  // Enhance contacts with opportunity-based status
+  useEffect(() => {
+    const enhanceContacts = async () => {
+      if (!contactsQuery.data?.contacts || !reviewPipelineId) return;
+
+      const enhanced = new Map<string, ContactStatus>();
+
+      for (const contact of contactsQuery.data.contacts) {
+        try {
+          // Fetch won opportunity status for this contact
+          const response = await fetch("/api/trpc/ghl.hasWonOpportunity", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              input: {
+                locationId,
+                contactId: contact.id,
+                pipelineId: reviewPipelineId,
+              },
+            }),
+          });
+
+          let hasWon = false;
+          if (response.ok) {
+            const data = (await response.json()) as any;
+            hasWon = data.result?.data?.hasWon ?? false;
+          }
+
+          // Calculate status with opportunity information
+          const contact_obj = contact as any;
+          const reviewStatus = calculateReviewContactStatus({
+            contact: contact_obj,
+            isWonInReviewPipeline: hasWon,
+          });
+
+          // Map to ContactStatus type for display
+          const displayStatus: ContactStatus =
+            reviewStatus === ""
+              ? (contact.smsStatus as ContactStatus)
+              : (reviewStatus as ContactStatus);
+
+          enhanced.set(contact.id, displayStatus);
+        } catch (error) {
+          console.error(
+            `[Contacts] Error checking won opportunities for contact ${contact.id}:`,
+            error
+          );
+          // Fall back to default status
+          enhanced.set(contact.id, contact.smsStatus as ContactStatus);
+        }
+      }
+
+      setEnhancedContacts(enhanced);
+    };
+
+    enhanceContacts();
+  }, [contactsQuery.data?.contacts, reviewPipelineId, locationId]);
 
   const isLoading = connectionQuery.isLoading || contactsQuery.isLoading;
   const isError = connectionQuery.isError || contactsQuery.isError;
@@ -122,6 +230,13 @@ export default function ContactsPage() {
   const canGoNext = Boolean(contactsQuery.data?.pagination.searchAfter?.length);
   const canGoPrev = cursorHistory.length > 0;
   const contacts = contactsQuery.data?.contacts ?? [];
+
+  // Map base contacts to enhanced contacts
+  const displayContacts: EnhancedContact[] = contacts.map((contact) => ({
+    ...contact,
+    smsStatus: enhancedContacts.get(contact.id) || (contact.smsStatus as ContactStatus),
+    emailStatus: enhancedContacts.get(contact.id) || (contact.emailStatus as ContactStatus),
+  }));
 
   const handleSearch = () => {
     setAppliedSearch(searchInput.trim());
@@ -312,14 +427,14 @@ export default function ContactsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : contacts.length === 0 ? (
+              ) : displayContacts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-16 text-center text-muted-foreground">
                     No contacts found for the current search and filters.
                   </TableCell>
                 </TableRow>
               ) : (
-                contacts.map((contact) => (
+                displayContacts.map((contact) => (
                   <TableRow key={contact.id}>
                     <TableCell className="font-medium text-foreground">{contact.name}</TableCell>
                     <TableCell>{contact.phone || "-"}</TableCell>
@@ -346,7 +461,7 @@ export default function ContactsPage() {
 
           <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-sm text-muted-foreground">
             <div>
-              Showing {contacts.length} contact{contacts.length === 1 ? "" : "s"}
+              Showing {displayContacts.length} contact{displayContacts.length === 1 ? "" : "s"}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setCursorHistory((current) => current.slice(0, -1))} disabled={!canGoPrev} className="gap-2">
@@ -357,8 +472,9 @@ export default function ContactsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (!contactsQuery.data?.pagination.searchAfter) return;
-                  setCursorHistory((current) => [...current, contactsQuery.data?.pagination.searchAfter]);
+                  const nextCursor = contactsQuery.data?.pagination.searchAfter;
+                  if (!nextCursor) return;
+                  setCursorHistory((current) => [...current, nextCursor]);
                 }}
                 disabled={!canGoNext}
                 className="gap-2"
