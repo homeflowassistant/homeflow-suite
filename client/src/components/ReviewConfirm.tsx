@@ -19,6 +19,7 @@ interface ReviewConfirmProps {
   parsedCSV: ParsedCSV;
   mapping: ColumnMapping;
   locationId: string;
+  tagName: "lead-follow-up" | "reactivation-campaign" | "add-on-campaign" | "quick-send";
   onBack: () => void;
   onComplete: () => void;
 }
@@ -27,6 +28,7 @@ export default function ReviewConfirm({
   parsedCSV,
   mapping,
   locationId,
+  tagName,
   onBack,
   onComplete,
 }: ReviewConfirmProps) {
@@ -73,6 +75,7 @@ export default function ReviewConfirm({
           locationId,
           contacts,
           dnd,
+          tagName,
         });
 
         totalSuccessful += result.successful;
@@ -150,6 +153,30 @@ export default function ReviewConfirm({
             {parsedCSV.totalRows}
           </span>
         </p>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-muted/70 p-4">
+        <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
+        <div className="grid gap-2 pt-3 text-sm">
+          {[
+            { value: "lead-follow-up", label: "Lead Follow-Up" },
+            { value: "reactivation-campaign", label: "Reactivation Campaign" },
+            { value: "add-on-campaign", label: "Add-on Campaign" },
+            { value: "quick-send", label: "Quick Send" },
+          ].map((option) => (
+            <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
+              <input
+                type="radio"
+                name="batchTag"
+                value={option.value}
+                checked={tagOption === option.value}
+                onChange={() => setTagOption(option.value as any)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="font-medium text-foreground">{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* DND Toggle */}

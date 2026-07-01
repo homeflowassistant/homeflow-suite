@@ -26,6 +26,19 @@ import {
 
 type FlowStep = "upload" | "mapping" | "review";
 
+type ContactTagOption =
+  | "lead-follow-up"
+  | "reactivation-campaign"
+  | "add-on-campaign"
+  | "quick-send";
+
+const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
+  { value: "lead-follow-up", label: "Lead Follow-Up" },
+  { value: "reactivation-campaign", label: "Reactivation Campaign" },
+  { value: "add-on-campaign", label: "Add-on Campaign" },
+  { value: "quick-send", label: "Quick Send" },
+];
+
 interface CSVUploadFlowProps {
   locationId: string;
 }
@@ -35,6 +48,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [tagOption, setTagOption] = useState<ContactTagOption>("lead-follow-up");
 
   const handleFileUploaded = (data: ParsedCSV) => {
     setParsedCSV(data);
@@ -80,7 +94,31 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
   return (
     <>
       {/* Step 1: Upload area (always visible in the right panel) */}
-      <CSVUpload onFileUploaded={handleFileUploaded} />
+      <div className="space-y-6">
+        <CSVUpload onFileUploaded={handleFileUploaded} />
+
+        <div className="rounded-3xl border border-border bg-muted/70 p-4">
+          <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
+          <div className="grid gap-2 pt-3 text-sm">
+            {TAG_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70"
+              >
+                <input
+                  type="radio"
+                  name="csvTag"
+                  value={option.value}
+                  checked={tagOption === option.value}
+                  onChange={() => setTagOption(option.value)}
+                  className="h-4 w-4 text-primary focus:ring-primary"
+                />
+                <span className="font-medium text-foreground">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Steps 2 & 3: Modal dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
@@ -120,6 +158,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
                 parsedCSV={parsedCSV}
                 mapping={mapping}
                 locationId={locationId}
+                tagName={tagOption}
                 onBack={handleBack}
                 onComplete={handleComplete}
               />

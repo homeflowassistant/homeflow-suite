@@ -177,7 +177,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 relative">
           {/* Left Panel — Single Contact Form */}
           <div className="lg:pr-8 lg:border-r border-border">
-            <div className="max-w-md">
+            <div className="rounded-[32px] border border-border bg-card p-6 shadow-sm max-w-full">
               <SingleContactForm locationId={locationId} />
             </div>
           </div>
@@ -200,7 +200,9 @@ export default function Home() {
 
           {/* Right Panel — CSV Upload */}
           <div className="lg:pl-8">
-            <CSVUploadFlow locationId={locationId} />
+            <div className="rounded-[32px] border border-border bg-card p-6 shadow-sm max-w-full">
+              <CSVUploadFlow locationId={locationId} />
+            </div>
           </div>
         </div>
       </main>

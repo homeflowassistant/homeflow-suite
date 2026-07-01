@@ -38,6 +38,7 @@ const contactSchema = z.object({
   email: z.string().optional().default(""),
   phone: z.string().optional().default(""),
   dnd: z.boolean().optional().default(false),
+  tagName: z.string().optional(),
 });
 
 // Batch contact schema
@@ -45,6 +46,7 @@ const batchContactSchema = z.object({
   locationId: z.string().min(1),
   contacts: z.array(contactSchema).min(1).max(500),
   dnd: z.boolean().optional().default(false),
+  tagName: z.string().optional(),
 });
 
 const contactsQuerySchema = z.object({
@@ -156,6 +158,7 @@ export const ghlRouter = router({
         email: input.contact.email ?? "",
         phone: input.contact.phone ?? "",
         dnd: input.contact.dnd ?? false,
+        tagName: input.contact.tagName,
       };
 
       const result = await processContact(
@@ -194,6 +197,7 @@ export const ghlRouter = router({
           email: contact.email ?? "",
           phone: contact.phone ?? "",
           dnd: input.dnd,
+          tagName: input.tagName,
         };
 
         try {

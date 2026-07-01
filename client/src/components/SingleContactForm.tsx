@@ -5,7 +5,7 @@
  * No manual API key configuration needed — the backend handles authentication.
  */
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,26 @@ interface FormData {
   lastName: string;
   email: string;
   phone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  numberOfDogs: string;
+  lastTimeScooped: string;
 }
+
+type ContactTagOption =
+  | "lead-follow-up"
+  | "reactivation-campaign"
+  | "add-on-campaign"
+  | "quick-send";
+
+const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
+  { value: "lead-follow-up", label: "Lead Follow-Up" },
+  { value: "reactivation-campaign", label: "Reactivation Campaign" },
+  { value: "add-on-campaign", label: "Add-on Campaign" },
+  { value: "quick-send", label: "Quick Send" },
+];
 
 interface SingleContactFormProps {
   locationId: string;
@@ -30,8 +49,15 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
     lastName: "",
     email: "",
     phone: "",
+    streetAddress: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    numberOfDogs: "",
+    lastTimeScooped: "",
   });
   const [dnd, setDnd] = useState(false);
+  const [tagOption, setTagOption] = useState<ContactTagOption>("lead-follow-up");
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
@@ -47,8 +73,20 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
       });
 
       // Reset form
-      setFormData({ firstName: "", lastName: "", email: "", phone: "" });
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        streetAddress: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        numberOfDogs: "",
+        lastTimeScooped: "",
+      });
       setDnd(false);
+      setTagOption("lead-follow-up");
       setConsent(false);
       setErrors({});
     },
@@ -71,7 +109,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
       newErrors.phone = "Email or phone is required";
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = "Invalid email format";
     }
 
@@ -79,7 +117,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validate()) return;
@@ -97,12 +135,13 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         dnd,
+        tagName: tagOption,
       },
     });
   };
 
   const handleChange =
-    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof FormData) => (e: ChangeEvent<HTMLInputElement>) => {
       setFormData((prev) => ({ ...prev, [field]: e.target.value }));
       if (errors[field]) {
         setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -181,7 +220,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
 
       {/* Phone */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Phone</label>
+        <label className="text-sm font-medium text-foreground">Phone Number</label>
         <input
           type="tel"
           value={formData.phone}
@@ -194,6 +233,92 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         {errors.phone && (
           <p className="text-xs text-destructive">{errors.phone}</p>
         )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-foreground">Street Address</label>
+        <input
+          type="text"
+          value={formData.streetAddress}
+          onChange={handleChange("streetAddress")}
+          placeholder="Enter service address"
+          className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">City</label>
+          <input
+            type="text"
+            value={formData.city}
+            onChange={handleChange("city")}
+            placeholder="Enter city"
+            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">State</label>
+          <input
+            type="text"
+            value={formData.state}
+            onChange={handleChange("state")}
+            placeholder="Enter state"
+            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Zip Code</label>
+          <input
+            type="text"
+            value={formData.postalCode}
+            onChange={handleChange("postalCode")}
+            placeholder="Enter zip code"
+            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Number of Dogs</label>
+          <input
+            type="text"
+            value={formData.numberOfDogs}
+            onChange={handleChange("numberOfDogs")}
+            placeholder="Enter # of dogs"
+            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Last Time Scooped</label>
+          <input
+            type="text"
+            value={formData.lastTimeScooped}
+            onChange={handleChange("lastTimeScooped")}
+            placeholder="Enter date"
+            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-muted/70 p-4">
+        <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
+        <div className="grid gap-2 pt-3 text-sm">
+          {TAG_OPTIONS.map((option) => (
+            <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
+              <input
+                type="radio"
+                name="contactTag"
+                value={option.value}
+                checked={tagOption === option.value}
+                onChange={() => setTagOption(option.value)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="font-medium text-foreground">{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Consent Checkbox */}

@@ -52,6 +52,7 @@ export interface GHLContactData {
   email: string;
   phone: string;
   dnd?: boolean;
+  tagName?: string;
 }
 
 export interface GHLCreateContactResponse {
@@ -1556,12 +1557,20 @@ export async function processContact(
   let enrolledInWorkflow = false;
 
   if (!contact.dnd) {
+    if (contact.tagName) {
+      try {
+        await addTagToContact(locationId, contactId, contact.tagName);
+      } catch (error) {
+        console.warn(`[GHL] Failed to add selected tag to contact ${contactId}:`, error);
+      }
+    }
+
     try {
       await addTagToContact(locationId, contactId, triggerTag);
       // We can't reliably know whether a workflow was triggered by tagging,
       // so we return enrolledInWorkflow=false but the tag was added.
     } catch (error) {
-      console.warn(`[GHL] Failed to add tag to contact ${contactId}:`, error);
+      console.warn(`[GHL] Failed to add trigger tag to contact ${contactId}:`, error);
     }
   }
 
