@@ -156,166 +156,165 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
   const isSubmitting = createContactMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {/* Header with DND toggle */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Add Single Contact</h2>
+      <div className="flex items-center justify-between py-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            Add to DO NOT CONTACT list
+          <span className="text-xs font-medium text-slate-600">
+            Add to DO NOT CONTACT
           </span>
           <Switch
             checked={dnd}
             onCheckedChange={setDnd}
-            className="data-[state=checked]:bg-destructive"
+            className="data-[state=checked]:bg-destructive h-5 w-9"
           />
         </div>
       </div>
 
       {/* First Name */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">First Name</label>
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-slate-900">*First Name</label>
         <input
           type="text"
           value={formData.firstName}
           onChange={handleChange("firstName")}
           placeholder="Enter first name"
-          className={`w-full px-3 py-2.5 rounded-md border bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
-            errors.firstName ? "border-destructive" : "border-input"
+          className={`w-full px-2 py-1.5 rounded-md border bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400 ${
+            errors.firstName ? "border-red-400" : "border-slate-300"
           }`}
         />
         {errors.firstName && (
-          <p className="text-xs text-destructive">{errors.firstName}</p>
+          <p className="text-xs text-red-500">{errors.firstName}</p>
         )}
       </div>
 
       {/* Last Name */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Last Name</label>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-slate-700">Last Name</label>
         <input
           type="text"
           value={formData.lastName}
           onChange={handleChange("lastName")}
           placeholder="Enter last name"
-          className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
         />
       </div>
 
       {/* Email */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Email</label>
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-slate-900">*Email</label>
         <input
           type="email"
           value={formData.email}
           onChange={handleChange("email")}
           placeholder="Enter email"
-          className={`w-full px-3 py-2.5 rounded-md border bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
-            errors.email ? "border-destructive" : "border-input"
+          className={`w-full px-2 py-1.5 rounded-md border bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400 ${
+            errors.email ? "border-red-400" : "border-slate-300"
           }`}
         />
         {errors.email && (
-          <p className="text-xs text-destructive">{errors.email}</p>
+          <p className="text-xs text-red-500">{errors.email}</p>
         )}
       </div>
 
       {/* Phone */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Phone Number</label>
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-slate-900">*Phone Number</label>
         <input
           type="tel"
           value={formData.phone}
           onChange={handleChange("phone")}
-          placeholder="Enter phone number"
-          className={`w-full px-3 py-2.5 rounded-md border bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
-            errors.phone ? "border-destructive" : "border-input"
+          placeholder="Enter phone"
+          className={`w-full px-2 py-1.5 rounded-md border bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400 ${
+            errors.phone ? "border-red-400" : "border-slate-300"
           }`}
         />
         {errors.phone && (
-          <p className="text-xs text-destructive">{errors.phone}</p>
+          <p className="text-xs text-red-500">{errors.phone}</p>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Street Address</label>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-slate-700">Street Address</label>
         <input
           type="text"
           value={formData.streetAddress}
           onChange={handleChange("streetAddress")}
-          placeholder="Enter service address"
-          className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          placeholder="Enter address"
+          className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">City</label>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700">City</label>
           <input
             type="text"
             value={formData.city}
             onChange={handleChange("city")}
-            placeholder="Enter city"
-            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="City"
+            className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">State</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700">State</label>
           <input
             type="text"
             value={formData.state}
             onChange={handleChange("state")}
-            placeholder="Enter state"
-            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="State"
+            className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Zip Code</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700">Zip Code</label>
           <input
             type="text"
             value={formData.postalCode}
             onChange={handleChange("postalCode")}
-            placeholder="Enter zip code"
-            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="Zip"
+            className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Number of Dogs</label>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700">Number of Dogs</label>
           <input
             type="text"
             value={formData.numberOfDogs}
             onChange={handleChange("numberOfDogs")}
-            placeholder="Enter # of dogs"
-            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="# of dogs"
+            className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Last Time Scooped</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700">Last Time Scooped</label>
           <input
             type="text"
             value={formData.lastTimeScooped}
             onChange={handleChange("lastTimeScooped")}
-            placeholder="Enter date"
-            className="w-full px-3 py-2.5 rounded-md border border-input bg-muted/30 text-sm placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="Date"
+            className="w-full px-2 py-1.5 rounded-md border border-slate-300 bg-white text-xs placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400"
           />
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-muted/70 p-4">
-        <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
-        <div className="grid gap-2 pt-3 text-sm">
+      <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 mt-2">
+        <p className="text-xs font-semibold text-slate-900 mb-2">Add contacts too:</p>
+        <div className="grid gap-1.5 text-xs">
           {TAG_OPTIONS.map((option) => (
-            <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
+            <label key={option.value} className="flex items-center gap-2 rounded-lg border border-cyan-200 bg-white p-2 cursor-pointer transition hover:bg-cyan-50">
               <input
                 type="radio"
                 name="contactTag"
                 value={option.value}
                 checked={tagOption === option.value}
                 onChange={() => setTagOption(option.value)}
-                className="h-4 w-4 text-primary focus:ring-primary"
+                className="h-3 w-3 text-cyan-400 focus:ring-cyan-400"
               />
-              <span className="font-medium text-foreground">{option.label}</span>
+              <span className="font-medium text-slate-700">◉ {option.label}</span>
             </label>
           ))}
         </div>
@@ -327,11 +326,11 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
           id="consent"
           checked={consent}
           onCheckedChange={(checked) => setConsent(checked === true)}
-          className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          className="mt-0.5 h-4 w-4 border-cyan-300 data-[state=checked]:bg-cyan-400 data-[state=checked]:border-cyan-400"
         />
         <label
           htmlFor="consent"
-          className="text-sm text-muted-foreground leading-tight cursor-pointer"
+          className="text-xs text-slate-600 leading-tight cursor-pointer"
         >
           I have the required consent to message this customer by email or SMS
         </label>
@@ -341,16 +340,16 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
       <Button
         type="submit"
         disabled={!isFormValid || isSubmitting}
-        className="w-full h-11 text-sm font-medium"
+        className="w-full h-9 text-xs font-semibold bg-cyan-400 hover:bg-cyan-500 text-white rounded-lg mt-3"
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Adding Contact...
+            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            Adding...
           </>
         ) : (
           <>
-            <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="h-3 w-3 mr-1" />
             Add Contact
           </>
         )}

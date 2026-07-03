@@ -90,40 +90,27 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Upload a CSV file of your contacts</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your CSV file should include the following columns:
-        </p>
-        <div className="flex gap-6 mt-2">
-          <span className="text-sm font-medium text-foreground">Phone Number</span>
-          <span className="text-sm font-medium text-foreground">First Name</span>
-          <span className="text-sm font-medium text-foreground">Last Name</span>
-          <span className="text-sm font-medium text-foreground">Email</span>
-        </div>
-      </div>
-
+    <div className="space-y-2">
       {/* Drop Zone */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`relative flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 ${
+        className={`relative flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 ${
           isDragging
-            ? 'border-primary bg-primary/5 scale-[1.01]'
+            ? 'border-cyan-400 bg-cyan-100/50 scale-[1.01]'
             : selectedFile
-            ? 'border-primary/40 bg-primary/5'
-            : 'border-border hover:border-primary/40 hover:bg-muted/50'
+            ? 'border-cyan-300 bg-cyan-50'
+            : 'border-cyan-200 hover:border-cyan-400 hover:bg-cyan-50'
         }`}
       >
         {selectedFile ? (
-          <div className="flex items-center gap-3">
-            <FileSpreadsheet className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="h-6 w-6 text-cyan-500" />
             <div>
-              <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs font-semibold text-slate-900">{selectedFile.name}</p>
+              <p className="text-xs text-slate-500">
                 {(selectedFile.size / 1024).toFixed(1)} KB
               </p>
             </div>
@@ -132,21 +119,20 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
                 e.stopPropagation();
                 clearFile();
               }}
-              className="ml-2 p-1 rounded-full hover:bg-muted transition-colors"
+              className="ml-2 p-1 rounded-full hover:bg-slate-200 transition-colors"
             >
-              <X className="h-4 w-4 text-muted-foreground" />
+              <X className="h-4 w-4 text-slate-500" />
             </button>
           </div>
         ) : (
           <>
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-              <Upload className="h-5 w-5 text-primary" />
+            <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center mb-2">
+              <Upload className="h-5 w-5 text-cyan-500" />
             </div>
-            <p className="text-sm text-foreground font-medium">
-              Click to upload{' '}
-              <span className="text-muted-foreground font-normal">or drag and drop</span>
+            <p className="text-xs text-slate-900 font-semibold text-center">
+              Drag and Drop<br />or<br /><span className="text-cyan-500 font-bold">Upload from Computer</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-1">CSV files only</p>
+            <p className="text-xs text-slate-500 mt-1">CSV files only</p>
           </>
         )}
 
@@ -158,18 +144,6 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
           className="hidden"
         />
       </div>
-
-      {!selectedFile && (
-        <div className="text-center">
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="border-primary text-primary hover:bg-primary/5"
-          >
-            Select File
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

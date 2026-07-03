@@ -33,47 +33,47 @@ export default function AddContactsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-white p-6">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Add Contacts</h1>
-          <p className="text-slate-600">Add contacts individually or upload a CSV file to bulk import</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Add Contacts</h1>
+          <p className="text-sm text-slate-600">Add contacts individually or upload a CSV file to bulk import</p>
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Single Contact Form */}
-          <div className="space-y-6">
-            <Card className="p-8 border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-              {/* Section Header */}
-              <div className="mb-6 pb-6 border-b border-slate-200">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 bg-clip-text text-transparent mb-1">
+          <div>
+            <Card className="p-6 border-0 shadow-sm bg-white">
+              {/* Section Header with Cyan Background */}
+              <div className="mb-5 pb-0 -mx-6 -mt-6 px-6 py-3 bg-cyan-400 rounded-t-lg">
+                <h2 className="text-xl font-bold text-white">
                   Add Single Contacts
                 </h2>
-                <p className="text-sm text-slate-500">Add one contact at a time with all details</p>
               </div>
 
               {/* Form */}
-              <SingleContactForm locationId={locationId} />
+              <div className="mt-5">
+                <SingleContactForm locationId={locationId} />
+              </div>
             </Card>
           </div>
 
           {/* Right Column - CSV Upload */}
-          <div className="space-y-6">
-            <Card className="p-8 border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-              {/* Section Header */}
-              <div className="mb-6 pb-6 border-b border-slate-200">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 bg-clip-text text-transparent mb-1">
+          <div>
+            <Card className="p-6 border-0 shadow-sm bg-white">
+              {/* Section Header with Cyan Background */}
+              <div className="mb-5 pb-0 -mx-6 -mt-6 px-6 py-3 bg-cyan-400 rounded-t-lg">
+                <h2 className="text-xl font-bold text-white">
                   Upload CSV File
                 </h2>
-                <p className="text-sm text-slate-500">Bulk import multiple contacts at once</p>
               </div>
 
               {/* CSV Upload Requirements */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 rounded-lg">
-                <p className="text-sm font-semibold text-slate-900 mb-3">Your CSV file should include:</p>
-                <div className="grid grid-cols-2 gap-3 text-sm text-slate-700">
+              <div className="mb-4 p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                <p className="text-sm font-semibold text-slate-900 mb-2">Your CSV file should include:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-700">
                   <div>• First Name</div>
                   <div>• Phone Number</div>
                   <div>• Last Name</div>
