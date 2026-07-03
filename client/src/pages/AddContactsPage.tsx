@@ -28,10 +28,10 @@ export default function AddContactsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
-      <div className="mx-auto flex h-screen max-w-[1260px] flex-col px-6 py-3">
-        <div className="grid grid-cols-[1fr_80px_1fr] items-stretch gap-4 flex-1 overflow-hidden">
-          <Card className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+    <div className="min-h-screen bg-white overflow-y-auto">
+      <div className="mx-auto max-w-[1260px] px-6 py-3">
+        <div className="grid grid-cols-[1fr_80px_1fr] items-start gap-4">
+          <Card className="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between px-5 pt-5">
               <div className="inline-flex rounded-lg border border-cyan-300 bg-cyan-200 px-4 py-2 shadow-sm">
                 <h2 className="text-[28px] font-extrabold leading-none tracking-tight text-slate-900">
@@ -41,7 +41,7 @@ export default function AddContactsPage() {
               <span className="pt-8 text-xs font-medium text-slate-500">* Required Fields</span>
             </div>
 
-            <div className="flex-1 overflow-hidden px-6 pb-4 pt-3">
+            <div className="px-6 pb-4 pt-3">
               <SingleContactForm locationId={locationId} />
             </div>
           </Card>
@@ -53,7 +53,7 @@ export default function AddContactsPage() {
             </div>
           </div>
 
-          <Card className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+          <Card className="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between px-5 pt-5">
               <div className="inline-flex rounded-lg border border-cyan-300 bg-cyan-200 px-4 py-2 shadow-sm">
                 <h2 className="text-[28px] font-extrabold leading-none tracking-tight text-slate-900">
@@ -63,7 +63,7 @@ export default function AddContactsPage() {
               <span className="pt-8 text-xs font-medium text-slate-500">* Required Fields</span>
             </div>
 
-            <div className="flex-1 overflow-hidden px-6 pb-4 pt-3">
+            <div className="px-6 pb-4 pt-3">
               <div className="mb-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-900">Your CVS file should include the following:</p>
                 <div className="mt-2 grid grid-cols-3 gap-x-6 gap-y-1 text-sm text-slate-700">
