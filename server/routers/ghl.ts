@@ -37,6 +37,10 @@ const contactSchema = z.object({
   lastName: z.string().optional().default(""),
   email: z.string().optional().default(""),
   phone: z.string().optional().default(""),
+  address1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
   dnd: z.boolean().optional().default(false),
   tagName: z.string().optional(),
   customFields: z
@@ -167,7 +171,11 @@ export const ghlRouter = router({
         phone: input.contact.phone ?? "",
         dnd: input.contact.dnd ?? false,
         tagName: input.contact.tagName,
-        customFields: input.contact.customFields,
+        ...(input.contact.address1?.trim() ? { address1: input.contact.address1.trim() } : {}),
+        ...(input.contact.city?.trim() ? { city: input.contact.city.trim() } : {}),
+        ...(input.contact.state?.trim() ? { state: input.contact.state.trim() } : {}),
+        ...(input.contact.postalCode?.trim() ? { postalCode: input.contact.postalCode.trim() } : {}),
+        ...(input.contact.customFields?.length ? { customFields: input.contact.customFields } : {}),
       };
 
       const result = await processContact(
@@ -207,6 +215,11 @@ export const ghlRouter = router({
           phone: contact.phone ?? "",
           dnd: input.dnd,
           tagName: input.tagName,
+          ...(contact.address1?.trim() ? { address1: contact.address1.trim() } : {}),
+          ...(contact.city?.trim() ? { city: contact.city.trim() } : {}),
+          ...(contact.state?.trim() ? { state: contact.state.trim() } : {}),
+          ...(contact.postalCode?.trim() ? { postalCode: contact.postalCode.trim() } : {}),
+          ...(contact.customFields?.length ? { customFields: contact.customFields } : {}),
         };
 
         try {

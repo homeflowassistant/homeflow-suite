@@ -19,14 +19,33 @@ interface ColumnMappingProps {
   onNext: (mapping: ColumnMappingType) => void;
 }
 
-type MappingField = 'firstName' | 'lastName' | 'fullName' | 'email' | 'phone';
+type MappingField =
+  | 'firstName'
+  | 'lastName'
+  | 'fullName'
+  | 'email'
+  | 'phone'
+  | 'address1'
+  | 'city'
+  | 'state'
+  | 'postalCode'
+  | 'numberOfDogs'
+  | 'lastTimeScooped'
+  | 'frequency';
 
-const FIELD_OPTIONS: { key: MappingField; label: string; group: string; required: boolean }[] = [
+const FIELD_OPTIONS: { key: MappingField; label: string; group: string; required: boolean; helper?: string }[] = [
   { key: 'fullName', label: 'Full Name', group: 'Name', required: false },
   { key: 'firstName', label: 'First Name', group: 'Name', required: false },
   { key: 'lastName', label: 'Last Name', group: 'Name', required: false },
   { key: 'phone', label: 'Phone Number', group: 'Contact Method', required: false },
   { key: 'email', label: 'Email', group: 'Contact Method', required: false },
+  { key: 'address1', label: 'Street Address', group: 'Address', required: false, helper: 'GHL standard field: address1' },
+  { key: 'city', label: 'City', group: 'Address', required: false, helper: 'GHL standard field: city' },
+  { key: 'state', label: 'State', group: 'Address', required: false, helper: 'GHL standard field: state' },
+  { key: 'postalCode', label: 'Zip Code', group: 'Address', required: false, helper: 'GHL standard field: postalCode' },
+  { key: 'numberOfDogs', label: 'Number of Dogs', group: 'Review Details', required: false, helper: 'GHL custom field: number_of_dogs' },
+  { key: 'lastTimeScooped', label: 'Last Time Scooped', group: 'Review Details', required: false, helper: 'GHL custom field: last_time_scooped' },
+  { key: 'frequency', label: 'Frequency', group: 'Review Details', required: false, helper: 'GHL custom field: frequency' },
 ];
 
 export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappingProps) {
@@ -66,12 +85,14 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
 
   const previewRows = parsedCSV.rows.slice(0, 7);
 
-  // Group fields by category
-  const nameFields = FIELD_OPTIONS.filter((f) => f.group === 'Name');
-  const contactFields = FIELD_OPTIONS.filter((f) => f.group === 'Contact Method');
-
   const hasNameMapping = mapping.firstName || mapping.fullName;
   const hasContactMapping = mapping.email || mapping.phone;
+  const groups = [
+    { key: 'Name', label: 'Name (at least one required)', hasMapping: hasNameMapping },
+    { key: 'Contact Method', label: 'Contact Method (at least one required)', hasMapping: hasContactMapping },
+    { key: 'Address', label: 'Address', hasMapping: Boolean(mapping.address1 || mapping.city || mapping.state || mapping.postalCode) },
+    { key: 'Review Details', label: 'Review Details', hasMapping: Boolean(mapping.numberOfDogs || mapping.lastTimeScooped || mapping.frequency) },
+  ];
 
   return (
     <div className="space-y-6">
@@ -120,55 +141,35 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
           <span className="text-xs text-muted-foreground">At least one field per group required</span>
         </div>
 
-        {/* Name Group */}
-        <div className={`border-l-4 ${hasNameMapping ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
-          <div className="flex items-center gap-2 mb-3">
-            {hasNameMapping && <Check className="h-4 w-4 text-primary" />}
-            <h4 className="text-sm font-medium text-foreground">
-              Name (at least one required)
-            </h4>
-          </div>
-          <div className="space-y-3">
-            {nameFields.map((field) => (
-              <MappingRow
-                key={field.key}
-                label={field.label}
-                value={mapping[field.key]}
-                options={parsedCSV.headers}
-                onChange={(val) => handleMappingChange(field.key, val)}
-                onRemove={() => handleRemoveMapping(field.key)}
-              />
-            ))}
-          </div>
-        </div>
+        {groups.map((group) => {
+          const fields = FIELD_OPTIONS.filter((field) => field.group === group.key);
 
-        {/* Contact Method Group */}
-        <div className={`border-l-4 ${hasContactMapping ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
-          <div className="flex items-center gap-2 mb-3">
-            {hasContactMapping && <Check className="h-4 w-4 text-primary" />}
-            <h4 className="text-sm font-medium text-foreground">
-              Contact Method (at least one required)
-            </h4>
-          </div>
-          <div className="space-y-3">
-            {contactFields.map((field) => (
-              <MappingRow
-                key={field.key}
-                label={field.label}
-                value={mapping[field.key]}
-                options={parsedCSV.headers}
-                onChange={(val) => handleMappingChange(field.key, val)}
-                onRemove={() => handleRemoveMapping(field.key)}
-              />
-            ))}
-          </div>
-        </div>
+          return (
+            <div key={group.key} className={`border-l-4 ${group.hasMapping ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
+              <div className="flex items-center gap-2 mb-3">
+                {group.hasMapping && <Check className="h-4 w-4 text-primary" />}
+                <h4 className="text-sm font-medium text-foreground">{group.label}</h4>
+              </div>
+              <div className="space-y-3">
+                {fields.map((field) => (
+                  <MappingRow
+                    key={field.key}
+                    label={field.label}
+                    helper={field.helper}
+                    value={mapping[field.key]}
+                    options={parsedCSV.headers}
+                    onChange={(val) => handleMappingChange(field.key, val)}
+                    onRemove={() => handleRemoveMapping(field.key)}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
-        {/* Optional Fields Note */}
         <div className="pl-4 py-2">
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium">Last Name</span>{' '}
-            <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-xs">Optional</span>
+            Standard GHL fields: address1, city, state, postalCode. Custom fields: number_of_dogs, last_time_scooped, frequency.
           </p>
         </div>
       </div>
@@ -200,12 +201,14 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
 // Sub-component for individual mapping rows
 function MappingRow({
   label,
+  helper,
   value,
   options,
   onChange,
   onRemove,
 }: {
   label: string;
+  helper?: string;
   value?: string;
   options: string[];
   onChange: (val: string) => void;
@@ -213,7 +216,10 @@ function MappingRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-foreground w-32 shrink-0">{label}</span>
+      <div className="w-36 shrink-0">
+        <span className="text-sm text-foreground block">{label}</span>
+        {helper && <span className="text-[11px] text-muted-foreground block mt-0.5">{helper}</span>}
+      </div>
       <span className="text-muted-foreground">→</span>
       <select
         value={value || ''}

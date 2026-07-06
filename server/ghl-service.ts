@@ -51,6 +51,10 @@ export interface GHLContactData {
   lastName: string;
   email: string;
   phone: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
   dnd?: boolean;
   tagName?: string;
   customFields?: Array<{ fieldKey: string; field_value?: unknown }>;
@@ -1253,13 +1257,19 @@ export async function createContact(
       name: `${contact.firstName} ${contact.lastName}`.trim(),
       email: contact.email || undefined,
       phone: contact.phone || undefined,
+      address1: contact.address1 || undefined,
+      city: contact.city || undefined,
+      state: contact.state || undefined,
+      postalCode: contact.postalCode || undefined,
       locationId,
       dnd: contact.dnd || false,
       source: "Royal Review - Add Contacts",
-      customFields: contact.customFields?.map((field) => ({
-        key: field.fieldKey,
-        field_value: field.field_value,
-      })),
+      customFields: contact.customFields
+        ?.map((field) => ({
+          key: field.fieldKey,
+          field_value: field.field_value,
+        }))
+        .filter((field) => String(field.field_value ?? "").trim() !== ""),
     }),
   });
 

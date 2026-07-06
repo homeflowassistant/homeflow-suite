@@ -34,6 +34,7 @@ export default function ReviewConfirm({
 }: ReviewConfirmProps) {
   const [dnd, setDnd] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [tagOption, setTagOption] = useState(tagName);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -46,6 +47,13 @@ export default function ReviewConfirm({
   if (mapping.fullName) mappedColumns.push("full name");
   if (mapping.firstName) mappedColumns.push("first name");
   if (mapping.lastName) mappedColumns.push("last name");
+  if (mapping.address1) mappedColumns.push("street address");
+  if (mapping.city) mappedColumns.push("city");
+  if (mapping.state) mappedColumns.push("state");
+  if (mapping.postalCode) mappedColumns.push("zip code");
+  if (mapping.numberOfDogs) mappedColumns.push("number of dogs");
+  if (mapping.lastTimeScooped) mappedColumns.push("last time scooped");
+  if (mapping.frequency) mappedColumns.push("frequency");
 
   const handleUpload = async () => {
     setIsUploading(true);
@@ -69,6 +77,15 @@ export default function ReviewConfirm({
           lastName: c.lastName,
           email: c.email,
           phone: c.phone,
+          address1: c.address1,
+          city: c.city,
+          state: c.state,
+          postalCode: c.postalCode,
+          customFields: [
+            { fieldKey: "number_of_dogs", field_value: c.numberOfDogs },
+            { fieldKey: "last_time_scooped", field_value: c.lastTimeScooped },
+            { fieldKey: "frequency", field_value: c.frequency },
+          ].filter((field) => String(field.field_value ?? "").trim() !== ""),
         }));
 
         const result = await processBatchMutation.mutateAsync({
@@ -170,7 +187,7 @@ export default function ReviewConfirm({
                 name="batchTag"
                 value={option.value}
                 checked={tagOption === option.value}
-                onChange={() => setTagOption(option.value as any)}
+                onChange={() => setTagOption(option.value as typeof tagOption)}
                 className="h-4 w-4 text-primary focus:ring-primary"
               />
               <span className="font-medium text-foreground">{option.label}</span>

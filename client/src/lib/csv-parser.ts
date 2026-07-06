@@ -18,6 +18,13 @@ export interface ColumnMapping {
   fullName?: string;
   email?: string;
   phone?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  numberOfDogs?: string;
+  lastTimeScooped?: string;
+  frequency?: string;
 }
 
 export interface MappedContact {
@@ -25,6 +32,13 @@ export interface MappedContact {
   lastName: string;
   email: string;
   phone: string;
+  address1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  numberOfDogs: string;
+  lastTimeScooped: string;
+  frequency: string;
 }
 
 /**
@@ -142,6 +156,59 @@ export function autoDetectMappings(headers: string[]): ColumnMapping {
   );
   if (phoneIdx >= 0) mapping.phone = headers[phoneIdx];
 
+  // Detect street address
+  const addressIdx = lowerHeaders.findIndex(
+    (h) =>
+      h === 'street address' ||
+      h === 'address' ||
+      h === 'address 1' ||
+      h === 'address1' ||
+      h === 'service address'
+  );
+  if (addressIdx >= 0) mapping.address1 = headers[addressIdx];
+
+  // Detect city
+  const cityIdx = lowerHeaders.findIndex((h) => h === 'city');
+  if (cityIdx >= 0) mapping.city = headers[cityIdx];
+
+  // Detect state
+  const stateIdx = lowerHeaders.findIndex((h) => h === 'state' || h === 'province');
+  if (stateIdx >= 0) mapping.state = headers[stateIdx];
+
+  // Detect zip/postal code
+  const postalCodeIdx = lowerHeaders.findIndex(
+    (h) =>
+      h === 'zip' ||
+      h === 'zip code' ||
+      h === 'zipcode' ||
+      h === 'postal code' ||
+      h === 'postalcode'
+  );
+  if (postalCodeIdx >= 0) mapping.postalCode = headers[postalCodeIdx];
+
+  // Detect custom review fields
+  const numberOfDogsIdx = lowerHeaders.findIndex(
+    (h) =>
+      h === 'number of dogs' ||
+      h === '# of dogs' ||
+      h === 'dogs' ||
+      h === 'number_of_dogs'
+  );
+  if (numberOfDogsIdx >= 0) mapping.numberOfDogs = headers[numberOfDogsIdx];
+
+  const lastTimeScoopedIdx = lowerHeaders.findIndex(
+    (h) =>
+      h === 'last time scooped' ||
+      h === 'last_time_scooped' ||
+      h === 'last scooped'
+  );
+  if (lastTimeScoopedIdx >= 0) mapping.lastTimeScooped = headers[lastTimeScoopedIdx];
+
+  const frequencyIdx = lowerHeaders.findIndex(
+    (h) => h === 'frequency' || h === 'service frequency' || h === 'cleaning frequency'
+  );
+  if (frequencyIdx >= 0) mapping.frequency = headers[frequencyIdx];
+
   return mapping;
 }
 
@@ -177,6 +244,13 @@ export function applyMappings(
       lastName,
       email: getVal(mapping.email),
       phone: getVal(mapping.phone),
+      address1: getVal(mapping.address1),
+      city: getVal(mapping.city),
+      state: getVal(mapping.state),
+      postalCode: getVal(mapping.postalCode),
+      numberOfDogs: getVal(mapping.numberOfDogs),
+      lastTimeScooped: getVal(mapping.lastTimeScooped),
+      frequency: getVal(mapping.frequency),
     };
   });
 }
