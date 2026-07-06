@@ -49,7 +49,6 @@ export default function ReviewConfirm({
   if (mapping.lastName) mappedColumns.push("last name");
   if (mapping.address1) mappedColumns.push("street address");
   if (mapping.city) mappedColumns.push("city");
-  if (mapping.state) mappedColumns.push("state");
   if (mapping.postalCode) mappedColumns.push("zip code");
   if (mapping.numberOfDogs) mappedColumns.push("number of dogs");
   if (mapping.lastTimeScooped) mappedColumns.push("last time scooped");
@@ -79,7 +78,6 @@ export default function ReviewConfirm({
           phone: c.phone,
           address1: c.address1,
           city: c.city,
-          state: c.state,
           postalCode: c.postalCode,
           customFields: [
             { fieldKey: "number_of_dogs", field_value: c.numberOfDogs },

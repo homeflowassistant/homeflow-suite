@@ -20,7 +20,6 @@ export interface ColumnMapping {
   phone?: string;
   address1?: string;
   city?: string;
-  state?: string;
   postalCode?: string;
   numberOfDogs?: string;
   lastTimeScooped?: string;
@@ -34,7 +33,6 @@ export interface MappedContact {
   phone: string;
   address1: string;
   city: string;
-  state: string;
   postalCode: string;
   numberOfDogs: string;
   lastTimeScooped: string;
@@ -171,10 +169,6 @@ export function autoDetectMappings(headers: string[]): ColumnMapping {
   const cityIdx = lowerHeaders.findIndex((h) => h === 'city');
   if (cityIdx >= 0) mapping.city = headers[cityIdx];
 
-  // Detect state
-  const stateIdx = lowerHeaders.findIndex((h) => h === 'state' || h === 'province');
-  if (stateIdx >= 0) mapping.state = headers[stateIdx];
-
   // Detect zip/postal code
   const postalCodeIdx = lowerHeaders.findIndex(
     (h) =>
@@ -246,7 +240,6 @@ export function applyMappings(
       phone: getVal(mapping.phone),
       address1: getVal(mapping.address1),
       city: getVal(mapping.city),
-      state: getVal(mapping.state),
       postalCode: getVal(mapping.postalCode),
       numberOfDogs: getVal(mapping.numberOfDogs),
       lastTimeScooped: getVal(mapping.lastTimeScooped),
@@ -265,8 +258,8 @@ export function validateMappings(mapping: ColumnMapping): {
   const errors: string[] = [];
 
   // At least one name field required
-  if (!mapping.firstName && !mapping.fullName) {
-    errors.push('At least First Name or Full Name must be mapped');
+  if (!mapping.firstName) {
+    errors.push('First Name must be mapped');
   }
 
   // At least one contact method required

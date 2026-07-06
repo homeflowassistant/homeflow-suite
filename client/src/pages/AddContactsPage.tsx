@@ -12,7 +12,7 @@ export default function AddContactsPage() {
 
   if (!locationId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center p-8">
         <div className="max-w-lg text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-cyan-100 flex items-center justify-center mx-auto">
             <Info className="h-7 w-7 text-cyan-600" />
@@ -76,10 +76,7 @@ export default function AddContactsPage() {
                   <div>Frequency</div>
                   <div>Street Address</div>
                   <div>City</div>
-                  <div />
-                  <div />
                   <div>Zip Code</div>
-                  <div>State</div>
                 </div>
               </div>
               <CSVUploadFlow locationId={locationId} />

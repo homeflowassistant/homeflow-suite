@@ -230,10 +230,7 @@ export default function Home() {
                   <div>Frequency</div>
                   <div>Street Address</div>
                   <div>City</div>
-                  <div />
-                  <div />
                   <div>Zip Code</div>
-                  <div>State</div>
                 </div>
               </div>
 

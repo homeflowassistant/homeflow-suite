@@ -27,25 +27,22 @@ type MappingField =
   | 'phone'
   | 'address1'
   | 'city'
-  | 'state'
   | 'postalCode'
   | 'numberOfDogs'
   | 'lastTimeScooped'
   | 'frequency';
 
-const FIELD_OPTIONS: { key: MappingField; label: string; group: string; required: boolean; helper?: string }[] = [
-  { key: 'fullName', label: 'Full Name', group: 'Name', required: false },
-  { key: 'firstName', label: 'First Name', group: 'Name', required: false },
-  { key: 'lastName', label: 'Last Name', group: 'Name', required: false },
-  { key: 'phone', label: 'Phone Number', group: 'Contact Method', required: false },
-  { key: 'email', label: 'Email', group: 'Contact Method', required: false },
-  { key: 'address1', label: 'Street Address', group: 'Address', required: false, helper: 'GHL standard field: address1' },
-  { key: 'city', label: 'City', group: 'Address', required: false, helper: 'GHL standard field: city' },
-  { key: 'state', label: 'State', group: 'Address', required: false, helper: 'GHL standard field: state' },
-  { key: 'postalCode', label: 'Zip Code', group: 'Address', required: false, helper: 'GHL standard field: postalCode' },
-  { key: 'numberOfDogs', label: 'Number of Dogs', group: 'Review Details', required: false, helper: 'GHL custom field: number_of_dogs' },
-  { key: 'lastTimeScooped', label: 'Last Time Scooped', group: 'Review Details', required: false, helper: 'GHL custom field: last_time_scooped' },
-  { key: 'frequency', label: 'Frequency', group: 'Review Details', required: false, helper: 'GHL custom field: frequency' },
+const FIELD_OPTIONS: { key: MappingField; label: string; required: boolean; helper?: string }[] = [
+  { key: 'firstName', label: 'First Name', required: true },
+  { key: 'phone', label: 'Phone Number', required: true },
+  { key: 'numberOfDogs', label: 'Number of Dogs', required: false, helper: 'GHL custom field: number_of_dogs' },
+  { key: 'lastName', label: 'Last Name', required: false },
+  { key: 'email', label: 'Email', required: true },
+  { key: 'lastTimeScooped', label: 'Last Time Scooped', required: false, helper: 'GHL custom field: last_time_scooped' },
+  { key: 'frequency', label: 'Frequency', required: false, helper: 'GHL custom field: frequency' },
+  { key: 'address1', label: 'Street Address', required: false, helper: 'GHL standard field: address1' },
+  { key: 'city', label: 'City', required: false, helper: 'GHL standard field: city' },
+  { key: 'postalCode', label: 'Zip Code', required: false, helper: 'GHL standard field: postalCode' },
 ];
 
 export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappingProps) {
@@ -85,14 +82,8 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
 
   const previewRows = parsedCSV.rows.slice(0, 7);
 
-  const hasNameMapping = mapping.firstName || mapping.fullName;
+  const hasNameMapping = Boolean(mapping.firstName);
   const hasContactMapping = mapping.email || mapping.phone;
-  const groups = [
-    { key: 'Name', label: 'Name (at least one required)', hasMapping: hasNameMapping },
-    { key: 'Contact Method', label: 'Contact Method (at least one required)', hasMapping: hasContactMapping },
-    { key: 'Address', label: 'Address', hasMapping: Boolean(mapping.address1 || mapping.city || mapping.state || mapping.postalCode) },
-    { key: 'Review Details', label: 'Review Details', hasMapping: Boolean(mapping.numberOfDogs || mapping.lastTimeScooped || mapping.frequency) },
-  ];
 
   return (
     <div className="space-y-6">
@@ -141,35 +132,29 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
           <span className="text-xs text-muted-foreground">At least one field per group required</span>
         </div>
 
-        {groups.map((group) => {
-          const fields = FIELD_OPTIONS.filter((field) => field.group === group.key);
-
-          return (
-            <div key={group.key} className={`border-l-4 ${group.hasMapping ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
-              <div className="flex items-center gap-2 mb-3">
-                {group.hasMapping && <Check className="h-4 w-4 text-primary" />}
-                <h4 className="text-sm font-medium text-foreground">{group.label}</h4>
-              </div>
-              <div className="space-y-3">
-                {fields.map((field) => (
-                  <MappingRow
-                    key={field.key}
-                    label={field.label}
-                    helper={field.helper}
-                    value={mapping[field.key]}
-                    options={parsedCSV.headers}
-                    onChange={(val) => handleMappingChange(field.key, val)}
-                    onRemove={() => handleRemoveMapping(field.key)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        <div className={`border-l-4 ${(hasNameMapping && hasContactMapping) ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
+          <div className="flex items-center gap-2 mb-3">
+            {hasNameMapping && hasContactMapping && <Check className="h-4 w-4 text-primary" />}
+            <h4 className="text-sm font-medium text-foreground">Map the CSV fields below</h4>
+          </div>
+          <div className="space-y-3">
+            {FIELD_OPTIONS.map((field) => (
+              <MappingRow
+                key={field.key}
+                label={field.label}
+                helper={field.helper}
+                value={mapping[field.key]}
+                options={parsedCSV.headers}
+                onChange={(val) => handleMappingChange(field.key, val)}
+                onRemove={() => handleRemoveMapping(field.key)}
+              />
+            ))}
+          </div>
+        </div>
 
         <div className="pl-4 py-2">
           <p className="text-xs text-muted-foreground">
-            Standard GHL fields: address1, city, state, postalCode. Custom fields: number_of_dogs, last_time_scooped, frequency.
+            Required for upload: First Name, and Email or Phone Number.
           </p>
         </div>
       </div>
