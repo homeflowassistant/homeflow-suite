@@ -34,7 +34,7 @@ export default function ReviewConfirm({
 }: ReviewConfirmProps) {
   const [dnd, setDnd] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [tagOption, setTagOption] = useState(tagName);
+  const [selectedTag, setSelectedTag] = useState(tagName);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -90,7 +90,7 @@ export default function ReviewConfirm({
           locationId,
           contacts,
           dnd,
-          tagName,
+          tagName: selectedTag,
         });
 
         totalSuccessful += result.successful;
@@ -184,8 +184,8 @@ export default function ReviewConfirm({
                 type="radio"
                 name="batchTag"
                 value={option.value}
-                checked={tagOption === option.value}
-                onChange={() => setTagOption(option.value as typeof tagOption)}
+                checked={selectedTag === option.value}
+                onChange={() => setSelectedTag(option.value as typeof selectedTag)}
                 className="h-4 w-4 text-primary focus:ring-primary"
               />
               <span className="font-medium text-foreground">{option.label}</span>

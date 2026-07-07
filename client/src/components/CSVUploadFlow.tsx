@@ -48,7 +48,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [tagOption, setTagOption] = useState<ContactTagOption>("lead-follow-up");
+  const [selectedTag, setSelectedTag] = useState<ContactTagOption>("lead-follow-up");
 
   const handleFileUploaded = (data: ParsedCSV) => {
     setParsedCSV(data);
@@ -109,8 +109,8 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
                   type="radio"
                   name="csvTag"
                   value={option.value}
-                  checked={tagOption === option.value}
-                  onChange={() => setTagOption(option.value)}
+                  checked={selectedTag === option.value}
+                  onChange={() => setSelectedTag(option.value)}
                   className="h-4 w-4 text-cyan-400 focus:ring-cyan-400"
                 />
                 <span className="font-medium text-slate-700">{option.label}</span>
@@ -158,7 +158,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
                 parsedCSV={parsedCSV}
                 mapping={mapping}
                 locationId={locationId}
-                tagName={tagOption}
+                tagName={selectedTag}
                 onBack={handleBack}
                 onComplete={handleComplete}
               />
