@@ -262,13 +262,13 @@ export default function RequestScheduling() {
         </section>
 
         <div className="rs-save-bar">
-          <button className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
+          <button type="button" className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save settings"}
           </button>
         </div>
 
         <div className="rs-actions-row">
-          <p className="rs-actions-copy">Would you like to view your workflow templates? You will be redirected to a new page. Please save any changes on this page before continuing.</p>
+          <p className="rs-actions-copy">Save your Request Scheduling settings before visiting workflow templates. You will be redirected to a new page.</p>
           <div className="rs-actions-buttons">
             <a href="/messaging" className="rs-cta-btn">Email Templates</a>
             <a href="/messaging" className="rs-cta-btn rs-cta-btn-secondary">SMS Templates</a>
