@@ -3,26 +3,37 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getLocationCustomValueMap, upsertGhlCustomValue } from "../ghl-service";
 
-const TIMING_LABEL_TO_INDEX: Record<string, 0 | 1 | 2 | 3> = {
-  "within_24h": 0,
-  "within 24 hours": 0,
-  "24h": 1,
+const TIMING_LABEL_TO_INDEX: Record<string, 0 | 1 | 2 | 3 | 4> = {
+  immediately: 0,
+  "next day": 1,
   "24 hours": 1,
-  "48h": 2,
-  "48 hours": 2,
-  "1week": 3,
-  "1 week": 3,
-};
-
-const REVERSE_TIMING_MAP: Record<string, 0 | 1 | 2 | 3> = {
-  within_24h: 0,
   "24h": 1,
+  "48 hours later": 2,
+  "48 hours": 2,
   "48h": 2,
-  "1week": 3,
+  "72 hours later": 3,
+  "72 hours": 3,
+  "1 week from now": 4,
+  "one week from now": 4,
+  "1 week": 4,
+  "one week": 4,
 };
 
-const REQUEST_SCHEDULING_LABELS = ["Within 24 Hours", "24 Hours", "48 Hours", "1 Week"] as const;
+const REVERSE_TIMING_MAP: Record<string, 0 | 1 | 2 | 3 | 4> = {
+  immediately: 0,
+  "next day": 1,
+  "24 hours": 1,
+  "48 hours later": 2,
+  "72 hours later": 3,
+  "1 week from now": 4,
+  "one week from now": 4,
+  "1 week": 4,
+  "one week": 4,
+};
+
+const REQUEST_SCHEDULING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 const FOLLOW_UP_LIMITS = ["0", "1", "2", "3"] as const;
+const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "S&G Link"] as const;
 
 export const requestSchedulingRouter = router({
   getSettings: publicProcedure
@@ -46,8 +57,12 @@ export const requestSchedulingRouter = router({
 
       const initialRequestScheduling = getCustomValue("initial_request_scheduling");
       const followUpLimit = getCustomValue("follow_up_limit");
+      const leadFollowUpOption = getCustomValue("lead_follow_up_option");
 
       return {
+        leadFollowUpOption: LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number])
+          ? (leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number])
+          : "Lite",
         initialTiming: TIMING_LABEL_TO_INDEX[initialRequestScheduling.toLowerCase().trim()] ?? REVERSE_TIMING_MAP[initialRequestScheduling] ?? 0,
         followUpCount: FOLLOW_UP_LIMITS.includes(followUpLimit as (typeof FOLLOW_UP_LIMITS)[number])
           ? Number.parseInt(followUpLimit, 10)
@@ -65,6 +80,7 @@ export const requestSchedulingRouter = router({
     .input(
       z.object({
         locationId: z.string().min(1, "Location ID is required"),
+        leadFollowUpOption: z.enum(LEAD_FOLLOW_UP_OPTIONS),
         initialRequestScheduling: z.enum(REQUEST_SCHEDULING_LABELS),
         followUpLimit: z.enum(FOLLOW_UP_LIMITS),
       })
@@ -79,8 +95,9 @@ export const requestSchedulingRouter = router({
             message: "Location ID cannot be empty",
           });
         }
-        // Upsert both custom values at location level
-        const [initialResults, followUpResults] = await Promise.all([
+        // Upsert custom values using the backend helper which resolves existing IDs automatically.
+        const [optionResults, initialResults, followUpResults] = await Promise.all([
+          upsertGhlCustomValue(locationId, "lead_follow_up_option", input.leadFollowUpOption),
           upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
           upsertGhlCustomValue(locationId, "follow_up_limit", input.followUpLimit),
         ]);
@@ -88,10 +105,15 @@ export const requestSchedulingRouter = router({
         return {
           success: true,
           saved: {
+            lead_follow_up_option: optionResults.value,
             initial_request_scheduling: initialResults.value,
             follow_up_limit: followUpResults.value,
           },
           results: {
+            lead_follow_up_option: {
+              action: "created_or_updated",
+              id: optionResults.id,
+            },
             initial_request_scheduling: {
               action: "created_or_updated",
               id: initialResults.id,

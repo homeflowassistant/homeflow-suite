@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./RequestScheduling.css";
 
-// Mapping from UI slider value to display label and custom value
-const TIMING_LABELS = ["Within 24 Hours", "24 Hours", "48 Hours", "1 Week"] as const;
-const TIMING_CUSTOM_VALUES = ["Within 24 Hours", "24 Hours", "48 Hours", "1 Week"] as const;
+const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "S&G Link"] as const;
+const TIMING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
+const TIMING_CUSTOM_VALUES = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 
-// Mapping from followUpCount to custom value string
 const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   0: "0",
   1: "1",
@@ -16,11 +15,21 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   3: "3",
 };
 
+function normalizeTimingValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function useLocationAndParams() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       locationId: params.get("locationId") || "",
+      leadFollowUpOption: params.get("lead_follow_up_option") || "",
       initialRequestScheduling: params.get("initial_request_scheduling") || "",
       followUpLimit: params.get("follow_up_limit") || "",
     };
@@ -28,29 +37,35 @@ function useLocationAndParams() {
 }
 
 function sliderBackground(value: number) {
-  const pct = (value / 3) * 100;
+  const pct = (value / (TIMING_LABELS.length - 1)) * 100;
   return `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${pct}%, hsl(var(--border)) ${pct}%, hsl(var(--border)) 100%)`;
 }
 
-/**
- * Map custom value string to UI slider index
- */
 function timingCustomValueToIndex(value: string): number {
-  const index = TIMING_CUSTOM_VALUES.indexOf(value as any);
-  return index >= 0 ? index : 0;
-}
+  const normalized = normalizeTimingValue(value);
+  const lookup: Record<string, number> = {
+    immediately: 0,
+    "next day": 1,
+    "24 hours": 1,
+    "24h": 1,
+    "48 hours later": 2,
+    "48 hours": 2,
+    "48h": 2,
+    "72 hours later": 3,
+    "72 hours": 3,
+    "1 week from now": 4,
+    "one week from now": 4,
+    "1 week": 4,
+    "one week": 4,
+  };
 
-/**
- * Map service type string to UI slider index
- */
-function serviceTypeToIndex(value: string): number {
-  const idx = parseInt(value, 10);
-  return isNaN(idx) || idx < 0 || idx > 3 ? 0 : idx;
+  return lookup[normalized] ?? TIMING_CUSTOM_VALUES.findIndex((label) => normalizeTimingValue(label) === normalized) ?? 0;
 }
 
 export default function RequestScheduling() {
-  const { locationId, initialRequestScheduling, followUpLimit } = useLocationAndParams();
-  const [initialTiming, setInitialTiming] = useState(0);
+  const { locationId, leadFollowUpOption, initialRequestScheduling, followUpLimit } = useLocationAndParams();
+  const [selectedOption, setSelectedOption] = useState<(typeof LEAD_FOLLOW_UP_OPTIONS)[number]>("Lite");
+  const [initialTiming, setInitialTiming] = useState(3);
   const [followUpCount, setFollowUpCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,47 +74,48 @@ export default function RequestScheduling() {
     { enabled: !!locationId }
   );
 
-  // Mutation for saving to location custom values
   const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
   const showToast = useCallback((message: string, isError = false) => {
     toast(message, { style: isError ? { background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" } : undefined });
   }, []);
 
-  // Preload from URL query parameters (custom values)
   useEffect(() => {
+    if (leadFollowUpOption && LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as any)) {
+      setSelectedOption(leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]);
+    }
+
     if (initialRequestScheduling) {
-      const idx = timingCustomValueToIndex(initialRequestScheduling);
-      setInitialTiming(idx);
+      setInitialTiming(timingCustomValueToIndex(initialRequestScheduling));
     }
 
     if (followUpLimit) {
       const val = parseInt(followUpLimit, 10);
       if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
     }
-  }, [initialRequestScheduling, followUpLimit]);
+  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit]);
 
   useEffect(() => {
-    if (initialRequestScheduling || followUpLimit) {
+    if (leadFollowUpOption || initialRequestScheduling || followUpLimit) {
       return;
     }
 
     if (settingsQuery.data) {
+      setSelectedOption(settingsQuery.data.leadFollowUpOption);
       setInitialTiming(settingsQuery.data.initialTiming);
       setFollowUpCount(settingsQuery.data.followUpCount);
     }
-  }, [initialRequestScheduling, followUpLimit, settingsQuery.data]);
+  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit, settingsQuery.data]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Save to location-level custom values
       await saveCustomValuesMutation.mutateAsync({
         locationId,
+        leadFollowUpOption: selectedOption,
         initialRequestScheduling: TIMING_LABELS[initialTiming],
         followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
       });
-      
       showToast("Settings saved successfully.");
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
@@ -116,7 +132,7 @@ export default function RequestScheduling() {
             <Link2 className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-xl font-semibold text-foreground">Request Scheduling</h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/request-scheduling?locationId=YOUR_LOCATION_ID</code> URL.
           </p>
         </div>
@@ -127,115 +143,137 @@ export default function RequestScheduling() {
   return (
     <div className="rs-main">
       <div className="rs-shell">
-        <header className="bg-background/95 backdrop-blur-sm sticky top-0 z-10 mb-6 rounded-t-xl border border-border">
-          <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3 rounded-t-xl">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-              <div className="min-w-0">
-                <h1 className="text-sm font-semibold text-foreground leading-none">Request Scheduling</h1>
-                <p className="text-xs text-muted-foreground truncate">Location {locationId}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span>Connected</span>
-            </div>
+        <header className="rs-page-header">
+          <div>
+            <p className="rs-page-label">Lead Follow-Up Options</p>
+            <h1 className="rs-page-title">How it works</h1>
+            <p className="rs-page-copy">
+              1. Add Contacts manually or via Facebook form.
+              2. We reach out with a message.
+              3. They approve a quote and you schedule a scope.
+            </p>
+          </div>
+          <div className="rs-page-icon">
+            <Sparkles className="h-6 w-6 text-primary" />
           </div>
         </header>
 
-        <div className="rs-grid">
-          <section className="rs-card">
-            <h2 className="rs-title">Initial Request Scheduling</h2>
-            <p className="rs-subtitle">Choose when to send review requests to your contacts after receiving their information.</p>
+        <section className="rs-card rs-option-section">
+          <div className="rs-option-grid">
+            {LEAD_FOLLOW_UP_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`rs-option-card ${selectedOption === option ? "rs-option-selected" : ""}`}
+                onClick={() => setSelectedOption(option)}
+              >
+                <div className="rs-option-card-header">
+                  <span className="rs-option-name">{option.toUpperCase()}</span>
+                  <span className="rs-option-pill">{option === "Lite" ? "Simple follow-up" : "Self-onboarding campaign"}</span>
+                </div>
+                <p className="rs-option-text">
+                  {option === "Lite"
+                    ? "Lite includes simple text and email follow-up for new leads so you stay connected without extra work. When someone reaches out, automatic messages help build trust, answer questions, and keep your business top of mind."
+                    : "Leads in the Sweep & Go Link campaign are automatically added to a text and email follow-up sequence with a self-onboarding link. Customers can simply click the link to view pricing, approve services, and schedule themselves, eliminating 90% of the back and forth."}
+                </p>
+                <p className="rs-option-text">
+                  {option === "Lite"
+                    ? "If you'd rather get distracted, or choose someone else, your phone number and email are included so customers feel comfortable reaching out when they are ready."
+                    : "Automate follow-up, keep your business top of mind, build trust over time, and help more leads sign up before they forget, get busy, or choose someone else."}
+                </p>
+                <div className="rs-example-box">
+                  <div className="rs-example-label">Example</div>
+                  <div className="rs-example-content">
+                    {option === "Lite"
+                      ? "Simple message + email follow-up keeps the lead engaged."
+                      : "Self-onboarding link sends the customer directly to pricing and scheduling."}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
 
-            <div className="rs-info-box" style={{ marginBottom: "12px" }}>
-              <p className="text-xs text-muted-foreground">
-                <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.initial_request_scheduling}}"}</code>.
-              </p>
+          <div className="rs-field-notes">
+            <p className="rs-field-notes-title">Custom values stored by the backend</p>
+            <ul>
+              <li><code>lead_follow_up_option</code></li>
+              <li><code>initial_request_scheduling</code></li>
+              <li><code>follow_up_limit</code></li>
+            </ul>
+            <p className="rs-field-notes-copy">The backend automatically finds the existing custom value IDs and saves the new values when you click Save.</p>
+          </div>
+        </section>
+
+        <section className="rs-card rs-scheduling-section">
+          <div className="rs-section-heading">
+            <div>
+              <h2 className="rs-title">Initial Outreach Scheduling</h2>
+              <p className="rs-subtitle">Choose when you want to start your initial outreach for Lead Follow-Ups.</p>
             </div>
+            <span className="rs-current-selection">{TIMING_LABELS[initialTiming]}</span>
+          </div>
 
-            <div className="rs-display-value">{TIMING_LABELS[initialTiming]}</div>
-
-            <div className="rs-slider-wrap">
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={1}
-                value={initialTiming}
-                onChange={(event) => setInitialTiming(Number.parseInt(event.target.value, 10))}
-                style={{ background: sliderBackground(initialTiming) }}
-                className="rs-slider"
-                aria-label="Initial request timing"
-              />
-              <div className="rs-slider-labels">
-                <span>Within 24h</span>
-                <span>24h</span>
-                <span>48h</span>
-                <span>1 Week</span>
-              </div>
+          <div className="rs-slider-panel">
+            <input
+              type="range"
+              min={0}
+              max={TIMING_LABELS.length - 1}
+              step={1}
+              value={initialTiming}
+              onChange={(event) => setInitialTiming(Number.parseInt(event.target.value, 10))}
+              style={{ background: sliderBackground(initialTiming) }}
+              className="rs-slider"
+              aria-label="Initial outreach timing"
+            />
+            <div className="rs-slider-labels rs-slider-labels-wide">
+              {TIMING_LABELS.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
             </div>
+          </div>
 
-            <div className="rs-info-box">
-              <div className="rs-info-header">
-                <Clock3 className="h-4 w-4 text-primary" />
-                <span className="rs-info-title">Important Notes:</span>
-              </div>
-              <ul className="rs-info-list">
-                <li>Review requests are only sent between 9 AM and 7 PM local time</li>
-                <li>If scheduled outside these hours, the request will be sent the next available day</li>
-                <li>For custom scheduling needs, contact your administrator.</li>
-              </ul>
+          <div className="rs-info-box">
+            <div className="rs-info-header">
+              <Clock3 className="h-4 w-4 text-primary" />
+              <span className="rs-info-title">Important Notes</span>
             </div>
-          </section>
+            <ul className="rs-info-list">
+              <li>Messages sent during the day <strong>8 AM to 7 PM</strong></li>
+              <li>Text messages are throttled, so your delivery will not be affected</li>
+            </ul>
+          </div>
+        </section>
 
-          <section className="rs-card">
-            <h2 className="rs-title">Follow-up Requests</h2>
-            <p className="rs-subtitle">Select the number of follow-up requests to send if no response is received.</p>
-
-            <div className="rs-info-box" style={{ marginBottom: "12px" }}>
-              <p className="text-xs text-muted-foreground">
-                <strong>Note:</strong> Saving to custom values. Values will be stored in <code>{"{{custom_values.follow_up_limit}}"}</code>.
-              </p>
-            </div>
-
-            <div className="rs-display-value">
-              {followUpCount === 0 ? "No Follow-ups" : `${followUpCount} Follow-up${followUpCount > 1 ? "s" : ""}`}
-            </div>
-
-            <div className="rs-slider-wrap">
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={1}
-                value={followUpCount}
-                onChange={(event) => setFollowUpCount(Number.parseInt(event.target.value, 10))}
-                style={{ background: sliderBackground(followUpCount) }}
-                className="rs-slider"
-                aria-label="Number of follow-up requests"
-              />
-              <div className="rs-slider-labels">
-                <span>0</span>
-                <span>1</span>
-                <span>2</span>
-                <span>3</span>
-              </div>
-            </div>
-
-            <div className="rs-info-box-green">
-              <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <p>Our smart system continuously analyzes and adjusts follow-up timing to maximize response rates.</p>
-            </div>
-          </section>
-        </div>
+        <section className="rs-card rs-timeline-section">
+          <h2 className="rs-title">Timeline</h2>
+          <div className="rs-timeline-grid">
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 1</span><span>Email 1 · SMS 1</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 3</span><span>Email 2 · SMS 2</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 5</span><span>Email 3 · SMS 3</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 8</span><span>Email 4 · SMS 4</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 12</span><span>Email 5 · SMS 5</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 26</span><span>Email 6</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 60</span><span>Email 7</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 90</span><span>Email 8</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 180</span><span>Email 9</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 270</span><span>Email 10</span></div>
+            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 360</span><span>Email 11</span></div>
+          </div>
+        </section>
 
         <div className="rs-save-bar">
           <button className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Settings"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
         </div>
 
+        <div className="rs-actions-row">
+          <p className="rs-actions-copy">Would you like to view your workflow templates? You will be redirected to a new page. Please save any changes on this page before continuing.</p>
+          <div className="rs-actions-buttons">
+            <a href="/messaging" className="rs-cta-btn">Email Templates</a>
+            <a href="/messaging" className="rs-cta-btn rs-cta-btn-secondary">SMS Templates</a>
+          </div>
+        </div>
       </div>
     </div>
   );
