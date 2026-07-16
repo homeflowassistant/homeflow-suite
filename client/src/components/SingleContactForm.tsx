@@ -34,8 +34,8 @@ type ContactTagOption =
   | "quick-send";
 
 const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
-  { value: "new lead (via homeflow)", label: "New Lead (via Homeflow)" },
-  { value: "homeflow: inactive customer", label: "Homeflow: Inactive Customer" },
+  { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
+  { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
   { value: "add-on-campaign", label: "Add-on Campaign" },
   { value: "quick-send", label: "Quick Send" },
 ];
