@@ -20,9 +20,9 @@ interface ReviewConfirmProps {
   mapping: ColumnMapping;
   locationId: string;
   tagName: "new lead (via homeflow)"
-  | "homeflow: inactive customer"
-  | "add-on-campaign"
-  | "quick-send";
+        | "homeflow: inactive customer"
+        | "add-on-campaign"
+        | "quick-send";
   onBack: () => void;
   onComplete: () => void;
 }
