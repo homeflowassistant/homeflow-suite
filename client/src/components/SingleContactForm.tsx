@@ -28,14 +28,14 @@ interface FormData {
 }
 
 type ContactTagOption =
-  | "lead-follow-up"
-  | "reactivation-campaign"
+   "new lead (via homeflow)"
+  | "homeflow: inactive customer"
   | "add-on-campaign"
   | "quick-send";
 
 const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
-  { value: "lead-follow-up", label: "Lead Follow-Up" },
-  { value: "reactivation-campaign", label: "Reactivation Campaign" },
+  { value: "new lead (via homeflow)", label: "New Lead (via Homeflow)" },
+  { value: "homeflow: inactive customer", label: "Homeflow: Inactive Customer" },
   { value: "add-on-campaign", label: "Add-on Campaign" },
   { value: "quick-send", label: "Quick Send" },
 ];
@@ -59,7 +59,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
     frequency: "",
   });
   const [dnd, setDnd] = useState(false);
-  const [tagOption, setTagOption] = useState<ContactTagOption>("lead-follow-up");
+  const [tagOption, setTagOption] = useState<ContactTagOption>("new lead (via homeflow)");
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
@@ -89,7 +89,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         frequency: "",
       });
       setDnd(false);
-      setTagOption("lead-follow-up");
+      setTagOption("new lead (via homeflow)");
       setConsent(false);
       setErrors({});
     },
