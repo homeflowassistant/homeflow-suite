@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: addcontact-server
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: GHL_CLIENT_ID
+        scope: all
+      - key: GHL_CLIENT_SECRET
+        scope: all
+      - key: DATABASE_URL
+        scope: all
+      - key: JWT_SECRET
+        scope: all
+      - key: ALLOWED_ORIGINS
+        value: https://addcontact-xi.vercel.app
