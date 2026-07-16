@@ -145,8 +145,8 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         tagName: tagOption,
           customFields: [
             { fieldKey: "number_of_dogs", field_value: formData.numberOfDogs.trim() },
-            { fieldKey: "last_time_scooped", field_value: formData.lastTimeScooped.trim() },
-            { fieldKey: "frequency", field_value: formData.frequency.trim() },
+            { fieldKey: "last_time_yard_was_thoroughly_cleaned", field_value: formData.lastTimeScooped.trim() },
+            { fieldKey: "clean_up_frequency", field_value: formData.frequency.trim() },
           ],
       },
     });

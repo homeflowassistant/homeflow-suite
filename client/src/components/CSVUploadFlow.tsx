@@ -27,14 +27,14 @@ import {
 type FlowStep = "upload" | "mapping" | "review";
 
 type ContactTagOption =
-  | "lead-follow-up"
-  | "reactivation-campaign"
+  | "new lead (via homeflow)"
+  | "homeflow: inactive customer"
   | "add-on-campaign"
   | "quick-send";
 
 const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
-  { value: "lead-follow-up", label: "Lead Follow-Up" },
-  { value: "reactivation-campaign", label: "Reactivation Campaign" },
+  { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
+  { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
   { value: "add-on-campaign", label: "Add-on Campaign" },
   { value: "quick-send", label: "Quick Send" },
 ];
@@ -48,7 +48,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<ContactTagOption>("lead-follow-up");
+  const [selectedTag, setSelectedTag] = useState<ContactTagOption>("new lead (via homeflow)");
 
   const handleFileUploaded = (data: ParsedCSV) => {
     setParsedCSV(data);

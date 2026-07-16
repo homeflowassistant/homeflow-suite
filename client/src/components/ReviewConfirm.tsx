@@ -19,7 +19,10 @@ interface ReviewConfirmProps {
   parsedCSV: ParsedCSV;
   mapping: ColumnMapping;
   locationId: string;
-  tagName: "lead-follow-up" | "reactivation-campaign" | "add-on-campaign" | "quick-send";
+  tagName: "new lead (via homeflow)"
+  | "homeflow: inactive customer"
+  | "add-on-campaign"
+  | "quick-send";
   onBack: () => void;
   onComplete: () => void;
 }
@@ -81,8 +84,8 @@ export default function ReviewConfirm({
           postalCode: c.postalCode,
           customFields: [
             { fieldKey: "number_of_dogs", field_value: c.numberOfDogs },
-            { fieldKey: "last_time_scooped", field_value: c.lastTimeScooped },
-            { fieldKey: "frequency", field_value: c.frequency },
+            { fieldKey: "last_time_yard_was_thoroughly_cleaned", field_value: c.lastTimeScooped },
+            { fieldKey: "clean_up_frequency", field_value: c.frequency },
           ].filter((field) => String(field.field_value ?? "").trim() !== ""),
         }));
 
@@ -174,8 +177,8 @@ export default function ReviewConfirm({
         <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
         <div className="grid gap-2 pt-3 text-sm">
           {[
-            { value: "lead-follow-up", label: "Lead Follow-Up" },
-            { value: "reactivation-campaign", label: "Reactivation Campaign" },
+            { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
+            { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
             { value: "add-on-campaign", label: "Add-on Campaign" },
             { value: "quick-send", label: "Quick Send" },
           ].map((option) => (
