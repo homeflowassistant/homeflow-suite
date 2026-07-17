@@ -32,7 +32,7 @@ const contactSchema = z.object({
     .array(
       z.object({
         fieldKey: z.string().min(1),
-        field_value: z.any().optional(),
+        fieldValue: z.any().optional(),
       })
     )
     .optional(),

@@ -83,10 +83,10 @@ export default function ReviewConfirm({
           city: c.city,
           postalCode: c.postalCode,
           customFields: [
-            { fieldKey: "number_of_dogs", field_value: c.numberOfDogs },
-            { fieldKey: "last_time_yard_was_thoroughly_cleaned", field_value: c.lastTimeScooped },
+            { fieldKey: "number_of_dogs", fieldValue: c.numberOfDogs },
+            { fieldKey: "last_time_yard_was_thoroughly_cleaned", fieldValue: c.lastTimeScooped },
             { fieldKey: "clean_up_frequency", field_value: c.frequency },
-          ].filter((field) => String(field.field_value ?? "").trim() !== ""),
+          ].filter((field) => String(field.fieldValue ?? "").trim() !== ""),
         }));
 
         const result = await processBatchMutation.mutateAsync({
