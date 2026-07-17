@@ -90,7 +90,7 @@ export const ghlRouter = router({
           message: "GHL location not connected. Please install the app first.",
         });
       }
-
+      console.log("[GHL DEBUG] router createContact - raw input from frontend:", JSON.stringify(input.contact, null, 2));
       const contactData: GHLContactData = {
         firstName: input.contact.firstName,
         lastName: input.contact.lastName ?? "",
@@ -135,6 +135,7 @@ export const ghlRouter = router({
 
       for (let i = 0; i < input.contacts.length; i++) {
         const contact = input.contacts[i];
+        if (i === 0) console.log("[GHL DEBUG] router processBatch - first contact raw input:", JSON.stringify({ contact, tagName: input.tagName }, null, 2));
         const contactData: GHLContactData = {
           firstName: contact.firstName,
           lastName: contact.lastName ?? "",
