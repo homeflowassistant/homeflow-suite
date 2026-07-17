@@ -85,7 +85,7 @@ export default function ReviewConfirm({
           customFields: [
             { fieldKey: "number_of_dogs", fieldValue: c.numberOfDogs },
             { fieldKey: "last_time_yard_was_thoroughly_cleaned", fieldValue: c.lastTimeScooped },
-            { fieldKey: "clean_up_frequency", field_value: c.frequency },
+            { fieldKey: "clean_up_frequency", fieldValue: c.frequency },
           ].filter((field) => String(field.fieldValue ?? "").trim() !== ""),
         }));
 
