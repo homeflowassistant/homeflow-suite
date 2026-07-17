@@ -43,7 +43,7 @@ export interface GHLContactData {
   postalCode?: string;
   dnd?: boolean;
   tagName?: string;
-  customFields?: Array<{ fieldKey: string; field_value?: unknown }>;
+  customFields?: Array<{ fieldKey: string; fieldValue?: unknown }>;
 }
 
 export interface GHLCreateContactResponse {
@@ -463,6 +463,30 @@ export async function createContact(
 ): Promise<GHLCreateContactResponse> {
   const accessToken = await getValidAccessToken(locationId);
 
+  const ghlPayload = {
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    name: `${contact.firstName} ${contact.lastName}`.trim(),
+    email: contact.email || undefined,
+    phone: contact.phone || undefined,
+    address1: contact.address1 || undefined,
+    city: contact.city || undefined,
+    state: contact.state || undefined,
+    postalCode: contact.postalCode || undefined,
+    locationId,
+    dnd: contact.dnd || false,
+    source: "Royal Review - Add Contacts",
+    tags: contact.tagName ? [contact.tagName] : undefined,
+    customFields: contact.customFields
+      ?.map((field) => ({
+        key: field.fieldKey,
+        fieldValue: field.fieldValue,
+      }))
+      .filter((field) => String(field.fieldValue ?? "").trim() !== ""),
+  };
+
+  console.log("[GHL DEBUG] createContact payload:", JSON.stringify(ghlPayload, null, 2));
+
   const response = await fetch(`${GHL_BASE_URL}/contacts/`, {
     method: "POST",
     headers: {
@@ -471,26 +495,7 @@ export async function createContact(
       Authorization: `Bearer ${accessToken}`,
       Version: GHL_API_VERSION,
     },
-    body: JSON.stringify({
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      name: `${contact.firstName} ${contact.lastName}`.trim(),
-      email: contact.email || undefined,
-      phone: contact.phone || undefined,
-      address1: contact.address1 || undefined,
-      city: contact.city || undefined,
-      state: contact.state || undefined,
-      postalCode: contact.postalCode || undefined,
-      locationId,
-      dnd: contact.dnd || false,
-      source: "Royal Review - Add Contacts",
-      customFields: contact.customFields
-        ?.map((field) => ({
-          key: field.fieldKey,
-          field_value: field.field_value,
-         }))
-        .filter((field) => String(field.field_value ?? "").trim() !== ""),
-    }),
+      body: JSON.stringify(ghlPayload),
   });
 
   if (!response.ok) {
@@ -509,8 +514,8 @@ export async function addTagToContact(
   contactId: string,
   tagName: string
 ): Promise<{ success: boolean }> {
+  console.log(`[GHL DEBUG] addTagToContact called with tagName: "${tagName}" for contact: ${contactId}`);
   const accessToken = await getValidAccessToken(locationId);
-
   const attempts: Array<{ url: string; method?: string; body?: unknown }> = [
     { url: `${GHL_BASE_URL}/contacts/${contactId}/tags`, method: "POST", body: { tags: [tagName] } },
     { url: `${GHL_BASE_URL}/contacts/${contactId}/tag`, method: "POST", body: { tag: tagName } },
@@ -531,12 +536,14 @@ export async function addTagToContact(
         body: attempt.body ? JSON.stringify(attempt.body) : undefined,
       });
 
-      if (response.ok) {
+            if (response.ok) {
+        console.log(`[GHL DEBUG] addTagToContact SUCCESS via ${attempt.url} with tag: "${tagName}"`);
         return { success: true };
       }
-
       const body = await response.text().catch(() => "");
       lastError = `${response.status} ${body} (${attempt.url})`;
+      console.log(`[GHL DEBUG] addTagToContact attempt FAILED: ${lastError}`);
+
 
       if (response.status !== 404 && response.status !== 405) break;
     } catch (err: any) {
@@ -589,6 +596,7 @@ export async function processContact(
   locationId: string,
   contact: GHLContactData
 ): Promise<{ contactId: string; enrolledInWorkflow: boolean }> {
+  console.log(`[GHL DEBUG] processContact received tagName: "${contact.tagName}" customFields: ${JSON.stringify(contact.customFields)}`);
   const result = await createContact(locationId, contact);
   const contactId = result.contact.id;
 
