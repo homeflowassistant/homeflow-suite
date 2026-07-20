@@ -493,16 +493,6 @@ export default function RequestScheduling() {
               </button>
             ))}
           </div>
-
-          <div className="rs-field-notes">
-            <p className="rs-field-notes-title">Custom values stored by the backend</p>
-            <ul>
-              <li><code>lead_follow_up_option</code></li>
-              <li><code>initial_request_scheduling</code></li>
-              <li><code>follow_up_limit</code></li>
-            </ul>
-            <p className="rs-field-notes-copy">The backend automatically finds the existing custom value IDs and saves the new values when you click Save.</p>
-          </div>
         </section>
 
         <section className="rs-card rs-scheduling-section">
