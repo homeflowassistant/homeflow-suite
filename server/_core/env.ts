@@ -11,4 +11,5 @@ export const ENV = {
   // GHL Marketplace OAuth
   ghlClientId: process.env.GHL_CLIENT_ID ?? "",
   ghlClientSecret: process.env.GHL_CLIENT_SECRET ?? "",
+  n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
 };
