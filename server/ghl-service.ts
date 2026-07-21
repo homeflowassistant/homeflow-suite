@@ -366,6 +366,11 @@ export async function refreshAccessToken(
 
 // ─── Installation Management ─────────────────────────────────────────
 
+/**
+ * Save or update a GHL installation after OAuth token exchange.
+ * Company tokens are stored with locationId === companyId so they can be
+ * looked up later via getAgencyInstallation(companyId).
+ */
 export async function upsertInstallation(
   tokenResponse: GHLTokenResponse,
   locationId: string
@@ -373,15 +378,18 @@ export async function upsertInstallation(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
+  const normalizedLocationId = locationId.trim();
+  const expiresAt = Date.now() + (Number(tokenResponse.expires_in) || 60 * 60 * 24) * 1000;
+  const isCompanyToken = tokenResponse.userType === "Company" || !tokenResponse.locationId;
+  const companyId = tokenResponse.companyId ?? (isCompanyToken ? normalizedLocationId : null);
 
   await db
     .insert(ghlInstallations)
     .values({
-      locationId,
-      companyId: tokenResponse.companyId ?? null,
+      locationId: normalizedLocationId,
+      companyId,
       accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
+      refreshToken: tokenResponse.refresh_token ?? tokenResponse.access_token,
       expiresAt,
       scopes: tokenResponse.scope ?? null,
       userId: tokenResponse.userId ?? null,
@@ -390,16 +398,21 @@ export async function upsertInstallation(
       target: ghlInstallations.locationId,
       set: {
         accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token,
+        refreshToken: tokenResponse.refresh_token ?? tokenResponse.access_token,
         expiresAt,
         scopes: tokenResponse.scope ?? null,
-        companyId: tokenResponse.companyId ?? null,
+        companyId,
         userId: tokenResponse.userId ?? null,
         updatedAt: new Date(),
       },
     });
 }
 
+/**
+ * Get an installation by exact locationId match.
+ * Does NOT fallback to companyId — a location without its own token
+ * should not accidentally use an agency token.
+ */
 export async function getInstallation(
   locationId: string
 ): Promise<GHLInstallation | undefined> {
@@ -410,15 +423,46 @@ export async function getInstallation(
   const result = await db
     .select()
     .from(ghlInstallations)
-    .where(
-      or(
-        eq(ghlInstallations.locationId, normalizedLocationId),
-        eq(ghlInstallations.companyId, normalizedLocationId)
-      )
-    )
+    .where(eq(ghlInstallations.locationId, normalizedLocationId))
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Get the agency (company-level) installation by companyId.
+ * Company tokens are stored with locationId === companyId, so we
+ * look up the row where locationId matches the companyId.
+ */
+export async function getAgencyInstallation(
+  companyId: string
+): Promise<GHLInstallation | undefined> {
+  const normalizedCompanyId = companyId.trim();
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const companyMatch = await db
+    .select()
+    .from(ghlInstallations)
+    .where(eq(ghlInstallations.locationId, normalizedCompanyId))
+    .limit(1);
+
+  if (companyMatch.length > 0) {
+    return companyMatch[0];
+  }
+
+  return undefined;
+}
+
+/**
+ * Remove an installation by locationId.
+ * Called when GHL sends an UNINSTALL webhook event.
+ */
+export async function removeInstallation(locationId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(ghlInstallations).where(eq(ghlInstallations.locationId, locationId));
 }
 
 export async function getValidAccessToken(
@@ -453,6 +497,83 @@ export async function refreshInstallationAccessToken(locationId: string): Promis
   const newTokens = await refreshAccessToken(installation.refreshToken);
   await upsertInstallation(newTokens, locationId);
   return newTokens.access_token;
+}
+
+// ─── Install-Time Custom Value Seeding ───────────────────────────────
+
+/**
+ * After a location is successfully installed (token stored), seed default
+ * custom values for the sub-account so that the Request Scheduling page
+ * has sensible defaults on first load.
+ */
+export async function updateCustomValuesOnInstall(locationId: string): Promise<void> {
+  try {
+    console.log(`[GHL Install] Starting custom value seeding for location: ${locationId}`);
+
+    const accessToken = await getValidAccessToken(locationId);
+
+    // Fetch location details to get the business name and owner first name
+    const [locationResponse, businessResponse] = await Promise.all([
+      fetch(`${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+      }),
+      fetch(`${GHL_BASE_URL}/businesses/?locationId=${encodeURIComponent(locationId)}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+      }),
+    ]);
+
+    let locationName = "";
+    let ownerFirstName = "";
+
+    if (locationResponse.ok) {
+      const data = (await locationResponse.json()) as any;
+      const loc = data.location || data;
+      locationName = loc.name || "";
+      if (loc.prospectInfo && loc.prospectInfo.firstName) {
+        ownerFirstName = loc.prospectInfo.firstName;
+      } else if (loc.firstName) {
+        ownerFirstName = loc.firstName;
+      }
+    }
+
+    if (businessResponse.ok) {
+      const data = (await businessResponse.json()) as any;
+      if (data.businesses && data.businesses.length > 0) {
+        locationName = data.businesses[0].name || locationName;
+      }
+    }
+
+    console.log(`[GHL Install] Fetched details for location ${locationId}: Owner="${ownerFirstName}", Business="${locationName}"`);
+
+    // Seed default custom values
+    const customValuesToUpdate = [
+      { name: "Lead Follow-up Options (Lite, SG-Link, Custom-Link)", value: "Lite" },
+      { name: "Initial Outreach Scheduling", value: "24 Hours" },
+      { name: "follow_up_limit", value: "3" },
+    ];
+
+    const updatePromises = customValuesToUpdate.map((cv) =>
+      upsertGhlCustomValue(locationId, cv.name, cv.value)
+        .then(() => console.log(`[GHL Install] Successfully updated custom value: "${cv.name}"`))
+        .catch((err) => console.error(`[GHL Install] Failed to update custom value "${cv.name}":`, err))
+    );
+
+    await Promise.all(updatePromises);
+    console.log(`[GHL Install] Finished seeding custom values for location: ${locationId}`);
+  } catch (error) {
+    console.error(`[GHL Install] Error seeding custom values for location ${locationId}:`, error);
+    // Don't rethrow — a failure here should not crash the install process
+  }
 }
 
 // ─── GHL API Calls ───────────────────────────────────────────────────

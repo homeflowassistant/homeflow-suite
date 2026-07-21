@@ -2,7 +2,10 @@
  * GHL OAuth Callback Route
  *
  * Handles the OAuth redirect from GoHighLevel after a sub-account installs the app.
- * Exchanges the authorization code for tokens and stores them in the database.
+ * Implements the same two-step flow as Royal Review:
+ *   1. OAuth callback exchanges the auth code for tokens and stores the agency-level token
+ *   2. Webhook endpoint receives INSTALL events, exchanges agency token for a location
+ *      token, stores it, and seeds default custom values
  *
  * Route: GET /api/ghl/oauth/callback?code=...
  */
@@ -10,8 +13,104 @@
 import type { Express, Request, Response } from "express";
 import {
   exchangeCodeForTokens,
+  getAgencyInstallation,
+  getInstallation,
+  removeInstallation,
   upsertInstallation,
+  updateCustomValuesOnInstall,
+  getValidAccessToken,
 } from "./ghl-service";
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Exchanges an agency-level token for a location-specific token.
+ * Called when GHL sends an INSTALL webhook for a sub-account.
+ */
+async function processLocationInstall(
+  agencyToken: string,
+  companyId: string,
+  locationId: string
+): Promise<void> {
+  const maxAttempts = 3;
+  const delayMs = Number(process.env.GHL_LOCATION_TOKEN_RETRY_DELAY_MS || 3000);
+
+  let lastError: Error | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch("https://services.leadconnectorhq.com/oauth/locationToken", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Bearer ${agencyToken}`,
+          Version: "2021-07-28",
+        },
+        body: new URLSearchParams({ companyId, locationId }).toString(),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const parsedError = (() => {
+          try {
+            return JSON.parse(errorBody);
+          } catch {
+            return null;
+          }
+        })();
+        const message =
+          parsedError && typeof parsedError === "object" && "message" in parsedError
+            ? String((parsedError as Record<string, unknown>).message)
+            : errorBody;
+
+        const isScopeError = /scope|oauth\.write|permission/i.test(message);
+        const isUserTypeError = /user type|supported/i.test(message);
+        console.error("[GHL Webhook] Location-token exchange failed", {
+          attempt,
+          maxAttempts,
+          companyId,
+          locationId,
+          status: response.status,
+          message,
+          isScopeError,
+          isUserTypeError,
+        });
+
+        lastError = new Error(`GHL location-token exchange failed: ${response.status} ${message}`);
+        if (attempt < maxAttempts) {
+          await delay(delayMs);
+          continue;
+        }
+        throw lastError;
+      }
+
+      const locationTokenResponse = (await response.json()) as { access_token?: string };
+      if (!locationTokenResponse.access_token) {
+        lastError = new Error("GHL location-token exchange returned no access token");
+        if (attempt < maxAttempts) {
+          await delay(delayMs);
+          continue;
+        }
+        throw lastError;
+      }
+
+      await upsertInstallation(locationTokenResponse as Parameters<typeof upsertInstallation>[0], locationId);
+      console.log("[GHL Webhook] Location token stored", { companyId, locationId, attempt });
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxAttempts) {
+        await delay(delayMs);
+        continue;
+      }
+      throw lastError;
+    }
+  }
+
+  throw lastError ?? new Error("GHL location-token exchange failed");
+}
 
 export function registerGHLOAuthRoutes(app: Express): void {
   /**
@@ -44,21 +143,28 @@ export function registerGHLOAuthRoutes(app: Express): void {
       // Exchange authorization code for tokens
       const tokenResponse = await exchangeCodeForTokens(code, redirectUri);
 
-      // Determine the locationId — GHL may return it in the token response
-      // For sub-account level apps, locationId is included
-      const locationId = tokenResponse.locationId;
-      if (!locationId) {
-        // If no locationId, this might be a company-level token
-        // We'll store it with the companyId as a fallback
-        console.warn("[GHL OAuth] No locationId in token response, using companyId");
+      const companyId = tokenResponse.companyId;
+      if (!companyId) {
+        throw new Error("No companyId returned from GHL token exchange");
       }
 
-      const storageId = locationId || tokenResponse.companyId || "unknown";
+      console.log("[GHL OAuth] Callback received", {
+        companyId,
+        scope: tokenResponse.scope,
+        userType: tokenResponse.userType,
+        isBulkInstallation: true,
+      });
 
-      // Store the installation
-      await upsertInstallation(tokenResponse, storageId);
-
-      console.log(`[GHL OAuth] App installed successfully for location: ${storageId}`);
+      if (tokenResponse.userType === "Company") {
+        await upsertInstallation(tokenResponse, companyId);
+        console.log(`[GHL OAuth] Agency token stored for companyId: ${companyId}`);
+      } else if (tokenResponse.userType === "Location" && tokenResponse.locationId) {
+        await upsertInstallation(tokenResponse, tokenResponse.locationId);
+        console.log(`[GHL OAuth] Location token stored for locationId: ${tokenResponse.locationId}`);
+      } else {
+        await upsertInstallation(tokenResponse, companyId);
+        console.log(`[GHL OAuth] Token stored for companyId: ${companyId}`);
+      }
 
       // Show success page
       res.send(`
@@ -71,7 +177,7 @@ export function registerGHLOAuthRoutes(app: Express): void {
                 </svg>
               </div>
               <h2 style="color: #16a34a; margin-bottom: 8px;">App Installed Successfully!</h2>
-              <p style="color: #6b7280;">Royal Review Add Contacts has been connected to your GoHighLevel account.</p>
+              <p style="color: #6b7280;">HomeFlow Suite has been connected to your GoHighLevel account.</p>
               <p style="color: #6b7280; font-size: 14px;">You can now close this window and access the app from your GHL sidebar.</p>
             </div>
           </body>
@@ -101,11 +207,62 @@ export function registerGHLOAuthRoutes(app: Express): void {
       const payload = req.body;
       console.log("[GHL Webhook] Received:", JSON.stringify(payload));
 
-      if (payload.type === "INSTALL") {
-        console.log(`[GHL Webhook] App installed for location: ${payload.locationId}`);
-      } else if (payload.type === "UNINSTALL") {
+      if (payload.type === "INSTALL" && payload.locationId) {
+        const { locationId, companyId, installType } = payload as {
+          locationId?: string;
+          companyId?: string;
+          installType?: string;
+        };
+
+        if (!companyId || !locationId) {
+          console.error("[GHL Webhook] Missing companyId or locationId for install event");
+          return res.status(400).json({ error: "Missing companyId or locationId" });
+        }
+
+        console.log("[GHL Webhook] Location install received", {
+          companyId,
+          locationId,
+          installType,
+        });
+
+        // Wait for the agency token to be available (may arrive after the webhook)
+        const maxAttempts = 5;
+        let agencyInstallation = await getAgencyInstallation(companyId);
+        let attempt = 1;
+
+        while (!agencyInstallation && attempt <= maxAttempts) {
+          const waitMs = 3000 * 2 ** (attempt - 1);
+          console.warn("[GHL Webhook] Agency token not ready; retrying", {
+            companyId,
+            locationId,
+            attempt,
+            waitMs,
+          });
+          await delay(waitMs);
+          agencyInstallation = await getAgencyInstallation(companyId);
+          attempt += 1;
+        }
+
+        if (!agencyInstallation) {
+          console.error("[GHL Webhook] Agency token was never received from the OAuth callback", {
+            companyId,
+            locationId,
+            attempts: maxAttempts,
+          });
+          return res.status(500).json({ error: "Agency token not available for location install" });
+        }
+
+        console.log("[GHL Webhook] Agency token found", {
+          companyId,
+          locationId,
+          hasAgencyToken: Boolean(agencyInstallation.accessToken),
+        });
+        const freshAgencyToken = await getValidAccessToken(companyId);
+        await processLocationInstall(agencyInstallation.accessToken, companyId, locationId);
+        updateCustomValuesOnInstall(locationId).catch(console.error);
+      } else if (payload.type === "UNINSTALL" && payload.locationId) {
+        await removeInstallation(payload.locationId);
         console.log(`[GHL Webhook] App uninstalled for location: ${payload.locationId}`);
-        // Optionally: remove the installation from DB
       }
 
       res.json({ success: true });
