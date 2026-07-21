@@ -39,13 +39,19 @@ const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "Custom Quote & Link", "S&G Link"] as co
 /**
  * Send S&G Link form data to the configured n8n webhook.
  */
-async function sendToN8nWebhook(payload: Record<string, unknown> ): Promise<boolean> {
+async function sendToN8nWebhook(payload: Record<string, unknown> ): Promise<{ success: boolean; statusCode?: number; error?: string }> {
   if (!ENV.n8nWebhookUrl) {
-    console.warn("[S&G Link] N8N_WEBHOOK_URL is not configured. Form data was not sent.");
-    return false;
+    console.error("[S&G Link] ========== WEBHOOK CALL SKIPPED ==========");
+    console.error("[S&G Link] N8N_WEBHOOK_URL is not configured. Form data was not sent.");
+    console.error("[S&G Link] ========== STATUS: SKIPPED ==========");
+    return { success: false, error: "N8N_WEBHOOK_URL not configured" };
   }
 
   try {
+    console.log("[S&G Link] ========== WEBHOOK CALL START ==========");
+    console.log("[S&G Link] Target URL:", ENV.n8nWebhookUrl);
+    console.log("[S&G Link] Payload:", JSON.stringify(payload, null, 2));
+
     const response = await fetch(ENV.n8nWebhookUrl, {
       method: "POST",
       headers: {
@@ -56,14 +62,22 @@ async function sendToN8nWebhook(payload: Record<string, unknown> ): Promise<bool
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      console.warn(`[S&G Link] n8n webhook responded with ${response.status}: ${detail}`);
-      return false;
+      console.error("[S&G Link] ========== WEBHOOK CALL FAILED ==========");
+      console.error("[S&G Link] Status:", response.status, response.statusText);
+      console.error("[S&G Link] Response body:", detail);
+      console.error("[S&G Link] ========== STATUS: FAILED ==========");
+      return { success: false, statusCode: response.status, error: detail };
     }
 
-    return true;
+    console.log("[S&G Link] ========== WEBHOOK CALL SUCCESS ==========");
+    console.log("[S&G Link] Status:", response.status, response.statusText);
+    console.log("[S&G Link] ========== STATUS: SUCCESS ==========");
+    return { success: true, statusCode: response.status };
   } catch (error) {
-    console.error("[S&G Link] Failed to send data to n8n webhook:", error);
-    return false;
+    console.error("[S&G Link] ========== WEBHOOK CALL FAILED ==========");
+    console.error("[S&G Link] Error:", error instanceof Error ? error.message : String(error));
+    console.error("[S&G Link] ========== STATUS: FAILED ==========");
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -149,8 +163,9 @@ export const requestSchedulingRouter = router({
         ]);
 
         // If S&G Link is selected and form data is provided, send to n8n webhook
-        let webhookSent = false;
+        let webhookResult: { success: boolean; statusCode?: number; error?: string } = { success: false };
         if (input.leadFollowUpOption === "S&G Link" && input.sgLinkData) {
+          console.log("[S&G Link] ========== SAVING S&G LINK SETTINGS + WEBHOOK ==========");
           const webhookPayload = {
             locationId,
             lead_follow_up_option: input.leadFollowUpOption,
@@ -169,7 +184,12 @@ export const requestSchedulingRouter = router({
             },
           };
 
-          webhookSent = await sendToN8nWebhook(webhookPayload);
+          webhookResult = await sendToN8nWebhook(webhookPayload);
+          console.log("[S&G Link] ========== SAVE COMPLETE ==========");
+          console.log("[S&G Link] Webhook status:", webhookResult.success ? "SUCCESS" : "FAILED", {
+            statusCode: webhookResult.statusCode,
+            error: webhookResult.error,
+          });
         }
 
         return {
@@ -179,7 +199,9 @@ export const requestSchedulingRouter = router({
             initial_request_scheduling: initialResults.value,
             follow_up_limit: followUpResults.value,
           },
-          webhookSent,
+          webhookSent: webhookResult.success,
+          webhookStatus: webhookResult.success ? "SUCCESS" : "FAILED",
+          webhookError: webhookResult.error ?? null,
           results: {
             lead_follow_up_option: {
               action: "created_or_updated",

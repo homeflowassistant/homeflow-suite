@@ -404,14 +404,22 @@ export default function RequestScheduling() {
   const handleSgSubmit = async (sgData: SgLinkFormData) => {
     setIsSaving(true);
     try {
-      await saveCustomValuesMutation.mutateAsync({
+      const result = await saveCustomValuesMutation.mutateAsync({
         locationId,
         leadFollowUpOption: selectedOption,
         initialRequestScheduling: TIMING_LABELS[initialTiming],
         followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
         sgLinkData: sgData,
       });
-      showToast("S&G Link settings and lead data saved successfully.");
+
+      // Show webhook status in the toast
+      if (result.webhookSent) {
+        showToast("S&G Link settings saved and webhook sent successfully.");
+      } else if (result.webhookError) {
+        showToast(`Settings saved, but webhook failed: ${result.webhookError}`);
+      } else {
+        showToast("Settings saved (webhook was not configured).");
+      }
       setShowSgPopup(false);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
