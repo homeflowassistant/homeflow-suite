@@ -180,7 +180,6 @@ export default function ReviewConfirm({
             { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
             { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
             { value: "add-on-campaign", label: "Add-on Campaign" },
-            { value: "quick-send", label: "Quick Send" },
           ].map((option) => (
             <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
               <input
