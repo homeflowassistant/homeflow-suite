@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles, X, ArrowRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./RequestScheduling.css";
 
-const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "Custom Quote & Link", "S&G Link"] as const;
+// Swap positions: "Custom Quote & Link" and "S&G Link" are swapped.
+// New order: Lite → S&G Link → Custom Quote & Link
+const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "S&G Link", "Custom Quote & Link"] as const;
 const TIMING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 const TIMING_CUSTOM_VALUES = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 
@@ -419,6 +421,9 @@ export default function RequestScheduling() {
     }
   };
 
+  // Determine option index for flow arrows
+  const selectedIndex = LEAD_FOLLOW_UP_OPTIONS.indexOf(selectedOption);
+
   if (!locationId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
@@ -442,11 +447,11 @@ export default function RequestScheduling() {
           <div>
             <p className="rs-page-label">Lead Follow-Up Options</p>
             <h1 className="rs-page-title">How it works</h1>
-            <p className="rs-page-copy">
-              1. Add Contacts manually or via Facebook form.
-              2. We reach out with a message.
-              3. They approve a quote and you schedule a scope.
-            </p>
+            <div className="rs-page-copy">
+              <p className="rs-how-step">1. Add Contacts manually or via Facebook form.</p>
+              <p className="rs-how-step">2. We reach out with a message.</p>
+              <p className="rs-how-step">3. They approve a quote and you schedule a scope.</p>
+            </div>
           </div>
           <div className="rs-page-icon">
             <Sparkles className="h-6 w-6 text-primary" />
@@ -455,43 +460,61 @@ export default function RequestScheduling() {
 
         <section className="rs-card rs-option-section">
           <div className="rs-option-grid">
-            {LEAD_FOLLOW_UP_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={`rs-option-card ${selectedOption === option ? "rs-option-selected" : ""}`}
-                onClick={() => setSelectedOption(option)}
-              >
-                <div className="rs-option-card-header">
-                  <span className="rs-option-name">{option.toUpperCase()}</span>
-                  <span className="rs-option-pill">{option === "Lite" ? "Simple follow-up" : option === "Custom Quote & Link" ? "Custom quote + link" : "Self-onboarding campaign"}</span>
+            {LEAD_FOLLOW_UP_OPTIONS.map((option, idx) => {
+              const isSelected = selectedOption === option;
+              const showArrow = isSelected && idx < LEAD_FOLLOW_UP_OPTIONS.length - 1;
+              return (
+                <div key={option} className="rs-option-card-wrapper">
+                  <button
+                    type="button"
+                    className={`rs-option-card ${isSelected ? "rs-option-selected" : ""}`}
+                    onClick={() => setSelectedOption(option)}
+                  >
+                    {/* "Most Popular" badge on S&G Link tile */}
+                    {option === "S&G Link" && (
+                      <div className="rs-popular-badge">
+                        <Star className="rs-popular-badge-icon" />
+                        <span>Most Popular</span>
+                      </div>
+                    )}
+                    <div className="rs-option-card-header">
+                      <span className="rs-option-name">{option.toUpperCase()}</span>
+                      <span className="rs-option-pill">{option === "Lite" ? "Simple follow-up" : option === "Custom Quote & Link" ? "Custom quote + link" : "Self-onboarding campaign"}</span>
+                    </div>
+                    <p className="rs-option-text">
+                      {option === "Lite"
+                        ? "Lite includes simple text and email follow-up for new leads so you stay connected without extra work. When someone reaches out, automatic messages help build trust, answer questions, and keep your business top of mind."
+                        : option === "Custom Quote & Link"
+                        ? "Custom Quote & Link lets you send a personalized quote with a scheduling link. Customers receive your custom quote, click the link to approve services, and schedule themselves — combining personalization with self-service convenience."
+                        : "Leads in the Sweep & Go Link campaign are automatically added to a text and email follow-up sequence with a self-onboarding link. Customers can simply click the link to view pricing, approve services, and schedule themselves, eliminating 90% of the back and forth."}
+                    </p>
+                    <p className="rs-option-text">
+                      {option === "Lite"
+                        ? "If you'd rather get distracted, or choose someone else, your phone number and email are included so customers feel comfortable reaching out when they are ready."
+                        : option === "Custom Quote & Link"
+                        ? "Send custom quotes, keep your business top of mind, and let customers approve and schedule on their own time. No back-and-forth needed."
+                        : "Automate follow-up, keep your business top of mind, build trust over time, and help more leads sign up before they forget, get busy, or choose someone else."}
+                    </p>
+                    <div className="rs-example-box">
+                      <div className="rs-example-label">Example</div>
+                      <div className="rs-example-content">
+                        {option === "Lite"
+                          ? "Simple message + email follow-up keeps the lead engaged."
+                          : option === "Custom Quote & Link"
+                          ? "Personalized quote with a scheduling link for self-service approval."
+                          : "Self-onboarding link sends the customer directly to pricing and scheduling."}
+                      </div>
+                    </div>
+                  </button>
+                  {/* Flow arrow indicator */}
+                  {showArrow && (
+                    <div className="rs-flow-arrow">
+                      <ArrowRight className="rs-flow-arrow-icon" />
+                    </div>
+                  )}
                 </div>
-                <p className="rs-option-text">
-                  {option === "Lite"
-                    ? "Lite includes simple text and email follow-up for new leads so you stay connected without extra work. When someone reaches out, automatic messages help build trust, answer questions, and keep your business top of mind."
-                    : option === "Custom Quote & Link"
-                    ? "Custom Quote & Link lets you send a personalized quote with a scheduling link. Customers receive your custom quote, click the link to approve services, and schedule themselves — combining personalization with self-service convenience."
-                    : "Leads in the Sweep & Go Link campaign are automatically added to a text and email follow-up sequence with a self-onboarding link. Customers can simply click the link to view pricing, approve services, and schedule themselves, eliminating 90% of the back and forth."}
-                </p>
-                <p className="rs-option-text">
-                  {option === "Lite"
-                    ? "If you'd rather get distracted, or choose someone else, your phone number and email are included so customers feel comfortable reaching out when they are ready."
-                    : option === "Custom Quote & Link"
-                    ? "Send custom quotes, keep your business top of mind, and let customers approve and schedule on their own time. No back-and-forth needed."
-                    : "Automate follow-up, keep your business top of mind, build trust over time, and help more leads sign up before they forget, get busy, or choose someone else."}
-                </p>
-                <div className="rs-example-box">
-                  <div className="rs-example-label">Example</div>
-                  <div className="rs-example-content">
-                    {option === "Lite"
-                      ? "Simple message + email follow-up keeps the lead engaged."
-                      : option === "Custom Quote & Link"
-                      ? "Personalized quote with a scheduling link for self-service approval."
-                      : "Self-onboarding link sends the customer directly to pricing and scheduling."}
-                  </div>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -523,14 +546,17 @@ export default function RequestScheduling() {
             </div>
           </div>
 
+          {/* Subtle faded blue horizontal divider */}
+          <div className="rs-scheduling-divider" />
+
           <div className="rs-info-box">
             <div className="rs-info-header">
               <Clock3 className="h-4 w-4 text-primary" />
               <span className="rs-info-title">Important Notes</span>
             </div>
             <ul className="rs-info-list">
-              <li>Messages sent during the day <strong>8 AM to 7 PM</strong></li>
-              <li>Text messages are throttled, so your delivery will not be affected</li>
+              <li><strong>8:00 AM – 9:00 PM (Local Time)</strong><br /><em>Please reach out to customer support if you need to reschedule outside this outreach window.</em></li>
+              <li><strong>Texts are sent at a controlled rate, ensuring reliable delivery.</strong></li>
             </ul>
           </div>
         </section>
