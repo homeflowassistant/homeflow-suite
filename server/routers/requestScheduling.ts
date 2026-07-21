@@ -88,9 +88,9 @@ export const requestSchedulingRouter = router({
         return result;
       };
 
-      const initialRequestScheduling = getCustomValue("initial_request_scheduling");
+      const initialRequestScheduling = getCustomValue("Initial Outreach Scheduling");
       const followUpLimit = getCustomValue("follow_up_limit");
-      const leadFollowUpOption = getCustomValue("lead_follow_up_option");
+      const leadFollowUpOption = getCustomValue("Lead Follow-up Options (Lite, SG-Link, Custom-Link)");
 
       return {
         leadFollowUpOption: LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number])
@@ -143,8 +143,8 @@ export const requestSchedulingRouter = router({
         }
 
         const [optionResults, initialResults, followUpResults] = await Promise.all([
-          upsertGhlCustomValue(locationId, "lead_follow_up_option", input.leadFollowUpOption),
-          upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
+          upsertGhlCustomValue(locationId, "Lead Follow-up Options (Lite, SG-Link, Custom-Link)", input.leadFollowUpOption),
+          upsertGhlCustomValue(locationId, "Initial Outreach Scheduling", input.initialRequestScheduling),
           upsertGhlCustomValue(locationId, "follow_up_limit", input.followUpLimit),
         ]);
 
