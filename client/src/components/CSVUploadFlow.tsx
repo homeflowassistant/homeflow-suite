@@ -6,7 +6,7 @@
  * Step 2: Map columns
  * Step 3: Review & Confirm
  *
- * Uses a modal/overlay approach for steps 2 and 3
+ * Uses a modal/overlay approach for steps 2 and 3.
  */
 
 import { useState } from "react";
@@ -71,7 +71,6 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
   };
 
   const handleComplete = () => {
-    // Reset the entire flow
     setStep("upload");
     setParsedCSV(null);
     setMapping(null);
@@ -80,7 +79,6 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
 
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      // Reset to upload step when dialog is closed
       setStep("upload");
       setParsedCSV(null);
       setMapping(null);
@@ -88,22 +86,21 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
     setDialogOpen(open);
   };
 
-  // Step indicator for the dialog
   const stepTitle = "Add Contacts to Review Harvest via CSV upload";
 
   return (
     <>
       {/* Step 1: Upload area (always visible in the right panel) */}
-      <div className="space-y-5">
+      <div>
         <CSVUpload onFileUploaded={handleFileUploaded} />
 
-        <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-4">
-          <p className="text-sm font-semibold text-slate-900 mb-2">Add contacts too:</p>
-          <div className="grid gap-1.5 text-sm">
+        <div className="csv-tag-box">
+          <p className="csv-tag-title">Add contacts to:</p>
+          <div className="csv-tag-grid">
             {TAG_OPTIONS.map((option) => (
               <label
                 key={option.value}
-                className="flex items-center gap-1.5 cursor-pointer transition"
+                className="scf-radio-label"
               >
                 <input
                   type="radio"
@@ -111,9 +108,9 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
                   value={option.value}
                   checked={selectedTag === option.value}
                   onChange={() => setSelectedTag(option.value)}
-                  className="h-4 w-4 text-cyan-400 focus:ring-cyan-400"
+                  className="scf-radio"
                 />
-                <span className="font-medium text-slate-700">{option.label}</span>
+                <span>{option.label}</span>
               </label>
             ))}
           </div>

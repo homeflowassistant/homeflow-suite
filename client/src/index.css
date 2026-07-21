@@ -128,3 +128,400 @@
     }
   }
 }
+
+/* ============================================================
+   GHL IFRAME LAYOUT
+   The GHL Custom Menu Link iframe does NOT provide 100vh to the
+   embedded page — it clips content that overflows its own height.
+   We therefore:
+     1. Avoid min-h-screen / height: 100vh on the page root.
+     2. Let the page grow naturally with its content (height: auto).
+     3. Allow the outer wrapper to scroll if the viewport is short
+        (overflow-y: auto), so nothing is ever clipped.
+     4. Use responsive CSS (grid, clamp, gap) instead of fixed px.
+   ============================================================ */
+
+/* ── Page shell ── */
+.ghl-page {
+  width: 100%;
+  min-height: 0;           /* never force viewport height */
+  background: #ffffff;
+  overflow-y: auto;        /* scroll only when truly needed  */
+  overflow-x: hidden;
+}
+
+.ghl-inner {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: clamp(12px, 2vw, 20px) clamp(12px, 2vw, 20px) 32px;
+}
+
+/* ── Two-column card grid ── */
+.cards-grid {
+  display: grid;
+  /* Left card | OR divider | Right card */
+  grid-template-columns: 1fr 56px 1fr;
+  align-items: start;
+  gap: 0;
+}
+
+@media (max-width: 720px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Individual card ── */
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;   /* slate-300 */
+  background: #ffffff;
+  padding: 0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  overflow: visible;           /* never clip card contents */
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 16px 0;
+}
+
+.card-badge {
+  display: inline-flex;
+  border-radius: 8px;
+  border: 1px solid #a5f3fc;   /* cyan-300 */
+  background: #cffafe;         /* cyan-200 */
+  padding: 6px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.card-title {
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #0f172a;              /* slate-900 */
+  white-space: nowrap;
+}
+
+.card-body {
+  padding: 10px 14px 16px;
+  flex: 1;
+}
+
+/* ── OR divider ── */
+.or-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;           /* visually centre relative to card headers */
+  gap: 6px;
+}
+
+.or-line {
+  flex: 1;
+  width: 1px;
+  background: #a5f3fc;         /* cyan-300 */
+  min-height: 40px;
+}
+
+.or-badge {
+  border-radius: 6px;
+  background: #22d3ee;         /* cyan-400 */
+  padding: 6px 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .or-divider {
+    flex-direction: row;
+    padding-top: 0;
+    padding-block: 12px;
+    gap: 10px;
+  }
+  .or-line {
+    flex: 1;
+    width: auto;
+    height: 1px;
+    min-height: 0;
+  }
+}
+
+/* ── CSV hint box ── */
+.csv-hint {
+  border-radius: 8px;
+  border: 1px solid #a5f3fc;
+  background: #ecfeff;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.csv-hint-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.csv-hint-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 16px;
+  font-size: 12px;
+  color: #334155;              /* slate-700 */
+}
+
+/* ── CSV drop zone ── */
+.csv-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: 2px dashed #a5f3fc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  padding: 16px 12px;
+  margin-bottom: 10px;
+}
+
+.csv-dropzone:hover {
+  border-color: #22d3ee;
+  background: #ecfeff;
+}
+
+.csv-dropzone--dragging {
+  border-color: #22d3ee;
+  background: rgba(207, 250, 254, 0.5);
+  transform: scale(1.01);
+}
+
+.csv-dropzone--filled {
+  border-color: #a5f3fc;
+  background: #ecfeff;
+}
+
+.csv-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-dropzone-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #cffafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.csv-dropzone-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ── SingleContactForm ── */
+.scf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scf-dnd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.scf-req-note {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.scf-dnd-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scf-dnd-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.scf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scf-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.scf-label--required::before {
+  content: "* ";
+  color: #06b6d4;
+}
+
+.scf-input {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: #0f172a;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.scf-input::placeholder {
+  color: #cbd5e1;
+}
+
+.scf-input:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+}
+
+.scf-input--error {
+  border-color: #f87171;
+}
+
+.scf-error {
+  font-size: 11px;
+  color: #ef4444;
+}
+
+.scf-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.scf-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.scf-tags {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scf-tags-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.scf-tags-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}
+
+.scf-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.scf-radio {
+  width: 14px;
+  height: 14px;
+  accent-color: #22d3ee;
+}
+
+.scf-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-block: 2px;
+}
+
+.scf-consent-label {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.scf-submit-row {
+  display: flex;
+  justify-content: stretch;
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+
+.scf-submit-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  background: #67e8f9;         /* cyan-300 */
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  box-shadow: 3px 3px 0 0 rgba(192, 132, 252, 0.4);
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scf-submit-btn:hover:not(:disabled) {
+  background: #a5f3fc;
+}
+
+.scf-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── CSVUploadFlow tag section ── */
+.csv-tag-box {
+  border-radius: 8px;
+  border: 1px solid #a5f3fc;
+  background: #ecfeff;
+  padding: 10px 12px;
+}
+
+.csv-tag-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.csv-tag-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}

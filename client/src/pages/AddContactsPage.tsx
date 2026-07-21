@@ -12,7 +12,7 @@ export default function AddContactsPage() {
 
   if (!locationId) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center p-8">
+      <div className="ghl-page flex items-center justify-center p-8">
         <div className="max-w-lg text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-cyan-100 flex items-center justify-center mx-auto">
             <Info className="h-7 w-7 text-cyan-600" />
@@ -20,7 +20,11 @@ export default function AddContactsPage() {
           <h1 className="text-xl font-semibold text-slate-900">Add Contacts</h1>
           <p className="text-sm text-slate-600 leading-relaxed">
             This page is designed to be embedded inside GoHighLevel. Add it as a Custom Menu Link
-            with the <code className="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-mono">?locationId=YOUR_LOCATION_ID</code> parameter.
+            with the{" "}
+            <code className="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-mono">
+              ?locationId=YOUR_LOCATION_ID
+            </code>{" "}
+            parameter.
           </p>
         </div>
       </div>
@@ -28,55 +32,50 @@ export default function AddContactsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white overflow-y-auto">
-      <div className="mx-auto max-w-[1260px] px-6 py-3">
-        <div className="grid grid-cols-[1fr_80px_1fr] items-start gap-4">
-          <Card className="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-            <div className="flex items-start justify-between px-5 pt-5">
-              <div className="inline-flex rounded-lg border border-cyan-300 bg-cyan-200 px-4 py-2 shadow-sm">
-                <h2 className="text-[28px] font-extrabold leading-none tracking-tight text-slate-900">
-                  Add Single Contacts
-                </h2>
+    <div className="ghl-page">
+      <div className="ghl-inner">
+        {/* Two-column card layout */}
+        <div className="cards-grid">
+          {/* ── Left card: Single Contact ── */}
+          <Card className="contact-card">
+            <div className="card-header">
+              <div className="card-badge">
+                <h2 className="card-title">Add Single Contact</h2>
               </div>
-              <span className="pt-8 text-xs font-medium text-slate-500">* Required Fields</span>
             </div>
-
-            <div className="px-6 pb-4 pt-3">
+            <div className="card-body">
               <SingleContactForm locationId={locationId} />
             </div>
           </Card>
 
-          <div className="relative flex items-center justify-center">
-            <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-cyan-300" />
-            <div className="relative rounded-md bg-cyan-400 px-4 py-2 text-2xl font-bold text-white shadow-sm">
-              OR
-            </div>
+          {/* ── Divider ── */}
+          <div className="or-divider">
+            <div className="or-line" />
+            <div className="or-badge">OR</div>
+            <div className="or-line" />
           </div>
 
-          <Card className="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-            <div className="flex items-start justify-between px-5 pt-5">
-              <div className="inline-flex rounded-lg border border-cyan-300 bg-cyan-200 px-4 py-2 shadow-sm">
-                <h2 className="text-[28px] font-extrabold leading-none tracking-tight text-slate-900">
-                  Upload CVS File
-                </h2>
+          {/* ── Right card: CSV Upload ── */}
+          <Card className="contact-card">
+            <div className="card-header">
+              <div className="card-badge">
+                <h2 className="card-title">Upload CSV File</h2>
               </div>
-              <span className="pt-8 text-xs font-medium text-slate-500">* Required Fields</span>
             </div>
-
-            <div className="px-6 pb-4 pt-3">
-              <div className="mb-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-900">Your CVS file should include the following:</p>
-                <div className="mt-2 grid grid-cols-3 gap-x-6 gap-y-1 text-sm text-slate-700">
-                  <div>*First Name</div>
-                  <div>*Phone Number</div>
-                  <div>*Number of Dogs</div>
-                  <div>Last Name</div>
-                  <div>*Email</div>
-                  <div>Last Time Scooped</div>
-                  <div>Frequency</div>
-                  <div>Street Address</div>
-                  <div>City</div>
-                  <div>Zip Code</div>
+            <div className="card-body">
+              <div className="csv-hint">
+                <p className="csv-hint-title">Your CSV file should include the following:</p>
+                <div className="csv-hint-grid">
+                  <span>*First Name</span>
+                  <span>*Phone Number</span>
+                  <span>*Number of Dogs</span>
+                  <span>Last Name</span>
+                  <span>*Email</span>
+                  <span>Last Time Scooped</span>
+                  <span>Frequency</span>
+                  <span>Street Address</span>
+                  <span>City</span>
+                  <span>Zip Code</span>
                 </div>
               </div>
               <CSVUploadFlow locationId={locationId} />
