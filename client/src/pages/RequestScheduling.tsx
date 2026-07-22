@@ -149,7 +149,6 @@ function SgLinkPopup({
       setErrors(validationErrors);
       return;
     }
-
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
