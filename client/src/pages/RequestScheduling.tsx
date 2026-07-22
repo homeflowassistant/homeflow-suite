@@ -44,7 +44,7 @@ function useLocationAndParams() {
 
 function sliderBackground(value: number) {
   const pct = (value / (TIMING_LABELS.length - 1)) * 100;
-  return `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${pct}%, hsl(var(--border)) ${pct}%, hsl(var(--border)) 100%)`;
+  return `linear-gradient(to right, var(--primary) 0%, var(--primary) ${pct}%, var(--border) ${pct}%, var(--border) 100%)`;
 }
 
 function timingCustomValueToIndex(value: string): number {
@@ -370,7 +370,7 @@ export default function RequestScheduling() {
   const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
   const showToast = useCallback((message: string, isError = false) => {
-    toast(message, { style: isError ? { background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" } : undefined });
+    toast(message, { style: isError ? { background: "var(--destructive)", color: "var(--destructive-foreground)" } : undefined });
   }, []);
 
   useEffect(() => {
@@ -632,7 +632,7 @@ export default function RequestScheduling() {
                 <path
                   d="M 0 0 C 30 0, 70 60, 100 60"
                   fill="none"
-                  stroke="hsl(var(--primary))"
+                  stroke="var(--primary)"
                   strokeWidth="2"
                   strokeDasharray="6 4"
                 />
