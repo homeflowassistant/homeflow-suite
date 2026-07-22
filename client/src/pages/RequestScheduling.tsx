@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link2, Clock3, Sparkles, X, ArrowRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import exampleEmail from "@assets/example-email.png";
-import exampleSgOnboarding from "@assets/example-sg-onboarding.png";
-import exampleCustomQuote from "@assets/example-custom-quote.png";
+// Example images served from /public via Vite
+const EXAMPLE_EMAIL = "/lite.png";
+const EXAMPLE_SG_ONBOARDING = "/S&G.png";
+const EXAMPLE_CUSTOM_QUOTE = "/custom.png";
 import "./RequestScheduling.css";
 
 // Swap positions: "Custom Quote & Link" and "S&G Link" are swapped.
@@ -488,9 +489,9 @@ export default function RequestScheduling() {
 
   // Example images map for each campaign option
   const exampleImages: Record<string, string> = {
-    "Lite": exampleEmail,
-    "S&G Link": exampleSgOnboarding,
-    "Custom Quote & Link": exampleCustomQuote,
+    "Lite": EXAMPLE_EMAIL,
+    "S&G Link": EXAMPLE_SG_ONBOARDING,
+    "Custom Quote & Link": EXAMPLE_CUSTOM_QUOTE,
   };
 
   return (
