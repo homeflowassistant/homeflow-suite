@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link2, Clock3, Sparkles, X, ArrowRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import exampleEmail from "@assets/example-email.png";
+import exampleSgOnboarding from "@assets/example-sg-onboarding.png";
+import exampleCustomQuote from "@assets/example-custom-quote.png";
 import "./RequestScheduling.css";
 
 // Swap positions: "Custom Quote & Link" and "S&G Link" are swapped.
@@ -328,6 +331,27 @@ function SgLinkPopup({
   );
 }
 
+// ─── Timeline Data ───────────────────────────────────────────────────
+
+const TIMELINE_STEPS = [
+  { day: "Day 1", label: "Email 1\nSMS 1" },
+  { day: "Day 3", label: "Email 2\nSMS 2" },
+  { day: "Day 5", label: "Email 3\nSMS 3" },
+  { day: "Day 8", label: "Email 4\nSMS 4" },
+  { day: "Day 12", label: "Email 5\nSMS 5" },
+  { day: "Day 26", label: "Email 6" },
+  { day: "Day 60", label: "Email 7" },
+  { day: "Day 90", label: "Email 8" },
+  { day: "Day 180", label: "Email 9" },
+  { day: "Day 270", label: "Email 10" },
+  { day: "Day 360", label: "Email 11" },
+];
+
+// First row: indices 0–5 (Day 1 through Day 26)
+// Second row: indices 6–10 (Day 60 through Day 360)
+const FIRST_ROW = TIMELINE_STEPS.slice(0, 6);
+const SECOND_ROW = TIMELINE_STEPS.slice(6);
+
 // ─── Main RequestScheduling Page ─────────────────────────────────────
 
 export default function RequestScheduling() {
@@ -429,8 +453,22 @@ export default function RequestScheduling() {
     }
   };
 
-  // Determine option index for flow arrows
-  const selectedIndex = LEAD_FOLLOW_UP_OPTIONS.indexOf(selectedOption);
+  // Redirect handlers for Email / SMS template buttons
+  const handleGoToEmailTemplates = () => {
+    window.open(
+      `https://app.royalreview.io/v2/location/${locationId}/marketing/emails/all?pageNumber=1`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
+  const handleGoToSmsTemplates = () => {
+    window.open(
+      `https://app.royalreview.io/v2/location/${locationId}/marketing/templates`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
 
   if (!locationId) {
     return (
@@ -447,6 +485,13 @@ export default function RequestScheduling() {
       </div>
     );
   }
+
+  // Example images map for each campaign option
+  const exampleImages: Record<string, string> = {
+    "Lite": exampleEmail,
+    "S&G Link": exampleSgOnboarding,
+    "Custom Quote & Link": exampleCustomQuote,
+  };
 
   return (
     <div className="rs-main">
@@ -470,7 +515,6 @@ export default function RequestScheduling() {
           <div className="rs-option-grid">
             {LEAD_FOLLOW_UP_OPTIONS.map((option, idx) => {
               const isSelected = selectedOption === option;
-              const showArrow = isSelected && idx < LEAD_FOLLOW_UP_OPTIONS.length - 1;
               return (
                 <div key={option} className="rs-option-card-wrapper">
                   <button
@@ -506,23 +550,29 @@ export default function RequestScheduling() {
                     <div className="rs-example-box">
                       <div className="rs-example-label">Example</div>
                       <div className="rs-example-content">
-                        {option === "Lite"
-                          ? "Simple message + email follow-up keeps the lead engaged."
-                          : option === "Custom Quote & Link"
-                          ? "Personalized quote with a scheduling link for self-service approval."
-                          : "Self-onboarding link sends the customer directly to pricing and scheduling."}
+                        <img
+                          src={exampleImages[option]}
+                          alt={`${option} example`}
+                          className="rs-example-image"
+                        />
                       </div>
                     </div>
                   </button>
-                  {/* Flow arrow indicator */}
-                  {showArrow && (
-                    <div className="rs-flow-arrow">
-                      <ArrowRight className="rs-flow-arrow-icon" />
-                    </div>
-                  )}
                 </div>
               );
             })}
+          </div>
+
+          {/* Blue connecting line between outreach scheduling options */}
+          <div className="rs-outreach-connector">
+            <div className="rs-connector-line">
+              {TIMING_LABELS.map((label, idx) => (
+                <div key={label} className="rs-connector-dot-wrapper">
+                  <div className={`rs-connector-dot ${idx === initialTiming ? "rs-connector-dot-active" : ""}`} />
+                  <span className="rs-connector-label">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -569,20 +619,78 @@ export default function RequestScheduling() {
           </div>
         </section>
 
+        {/* ─── Redesigned Timeline with two rows and dashed blue arrows ─── */}
         <section className="rs-card rs-timeline-section">
           <h2 className="rs-title">Timeline</h2>
-          <div className="rs-timeline-grid">
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 1</span><span>Email 1 · SMS 1</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 3</span><span>Email 2 · SMS 2</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 5</span><span>Email 3 · SMS 3</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 8</span><span>Email 4 · SMS 4</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 12</span><span>Email 5 · SMS 5</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 26</span><span>Email 6</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 60</span><span>Email 7</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 90</span><span>Email 8</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 180</span><span>Email 9</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 270</span><span>Email 10</span></div>
-            <div className="rs-timeline-item"><span className="rs-timeline-day">Day 360</span><span>Email 11</span></div>
+          <div className="rs-timeline-redesigned">
+            {/* First row: Day 1 → Day 3 → Day 5 → Day 8 → Day 12 → Day 26 */}
+            <div className="rs-timeline-row">
+              {FIRST_ROW.map((step, idx) => (
+                <div key={step.day} className="rs-timeline-row-inner">
+                  <div className="rs-timeline-step">
+                    <span className="rs-timeline-step-day">{step.day}</span>
+                    <span className="rs-timeline-step-label">{step.label}</span>
+                  </div>
+                  {idx < FIRST_ROW.length - 1 && (
+                    <ArrowRight className="rs-timeline-dashed-arrow" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Curved connector from Day 26 (end of row 1) to Day 60 (start of row 2) */}
+            <div className="rs-timeline-curve-connector">
+              <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="rs-timeline-curve-svg">
+                <path
+                  d="M 0 0 C 30 0, 70 60, 100 60"
+                  fill="none"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                />
+              </svg>
+            </div>
+
+            {/* Second row: Day 60 → Day 90 → Day 180 → Day 270 → Day 360 */}
+            <div className="rs-timeline-row">
+              {SECOND_ROW.map((step, idx) => (
+                <div key={step.day} className="rs-timeline-row-inner">
+                  <div className="rs-timeline-step">
+                    <span className="rs-timeline-step-day">{step.day}</span>
+                    <span className="rs-timeline-step-label">{step.label}</span>
+                  </div>
+                  {idx < SECOND_ROW.length - 1 && (
+                    <ArrowRight className="rs-timeline-dashed-arrow" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Workflow Templates Block ─── */}
+        <section className="rs-card rs-templates-section">
+          <div className="rs-templates-content">
+            <p className="rs-templates-text">
+              Would you like to view your workflow templates?<br />
+              You will be redirected to a new page. Please save any changes on this page before continuing.
+            </p>
+            <div className="rs-templates-buttons">
+              <button
+                type="button"
+                className="rs-templates-btn rs-templates-btn-email"
+                onClick={handleGoToEmailTemplates}
+              >
+                Email Templates
+              </button>
+              <button
+                type="button"
+                className="rs-templates-btn rs-templates-btn-sms"
+                onClick={handleGoToSmsTemplates}
+              >
+                SMS Templates
+              </button>
+            </div>
           </div>
         </section>
 

@@ -91,14 +91,15 @@
   align-items: start;
 }
 
-/* Each card gets its own wrapper for arrow positioning */
+/* Each card gets its own wrapper */
 .rs-option-card-wrapper {
   position: relative;
 }
 
 .rs-option-card {
   position: relative;
-  background: var(--background);
+  /* REMOVE background color — transparent so no color behind the cards */
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 22px;
@@ -153,10 +154,11 @@
 }
 
 .rs-example-box {
-  border: 1px solid var(--border);
+  /* REMOVE background color behind example */
+  border: none;
   border-radius: 16px;
-  background: var(--background);
-  padding: 18px;
+  background: transparent;
+  padding: 18px 0;
   margin-top: auto;
 }
 
@@ -174,6 +176,14 @@
   font-size: 13px;
   color: var(--foreground);
   line-height: 1.7;
+}
+
+.rs-example-image {
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 /* ─── Most Popular Badge ─── */
@@ -199,41 +209,6 @@
 .rs-popular-badge-icon {
   width: 13px;
   height: 13px;
-}
-
-/* ─── Flow Arrows Between Tiles ─── */
-.rs-flow-arrow {
-  display: none;
-  position: absolute;
-  top: 50%;
-  right: -28px;
-  transform: translateY(-50%);
-  z-index: 3;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--primary);
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
-  animation: rs-arrow-pulse 2s ease-in-out infinite;
-}
-
-.rs-flow-arrow-icon {
-  width: 18px;
-  height: 18px;
-  color: #fff;
-}
-
-@keyframes rs-arrow-pulse {
-  0%, 100% { box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3); }
-  50% { box-shadow: 0 2px 16px rgba(6, 182, 212, 0.5); }
-}
-
-@media (min-width: 961px) {
-  .rs-flow-arrow {
-    display: flex;
-  }
 }
 
 .rs-field-notes {
@@ -271,6 +246,71 @@
   color: var(--foreground);
 }
 
+/* ─── Blue Connector Line Between Outreach Options ─── */
+.rs-outreach-connector {
+  margin-top: 24px;
+  padding: 20px 0;
+}
+
+.rs-connector-line {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+
+.rs-connector-line::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 24px;
+  right: 24px;
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    hsl(var(--primary)),
+    hsl(var(--primary))
+  );
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.rs-connector-dot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.rs-connector-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 4px solid var(--background);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.35);
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.rs-connector-dot-active {
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(6, 182, 212, 0.4);
+  transform: scale(1.15);
+}
+
+.rs-connector-label {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ─── Scheduling Section ─── */
 .rs-scheduling-section,
 .rs-timeline-section {
   display: grid;
@@ -284,7 +324,6 @@
   gap: 18px;
 }
 
-/* ─── Consistent Typography for Section Headings ─── */
 .rs-title {
   font-family: var(--font-sans);
   font-size: 1.25rem;
@@ -355,7 +394,6 @@
   text-align: center;
 }
 
-/* ─── Scheduling Divider ─── */
 .rs-scheduling-divider {
   width: 100%;
   height: 2px;
@@ -424,27 +462,141 @@
   background: var(--primary);
 }
 
-.rs-timeline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+/* ─── Redesigned Timeline (two rows, dashed blue arrows) ─── */
+.rs-timeline-redesigned {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 12px 0;
 }
 
-.rs-timeline-item {
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 18px;
-  background: var(--background);
-  display: grid;
-  gap: 8px;
+.rs-timeline-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
 }
 
-.rs-timeline-day {
+.rs-timeline-row-inner {
+  display: flex;
+  align-items: center;
+}
+
+.rs-timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid hsl(var(--primary));
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: var(--card);
+  min-width: 100px;
+  text-align: center;
+}
+
+.rs-timeline-step-day {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
+}
+
+.rs-timeline-step-label {
+  font-size: 13px;
   font-weight: 700;
   color: var(--foreground);
+  white-space: pre-line;
+  line-height: 1.3;
 }
 
-/* ─── Save Button (shifted left, not covered by chat bubble) ─── */
+.rs-timeline-dashed-arrow {
+  width: 28px;
+  height: 28px;
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+  margin: 0 4px;
+  opacity: 0.8;
+}
+
+/* Curved connector from end of row 1 to start of row 2 */
+.rs-timeline-curve-connector {
+  align-self: flex-end;
+  width: 50px;
+  height: 40px;
+  margin-bottom: -8px;
+}
+
+.rs-timeline-curve-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Workflow Templates Block ─── */
+.rs-templates-section {
+  padding: 20px 24px;
+}
+
+.rs-templates-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.rs-templates-text {
+  font-size: 14px;
+  color: var(--foreground);
+  line-height: 1.7;
+  flex: 1;
+  min-width: 280px;
+}
+
+.rs-templates-buttons {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.rs-templates-btn {
+  padding: 12px 28px;
+  border-radius: 14px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.rs-templates-btn-email {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.rs-templates-btn-email:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+}
+
+.rs-templates-btn-sms {
+  background: linear-gradient(135deg, #06b6d4, #22d3ee);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+}
+
+.rs-templates-btn-sms:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.45);
+}
+
+/* ─── Save Button ─── */
 .rs-save-bar {
   display: flex;
   justify-content: center;
@@ -511,6 +663,7 @@
   color: var(--foreground);
 }
 
+/* ─── Responsive ─── */
 @media (max-width: 960px) {
   .rs-grid {
     grid-template-columns: 1fr;
@@ -527,6 +680,37 @@
   .rs-save-bar {
     padding: 0 60px 0 0;
   }
+
+  .rs-connector-label {
+    font-size: 10px;
+  }
+
+  .rs-templates-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .rs-timeline-redesigned {
+    align-items: flex-start;
+    overflow-x: auto;
+  }
+
+  .rs-timeline-row {
+    justify-content: flex-start;
+    min-width: max-content;
+  }
+
+  .rs-timeline-step {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+
+  .rs-timeline-dashed-arrow {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -540,6 +724,25 @@
 
   .rs-save-bar {
     padding: 0;
+  }
+
+  .rs-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rs-connector-label {
+    font-size: 9px;
+    white-space: normal;
+  }
+
+  .rs-templates-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .rs-templates-btn {
+    width: 100%;
+    text-align: center;
   }
 }
 
