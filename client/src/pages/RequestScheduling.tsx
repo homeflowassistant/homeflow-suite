@@ -562,18 +562,6 @@ export default function RequestScheduling() {
               );
             })}
           </div>
-
-          {/* Blue connecting line between outreach scheduling options */}
-          <div className="rs-outreach-connector">
-            <div className="rs-connector-line">
-              {TIMING_LABELS.map((label, idx) => (
-                <div key={label} className="rs-connector-dot-wrapper">
-                  <div className={`rs-connector-dot ${idx === initialTiming ? "rs-connector-dot-active" : ""}`} />
-                  <span className="rs-connector-label">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </section>
 
         <section className="rs-card rs-scheduling-section">
