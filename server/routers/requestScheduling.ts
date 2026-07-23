@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getLocationCustomValueMap, upsertGhlCustomValue } from "../ghl-service";
-import { ENV } from "../_core/env";
 
 const TIMING_LABEL_TO_INDEX: Record<string, 0 | 1 | 2 | 3 | 4> = {
   immediately: 0,
@@ -35,51 +34,6 @@ const REVERSE_TIMING_MAP: Record<string, 0 | 1 | 2 | 3 | 4> = {
 const REQUEST_SCHEDULING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 const FOLLOW_UP_LIMITS = ["0", "1", "2", "3"] as const;
 const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "Custom Quote & Link", "S&G Link"] as const;
-
-/**
- * Send S&G Link form data to the configured n8n webhook.
- */
-async function sendToN8nWebhook(payload: Record<string, unknown> ): Promise<{ success: boolean; statusCode?: number; error?: string }> {
-  if (!ENV.n8nWebhookUrl) {
-    console.error("[S&G Link] ========== WEBHOOK CALL SKIPPED ==========");
-    console.error("[S&G Link] N8N_WEBHOOK_URL is not configured. Form data was not sent.");
-    console.error("[S&G Link] ========== STATUS: SKIPPED ==========");
-    return { success: false, error: "N8N_WEBHOOK_URL not configured" };
-  }
-
-  try {
-    console.log("[S&G Link] ========== WEBHOOK CALL START ==========");
-    console.log("[S&G Link] Target URL:", ENV.n8nWebhookUrl);
-    console.log("[S&G Link] Payload:", JSON.stringify(payload, null, 2));
-
-    const response = await fetch(ENV.n8nWebhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.error("[S&G Link] ========== WEBHOOK CALL FAILED ==========");
-      console.error("[S&G Link] Status:", response.status, response.statusText);
-      console.error("[S&G Link] Response body:", detail);
-      console.error("[S&G Link] ========== STATUS: FAILED ==========");
-      return { success: false, statusCode: response.status, error: detail };
-    }
-
-    console.log("[S&G Link] ========== WEBHOOK CALL SUCCESS ==========");
-    console.log("[S&G Link] Status:", response.status, response.statusText);
-    console.log("[S&G Link] ========== STATUS: SUCCESS ==========");
-    return { success: true, statusCode: response.status };
-  } catch (error) {
-    console.error("[S&G Link] ========== WEBHOOK CALL FAILED ==========");
-    console.error("[S&G Link] Error:", error instanceof Error ? error.message : String(error));
-    console.error("[S&G Link] ========== STATUS: FAILED ==========");
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
-}
 
 export const requestSchedulingRouter = router({
   getSettings: publicProcedure
@@ -119,9 +73,6 @@ export const requestSchedulingRouter = router({
 
   /**
    * Save custom values to GHL location.
-   * When the selected option is "S&G Link", this mutation also accepts
-   * an optional `sgLinkData` payload. If provided, it will be forwarded
-   * to the configured n8n webhook (N8N_WEBHOOK_URL).
    */
   saveCustomValuesSettings: publicProcedure
     .input(
@@ -130,20 +81,6 @@ export const requestSchedulingRouter = router({
         leadFollowUpOption: z.enum(LEAD_FOLLOW_UP_OPTIONS),
         initialRequestScheduling: z.enum(REQUEST_SCHEDULING_LABELS),
         followUpLimit: z.enum(FOLLOW_UP_LIMITS),
-        // S&G Link form data — optional, sent when S&G Link is selected
-        sgLinkData: z
-          .object({
-            zipCode: z.string().min(1, "Zip code is required"),
-            numberOfDogs: z.string().min(1, "Number of dogs is required"),
-            cleanUpFrequency: z.string().min(1, "Clean up frequency is required"),
-            lastTimeYardCleaned: z.string().min(1, "Last time yard was cleaned is required"),
-            firstName: z.string().min(1, "First name is required"),
-            lastName: z.string().optional(),
-            cellPhone: z.string().min(1, "Cell phone number is required"),
-            email: z.string().min(1, "Email is required"),
-            marketingAllowed: z.boolean().default(true),
-          })
-          .optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -162,36 +99,6 @@ export const requestSchedulingRouter = router({
           upsertGhlCustomValue(locationId, "follow_up_limit", input.followUpLimit),
         ]);
 
-        // If S&G Link is selected and form data is provided, send to n8n webhook
-        let webhookResult: { success: boolean; statusCode?: number; error?: string } = { success: false };
-        if (input.leadFollowUpOption === "S&G Link" && input.sgLinkData) {
-          console.log("[S&G Link] ========== SAVING S&G LINK SETTINGS + WEBHOOK ==========");
-          const webhookPayload = {
-            locationId,
-            lead_follow_up_option: input.leadFollowUpOption,
-            initial_request_scheduling: input.initialRequestScheduling,
-            follow_up_limit: input.followUpLimit,
-            sg_link_data: {
-              zip_code: input.sgLinkData.zipCode,
-              number_of_dogs: input.sgLinkData.numberOfDogs,
-              clean_up_frequency: input.sgLinkData.cleanUpFrequency,
-              last_time_yard_was_cleaned: input.sgLinkData.lastTimeYardCleaned,
-              first_name: input.sgLinkData.firstName,
-              last_name: input.sgLinkData.lastName ?? "",
-              cell_phone: input.sgLinkData.cellPhone,
-              email: input.sgLinkData.email,
-              marketing_allowed: input.sgLinkData.marketingAllowed,
-            },
-          };
-
-          webhookResult = await sendToN8nWebhook(webhookPayload);
-          console.log("[S&G Link] ========== SAVE COMPLETE ==========");
-          console.log("[S&G Link] Webhook status:", webhookResult.success ? "SUCCESS" : "FAILED", {
-            statusCode: webhookResult.statusCode,
-            error: webhookResult.error,
-          });
-        }
-
         return {
           success: true,
           saved: {
@@ -199,9 +106,6 @@ export const requestSchedulingRouter = router({
             initial_request_scheduling: initialResults.value,
             follow_up_limit: followUpResults.value,
           },
-          webhookSent: webhookResult.success,
-          webhookStatus: webhookResult.success ? "SUCCESS" : "FAILED",
-          webhookError: webhookResult.error ?? null,
           results: {
             lead_follow_up_option: {
               action: "created_or_updated",

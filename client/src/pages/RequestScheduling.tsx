@@ -8,8 +8,7 @@ const EXAMPLE_SG_ONBOARDING = "/S&G.png";
 const EXAMPLE_CUSTOM_QUOTE = "/custom.png";
 import "./RequestScheduling.css";
 
-// Swap positions: "Custom Quote & Link" and "S&G Link" are swapped.
-// New order: Lite → S&G Link → Custom Quote & Link
+// Order: Lite → S&G Link → Custom Quote & Link
 const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "S&G Link", "Custom Quote & Link"] as const;
 const TIMING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
 const TIMING_CUSTOM_VALUES = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
@@ -68,269 +67,6 @@ function timingCustomValueToIndex(value: string): number {
   return lookup[normalized] ?? TIMING_CUSTOM_VALUES.findIndex((label) => normalizeTimingValue(label) === normalized) ?? 0;
 }
 
-// ─── S&G Link Form Data ──────────────────────────────────────────────
-
-interface SgLinkFormData {
-  zipCode: string;
-  numberOfDogs: string;
-  cleanUpFrequency: string;
-  lastTimeYardCleaned: string;
-  firstName: string;
-  lastName: string;
-  cellPhone: string;
-  email: string;
-  marketingAllowed: boolean;
-}
-
-const emptySgForm: SgLinkFormData = {
-  zipCode: "",
-  numberOfDogs: "",
-  cleanUpFrequency: "",
-  lastTimeYardCleaned: "",
-  firstName: "",
-  lastName: "",
-  cellPhone: "",
-  email: "",
-  marketingAllowed: true,
-};
-
-function validateSgForm(data: SgLinkFormData): Partial<Record<keyof SgLinkFormData, string>> {
-  const errors: Partial<Record<keyof SgLinkFormData, string>> = {};
-
-  if (!data.zipCode.trim()) errors.zipCode = "Zip code is required";
-  if (!data.numberOfDogs.trim()) errors.numberOfDogs = "Number of dogs is required";
-  if (!data.cleanUpFrequency.trim()) errors.cleanUpFrequency = "Clean up frequency is required";
-  if (!data.lastTimeYardCleaned.trim()) errors.lastTimeYardCleaned = "Last time the yard was cleaned is required";
-  if (!data.firstName.trim()) errors.firstName = "First name is required";
-  if (!data.cellPhone.trim()) errors.cellPhone = "Cell phone number is required";
-  if (!data.email.trim()) {
-    errors.email = "Email is required";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
-    errors.email = "Invalid email format";
-  }
-
-  return errors;
-}
-
-// ─── S&G Link Popup Component ────────────────────────────────────────
-
-function SgLinkPopup({
-  open,
-  onClose,
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: SgLinkFormData) => void;
-}) {
-  const [formData, setFormData] = useState<SgLinkFormData>(emptySgForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof SgLinkFormData, string>>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (field: keyof SgLinkFormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = field === "marketingAllowed" ? (e.target as HTMLInputElement).checked : e.target.value;
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, marketingAllowed: checked }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validationErrors = validateSgForm(formData);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await onSubmit(formData);
-      setFormData(emptySgForm);
-      setErrors({});
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="sg-popup-overlay">
-      <div className="sg-popup-modal">
-        <div className="sg-popup-header">
-          <div>
-            <h2 className="sg-popup-title">S&G Link — Lead Information</h2>
-            <p className="sg-popup-subtitle">
-              Enter the lead details to submit to the Sweep & Go Link campaign.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="sg-popup-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="sg-popup-form">
-          <div className="sg-form-grid">
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Zip Code
-              </label>
-              <input
-                type="text"
-                value={formData.zipCode}
-                onChange={handleChange("zipCode")}
-                placeholder="Enter zip code"
-                className={`sg-input ${errors.zipCode ? "sg-input-error" : ""}`}
-              />
-              {errors.zipCode && <p className="sg-error">{errors.zipCode}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Number of Dogs
-              </label>
-              <input
-                type="text"
-                value={formData.numberOfDogs}
-                onChange={handleChange("numberOfDogs")}
-                placeholder="Enter number of dogs"
-                className={`sg-input ${errors.numberOfDogs ? "sg-input-error" : ""}`}
-              />
-              {errors.numberOfDogs && <p className="sg-error">{errors.numberOfDogs}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Clean Up Frequency
-              </label>
-              <input
-                type="text"
-                value={formData.cleanUpFrequency}
-                onChange={handleChange("cleanUpFrequency")}
-                placeholder="e.g. Weekly, Bi-weekly, Monthly"
-                className={`sg-input ${errors.cleanUpFrequency ? "sg-input-error" : ""}`}
-              />
-              {errors.cleanUpFrequency && <p className="sg-error">{errors.cleanUpFrequency}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Last Time The Yard Was Cleaned
-              </label>
-              <input
-                type="text"
-                value={formData.lastTimeYardCleaned}
-                onChange={handleChange("lastTimeYardCleaned")}
-                placeholder="e.g. 2 weeks ago, 06/15/2026"
-                className={`sg-input ${errors.lastTimeYardCleaned ? "sg-input-error" : ""}`}
-              />
-              {errors.lastTimeYardCleaned && <p className="sg-error">{errors.lastTimeYardCleaned}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> First Name
-              </label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={handleChange("firstName")}
-                placeholder="Enter first name"
-                className={`sg-input ${errors.firstName ? "sg-input-error" : ""}`}
-              />
-              {errors.firstName && <p className="sg-error">{errors.firstName}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">Last Name</label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={handleChange("lastName")}
-                placeholder="Enter last name"
-                className="sg-input"
-              />
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Cell Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.cellPhone}
-                onChange={handleChange("cellPhone")}
-                placeholder="Enter cell phone number"
-                className={`sg-input ${errors.cellPhone ? "sg-input-error" : ""}`}
-              />
-              {errors.cellPhone && <p className="sg-error">{errors.cellPhone}</p>}
-            </div>
-
-            <div className="sg-form-field">
-              <label className="sg-label">
-                <span className="sg-required">*</span> Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={handleChange("email")}
-                placeholder="Enter email address"
-                className={`sg-input ${errors.email ? "sg-input-error" : ""}`}
-              />
-              {errors.email && <p className="sg-error">{errors.email}</p>}
-            </div>
-
-            <div className="sg-form-field sg-full-width">
-              <label className="sg-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.marketingAllowed}
-                  onChange={(e) => handleCheckboxChange(e.target.checked)}
-                  className="sg-checkbox"
-                />
-                <span>Marketing Allowed (defaults to Yes if empty)</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="sg-form-actions">
-            <button
-              type="button"
-              className="sg-btn-cancel"
-              onClick={() => {
-                setFormData(emptySgForm);
-                setErrors({});
-                onClose();
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="sg-btn-submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Submitting..." : "Submit & Save"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ─── Timeline Data ───────────────────────────────────────────────────
 
 const TIMELINE_STEPS = [
@@ -360,7 +96,6 @@ export default function RequestScheduling() {
   const [initialTiming, setInitialTiming] = useState(3);
   const [followUpCount, setFollowUpCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSgPopup, setShowSgPopup] = useState(false);
 
   const settingsQuery = trpc.requestScheduling.getSettings.useQuery(
     { locationId },
@@ -401,13 +136,6 @@ export default function RequestScheduling() {
   }, [leadFollowUpOption, initialRequestScheduling, followUpLimit, settingsQuery.data]);
 
   const handleSave = async () => {
-    // If S&G Link is selected, open the popup for data entry
-    if (selectedOption === "S&G Link") {
-      setShowSgPopup(true);
-      return;
-    }
-
-    // For "Lite" or "Custom Quote & Link", save directly without popup
     setIsSaving(true);
     try {
       await saveCustomValuesMutation.mutateAsync({
@@ -417,34 +145,6 @@ export default function RequestScheduling() {
         followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
       });
       showToast("Settings saved successfully.");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      showToast(`Error saving settings: ${errorMsg}`, true);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSgSubmit = async (sgData: SgLinkFormData) => {
-    setIsSaving(true);
-    try {
-      const result = await saveCustomValuesMutation.mutateAsync({
-        locationId,
-        leadFollowUpOption: selectedOption,
-        initialRequestScheduling: TIMING_LABELS[initialTiming],
-        followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
-        sgLinkData: sgData,
-      });
-
-      // Show webhook status in the toast
-      if (result.webhookSent) {
-        showToast("S&G Link settings saved and webhook sent successfully.");
-      } else if (result.webhookError) {
-        showToast(`Settings saved, but webhook failed: ${result.webhookError}`);
-      } else {
-        showToast("Settings saved (webhook was not configured).");
-      }
-      setShowSgPopup(false);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       showToast(`Error saving settings: ${errorMsg}`, true);
@@ -688,13 +388,6 @@ export default function RequestScheduling() {
           </button>
         </div>
       </div>
-
-      {/* S&G Link Popup */}
-      <SgLinkPopup
-        open={showSgPopup}
-        onClose={() => setShowSgPopup(false)}
-        onSubmit={handleSgSubmit}
-      />
     </div>
   );
 }
