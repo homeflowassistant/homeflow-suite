@@ -164,7 +164,7 @@ export default function RequestScheduling() {
 
   const handleGoToSmsTemplates = () => {
     window.open(
-      `https://app.royalreview.io/v2/location/${locationId}/marketing/templates`,
+      `https://app.royalreview.io/v2/location/${locationId}/conversations/templates?tab=folders&page=1&size=20`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -231,7 +231,6 @@ export default function RequestScheduling() {
                     )}
                     <div className="rs-option-card-header">
                       <span className="rs-option-name">{option.toUpperCase()}</span>
-                      <span className="rs-option-pill">{option === "Lite" ? "Simple follow-up" : option === "Custom Quote & Link" ? "Custom quote + link" : "Self-onboarding campaign"}</span>
                     </div>
                     <p className="rs-option-text">
                       {option === "Lite"
@@ -256,6 +255,27 @@ export default function RequestScheduling() {
                           className="rs-example-image"
                         />
                       </div>
+                    </div>
+                    {/* Radio Button */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        marginTop: "18px",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="leadFollowUp"
+                        checked={selectedOption === option}
+                        onChange={() => setSelectedOption(option)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          width: "22px",
+                          height: "22px",
+                          cursor: "pointer",
+                        }}
+                      />
                     </div>
                   </button>
                 </div>
