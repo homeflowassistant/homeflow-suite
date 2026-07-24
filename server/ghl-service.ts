@@ -228,44 +228,52 @@ export async function upsertGhlCustomValue(
 ): Promise<{ id: string; name: string; value: string }> {
   const accessToken = await getValidAccessToken(locationId);
 
-  const getResponse = await fetch(
-    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        Version: GHL_API_VERSION,
-      },
-    }
-  );
-
-  if (!getResponse.ok) {
-    const errorBody = await getResponse.text();
-    console.error(`[GHL] Failed to fetch custom values: ${getResponse.status} ${errorBody}`);
-    throw new Error(`Failed to fetch custom values: ${getResponse.status}`);
-  }
-
-  const data = (await getResponse.json()) as { customValues?: Record<string, unknown>[] };
-  const customValues = data.customValues ?? [];
-
   let existingId: string | undefined;
-  const normalizedTarget = normalizeFieldName(name);
-  for (const customValue of customValues) {
-    const keyCandidates = [
-      typeof customValue.fieldKey === "string" ? customValue.fieldKey : undefined,
-      typeof customValue.key === "string" ? customValue.key : undefined,
-      typeof customValue.name === "string" ? customValue.name : undefined,
-    ].filter(Boolean) as string[];
 
-    for (const candidate of keyCandidates) {
-      if (normalizeFieldName(candidate) === normalizedTarget || candidate === name) {
-        existingId = typeof customValue.id === "string" ? customValue.id : undefined;
-        break;
+  try {
+    const getResponse = await fetch(
+      `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+      }
+    );
+
+    if (getResponse.ok) {
+      const data = (await getResponse.json()) as { customValues?: Record<string, unknown>[] };
+      const customValues = data.customValues ?? [];
+
+      const normalizedTarget = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      for (const customValue of customValues) {
+        const id = typeof customValue.id === "string" ? customValue.id : undefined;
+        if (!id) continue;
+
+        const keyCandidates = [
+          typeof customValue.fieldKey === "string" ? customValue.fieldKey : undefined,
+          typeof customValue.key === "string" ? customValue.key : undefined,
+          typeof customValue.name === "string" ? customValue.name : undefined,
+        ].filter(Boolean) as string[];
+
+        for (const candidate of keyCandidates) {
+          const normCand = candidate.toLowerCase().replace(/^contact\./, "").replace(/[^a-z0-9]/g, "");
+          if (
+            candidate === name ||
+            candidate.toLowerCase() === name.toLowerCase() ||
+            normCand === normalizedTarget
+          ) {
+            existingId = id;
+            break;
+          }
+        }
+        if (existingId) break;
       }
     }
-
-    if (existingId) break;
+  } catch (err) {
+    console.warn("[GHL] Failed pre-fetching custom values during upsert:", err);
   }
 
   const url = existingId
@@ -288,6 +296,75 @@ export async function upsertGhlCustomValue(
 
   if (!upsertResponse.ok) {
     const errorBody = await upsertResponse.text();
+
+    // If POST failed because the key already exists in GHL, fetch custom values again and force a PUT update!
+    if (method === "POST" && (upsertResponse.status === 400 || errorBody.includes("already exists"))) {
+      console.log(`[GHL] POST failed for "${name}" with "already exists". Retrying via PUT update...`);
+      try {
+        const retryGet = await fetch(
+          `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${accessToken}`,
+              Version: GHL_API_VERSION,
+            },
+          }
+        );
+        if (retryGet.ok) {
+          const retryData = (await retryGet.json()) as { customValues?: Record<string, unknown>[] };
+          const list = retryData.customValues ?? [];
+          const normalizedTarget = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+          let foundId: string | undefined;
+          for (const cvItem of list) {
+            const id = typeof cvItem.id === "string" ? cvItem.id : undefined;
+            if (!id) continue;
+            const candidates = [
+              typeof cvItem.fieldKey === "string" ? cvItem.fieldKey : undefined,
+              typeof cvItem.key === "string" ? cvItem.key : undefined,
+              typeof cvItem.name === "string" ? cvItem.name : undefined,
+            ].filter(Boolean) as string[];
+
+            for (const cand of candidates) {
+              const normCand = cand.toLowerCase().replace(/^contact\./, "").replace(/[^a-z0-9]/g, "");
+              if (cand === name || cand.toLowerCase() === name.toLowerCase() || normCand === normalizedTarget) {
+                foundId = id;
+                break;
+              }
+            }
+            if (foundId) break;
+          }
+
+          if (foundId) {
+            const putUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(foundId)}`;
+            const putResp = await fetch(putUrl, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${accessToken}`,
+                Version: GHL_API_VERSION,
+              },
+              body: JSON.stringify(payload),
+            });
+            if (putResp.ok) {
+              const putData = (await putResp.json()) as Record<string, any>;
+              const resCv = putData.customValue ?? putData;
+              return {
+                id: foundId,
+                name: typeof resCv.name === "string" ? resCv.name : name,
+                value: typeof resCv.value === "string" ? resCv.value : value,
+              };
+            }
+          }
+        }
+      } catch (retryErr) {
+        console.error("[GHL] Retry PUT failed:", retryErr);
+      }
+    }
+
     console.error(`[GHL] Failed to upsert custom value "${name}":`, {
       status: upsertResponse.status,
       method,

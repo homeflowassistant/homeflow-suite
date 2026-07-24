@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { ghlRouter } from "./routers/ghl";
 import { requestSchedulingRouter } from "./routers/requestScheduling";
+import { reactivationRouter } from "./routers/reactivation";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +22,7 @@ export const appRouter = router({
   // GHL Marketplace integration
   ghl: ghlRouter,
   requestScheduling: requestSchedulingRouter,
+  reactivation: reactivationRouter,
 });
 
 export type AppRouter = typeof appRouter;

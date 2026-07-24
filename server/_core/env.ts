@@ -12,4 +12,5 @@ export const ENV = {
   ghlClientId: process.env.GHL_CLIENT_ID ?? "",
   ghlClientSecret: process.env.GHL_CLIENT_SECRET ?? "",
   n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
+  appDomain: process.env.APP_DOMAIN ?? process.env.VITE_API_URL ?? "https://homeflow-suite.vercel.app",
 };
