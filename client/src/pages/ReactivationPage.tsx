@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Clock3, Link2, RefreshCw, Upload, X } from "lucide-react";
+import { ArrowRight, Clock3, Link2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./ReactivationPage.css";
