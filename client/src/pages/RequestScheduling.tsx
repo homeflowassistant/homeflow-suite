@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link2, Clock3, Sparkles, X, ArrowRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
 // Example images served from /public via Vite
 const EXAMPLE_EMAIL = "/lite.png";
 const EXAMPLE_SG_ONBOARDING = "/S&G.png";
@@ -96,11 +97,11 @@ export default function RequestScheduling() {
   const [initialTiming, setInitialTiming] = useState(3);
   const [followUpCount, setFollowUpCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
+  const [quotePopupOpen, setQuotePopupOpen] = useState(false);
 
-  const settingsQuery = trpc.requestScheduling.getSettings.useQuery(
-    { locationId },
-    { enabled: !!locationId }
-  );
+  // Note: getSettings requires contactId (per-contact GHL fetch),
+  // but this is a location-level page. State is driven by URL params.
+  const settingsQuery = null;
 
   const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
@@ -123,17 +124,14 @@ export default function RequestScheduling() {
     }
   }, [leadFollowUpOption, initialRequestScheduling, followUpLimit]);
 
+  // If no URL params are provided, fall back to saved location-level custom values
+  // (fetched via a separate location-level query when available).
   useEffect(() => {
     if (leadFollowUpOption || initialRequestScheduling || followUpLimit) {
       return;
     }
-
-    if (settingsQuery.data) {
-      setSelectedOption(settingsQuery.data.leadFollowUpOption);
-      setInitialTiming(settingsQuery.data.initialTiming);
-      setFollowUpCount(settingsQuery.data.followUpCount);
-    }
-  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit, settingsQuery.data]);
+    // No fallback query available without contactId; keep default state.
+  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -168,6 +166,24 @@ export default function RequestScheduling() {
       "_blank",
       "noopener,noreferrer"
     );
+  };
+
+  const handleQuoteSaveSuccess = () => {
+    // Re-read URL params after popup save (the page will re-render with updated values)
+    const params = new URLSearchParams(window.location.search);
+    const opt = params.get("lead_follow_up_option");
+    if (opt && LEAD_FOLLOW_UP_OPTIONS.includes(opt as any)) {
+      setSelectedOption(opt as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]);
+    }
+    const timing = params.get("initial_request_scheduling");
+    if (timing) {
+      setInitialTiming(timingCustomValueToIndex(timing));
+    }
+    const fu = params.get("follow_up_limit");
+    if (fu) {
+      const val = parseInt(fu, 10);
+      if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
+    }
   };
 
   if (!locationId) {
@@ -408,6 +424,19 @@ export default function RequestScheduling() {
           </button>
         </div>
       </div>
+
+      {/* Custom Quote & Link Popup */}
+      <CustomQuoteLinkPopup
+        open={quotePopupOpen}
+        onOpenChange={setQuotePopupOpen}
+        locationId={locationId}
+        leadFollowUpOption={selectedOption}
+        initialTiming={initialTiming}
+        followUpCount={followUpCount}
+        onTimingChange={setInitialTiming}
+        onFollowUpChange={setFollowUpCount}
+        onSaveSuccess={handleQuoteSaveSuccess}
+      />
     </div>
   );
 }
