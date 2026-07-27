@@ -2,18 +2,22 @@
  * CustomQuoteLinkPopup Component
  *
  * A split-panel popup dialog that appears on the Follow-Up (Request Scheduling) page.
+ * Triggered by clicking the "Custom Quote & Link" option card.
  *
- * Left Panel:  Visual quote template preview matching the reference design from
- *              pawsitivelypoopfree.com — shows a service quote with company logo,
+ * Left Panel:  Visual quote template preview pre-filled with reference content
+ *              from pawsitivelypoopfree.com — shows a service quote with company logo,
  *              team photo, bio, pricing, images gallery, and reviews.
  *
  * Right Panel: The existing form fields from the Request Scheduling page —
+ *              Company branding uploads, bio, CTA, pricing, gallery, reviews,
  *              Initial Request Scheduling slider, Follow-up Requests slider,
  *              and Save button. All fields map to the same GHL custom values
  *              via the existing saveCustomValuesSettings mutation.
  *
  * Backend:  No changes. Reuses trpc.requestScheduling.saveCustomValuesSettings.
- *           Custom fields: initial_request_scheduling, follow_up_limit
+ *           Custom fields: lead_follow_up_option, initial_request_scheduling, follow_up_limit
+ *
+ * Modular:  Designed to be duplicated/extended for S&G Link popup in the future.
  */
 
 import { useState, useCallback, useRef } from "react";
@@ -36,7 +40,8 @@ import {
   Loader2,
   Trash2,
   Plus,
-  ChevronLeft,
+  FileText,
+  Edit3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -94,20 +99,54 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   3: "3",
 };
 
+// Default prefilled content from pawsitivelypoopfree.com/quote/new-quote-title/
 const DEFAULT_FORM: QuoteFormData = {
-  companyLogo: null,
-  teamPhoto: null,
-  bioTitle: "",
-  bioDescription: "",
+  companyLogo: "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/rmps-logotype-horizontal-colour@2x.svg",
+  teamPhoto: "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020085-scaled.jpg",
+  bioTitle: "Utah's Highest Rated Pooper Scooper Service",
+  bioDescription:
+    "Serving dog owners across the Wasatch Front, our Utah team keeps your yard clean, fresh, and hassle-free. Whether you\u2019re in Salt Lake, Utah County, Davis, or the surrounding areas, we provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, Rocky Mountain Pooper Scoopers is here to make life easier\u2014one yard at a time.",
   bioImage: null,
-  ctaText: "",
-  ctaDescription: "",
-  pricingBio: "",
-  pricingTotal: "",
-  pricingSixMonths: "",
-  pricingOneYear: "",
-  galleryImages: [],
-  reviews: [],
+  ctaText: "Quote Approved",
+  ctaDescription: "Click to approve this quote and schedule your service.",
+  pricingBio: "$19.00",
+  pricingTotal: "$9.99",
+  pricingSixMonths: "$0.00",
+  pricingOneYear: "$0.00",
+  galleryImages: [
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/IMG_5482-2-scaled.jpg",
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/pexels-pixabay-247522-scaled.jpg",
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020138-scaled.jpg",
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/pexels-theroommarketing-com-536177-13157651-scaled.jpg",
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020085-scaled.jpg",
+    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020117-scaled.jpg",
+  ],
+  reviews: [
+    {
+      reviewerName: "Joshua & Megan",
+      reviewText:
+        "I thought hiring a pooper scooper was lazy\u2026 until I tried it. Now I tell all my neighbors. It\u2019s like outsourcing laundry: not glamorous, but it changes your week.",
+      rating: 5,
+    },
+    {
+      reviewerName: "Amber K.",
+      reviewText:
+        "They didn\u2019t just scoop \u2014 they noticed my gate hinge was loose and mentioned it so I could fix it before the dog escaped. Small details like that make me trust them completely.",
+      rating: 5,
+    },
+    {
+      reviewerName: "Marcus L.",
+      reviewText:
+        "With two big labs, it used to feel like a minefield out there. Now it\u2019s just\u2026 a yard. Clean, fresh, and useable again. Pricing is fair, and honestly cheaper than the arguments I used to have with my kids about whose turn it was.",
+      rating: 5,
+    },
+    {
+      reviewerName: "Samantha P.",
+      reviewText:
+        "They text me before arriving, close the gate every time, and even give the dog a pat if he\u2019s out. Super reliable and respectful service. My only regret is not signing up sooner.",
+      rating: 5,
+    },
+  ],
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -159,22 +198,28 @@ function StarRating({ rating, onRate, readonly }: { rating: number; onRate?: (r:
 
 function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden h-full">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full">
       {/* Header with logo */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
         {formData.companyLogo ? (
           <img
             src={formData.companyLogo}
             alt="Company Logo"
-            className="h-8 object-contain"
+            className="h-10 object-contain"
+            crossOrigin="anonymous"
           />
         ) : (
-          <div className="h-8 w-24 bg-slate-100 rounded flex items-center justify-center text-[10px] text-slate-400">
+          <div className="h-10 w-32 bg-slate-100 rounded flex items-center justify-center text-[11px] text-slate-400">
             Your Logo
           </div>
         )}
-        <span className="text-[10px] text-slate-400 font-medium">
-          Quote of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        <span className="text-[11px] text-slate-400 font-medium">
+          Quote of{" "}
+          {new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
         </span>
       </div>
 
@@ -184,91 +229,108 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           <img
             src={formData.teamPhoto}
             alt="Team Photo"
-            className="w-full h-36 object-cover"
+            className="w-full h-44 object-cover"
+            crossOrigin="anonymous"
           />
         ) : (
-          <div className="w-full h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+          <div className="w-full h-44 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
             <div className="text-center">
-              <Image className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-              <span className="text-[10px] text-slate-400">Upload Company Photo</span>
+              <Image className="w-10 h-10 text-slate-300 mx-auto mb-1" />
+              <span className="text-[11px] text-slate-400">
+                Upload Company Photo
+              </span>
             </div>
           </div>
         )}
       </div>
 
       {/* Bio section */}
-      <div className="px-4 py-3 border-b border-slate-100">
-        <h3 className="text-xs font-bold text-slate-800 mb-1">
-          {formData.bioTitle || "Why I signed... and how it's the..."}
+      <div className="px-5 py-4 border-b border-slate-100">
+        <h3 className="text-sm font-bold text-slate-800 mb-1.5">
+          {formData.bioTitle || "Your Bio Title Here"}
         </h3>
-        <p className="text-[10px] text-slate-600 leading-relaxed">
-          {formData.bioDescription || "Your bio description will appear here. Explain your service, what makes you different, and why customers should choose you."}
+        <p className="text-[11px] text-slate-600 leading-relaxed">
+          {formData.bioDescription ||
+            "Your bio description will appear here. Explain your service, what makes you different, and why customers should choose you."}
         </p>
       </div>
 
       {/* Pricing section */}
-      <div className="px-4 py-3 border-b border-slate-100">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <span className="text-xs font-bold text-slate-800">
-              {formData.pricingBio || "Free Trial"}
-            </span>
-          </div>
-          <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded">
+      <div className="px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold text-slate-800">
+            {formData.pricingBio || "Free Trial"}
+          </span>
+          <span className="bg-red-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full">
             FREE
           </span>
         </div>
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-4 gap-2">
           <div className="text-center">
-            <span className="block text-[9px] text-slate-500">Total</span>
-            <span className="block text-[10px] font-bold text-slate-700">{formData.pricingTotal || "$0.00"}</span>
+            <span className="block text-[10px] text-slate-500">Total</span>
+            <span className="block text-[11px] font-bold text-slate-700">
+              {formData.pricingTotal || "$0.00"}
+            </span>
           </div>
           <div className="text-center">
-            <span className="block text-[9px] text-slate-500">Monthly</span>
-            <span className="block text-[10px] font-bold text-slate-700">{formData.pricingBio || "$0.00"}</span>
+            <span className="block text-[10px] text-slate-500">Monthly</span>
+            <span className="block text-[11px] font-bold text-slate-700">
+              {formData.pricingBio || "$0.00"}
+            </span>
           </div>
           <div className="text-center">
-            <span className="block text-[9px] text-slate-500">6 Months</span>
-            <span className="block text-[10px] font-bold text-slate-700">{formData.pricingSixMonths || "$0.00"}</span>
+            <span className="block text-[10px] text-slate-500">6 Months</span>
+            <span className="block text-[11px] font-bold text-slate-700">
+              {formData.pricingSixMonths || "$0.00"}
+            </span>
           </div>
           <div className="text-center">
-            <span className="block text-[9px] text-slate-500">1 Year</span>
-            <span className="block text-[10px] font-bold text-slate-700">{formData.pricingOneYear || "$0.00"}</span>
+            <span className="block text-[10px] text-slate-500">1 Year</span>
+            <span className="block text-[11px] font-bold text-slate-700">
+              {formData.pricingOneYear || "$0.00"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* CTA section */}
-      <div className="px-4 py-3 border-b border-slate-100">
+      <div className="px-5 py-4 border-b border-slate-100">
         <p className="text-xs font-semibold text-blue-700 mb-0.5">
           {formData.ctaText || "CTA text here"}
         </p>
-        <p className="text-[10px] text-slate-500">
-          {formData.ctaDescription || "CTA bio description here"}
+        <p className="text-[11px] text-slate-500">
+          {formData.ctaDescription || "CTA description here"}
         </p>
       </div>
 
       {/* Images gallery */}
-      <div className="px-4 py-3 border-b border-slate-100">
-        <h4 className="text-[10px] font-bold text-slate-700 mb-2">Images</h4>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <div className="px-5 py-4 border-b border-slate-100">
+        <h4 className="text-[11px] font-bold text-slate-700 mb-2.5">
+          Images
+        </h4>
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {formData.galleryImages.length > 0 ? (
             formData.galleryImages.map((img, idx) => (
               <div
                 key={idx}
-                className="w-14 h-14 rounded border border-slate-200 overflow-hidden flex-shrink-0"
+                className="w-16 h-16 rounded-lg border border-slate-200 overflow-hidden flex-shrink-0 shadow-sm"
               >
-                <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                <img
+                  src={img}
+                  alt={`Gallery ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
               </div>
             ))
           ) : (
             <>
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="w-14 h-14 rounded border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center flex-shrink-0"
+                  className="w-16 h-16 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center flex-shrink-0"
                 >
-                  <Image size={12} className="text-slate-300" />
+                  <Image size={14} className="text-slate-300" />
                 </div>
               ))}
             </>
@@ -277,23 +339,40 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       </div>
 
       {/* Reviews section */}
-      <div className="px-4 py-3">
-        <h4 className="text-[10px] font-bold text-slate-700 mb-2">Reviews</h4>
+      <div className="px-5 py-4">
+        <h4 className="text-[11px] font-bold text-slate-700 mb-3">Reviews</h4>
         {formData.reviews.length > 0 ? (
-          <div className="space-y-2 max-h-28 overflow-y-auto">
+          <div className="space-y-3 max-h-40 overflow-y-auto">
             {formData.reviews.map((review, idx) => (
-              <div key={idx} className="bg-slate-50 rounded p-2">
-                <div className="flex items-center gap-1 mb-0.5">
+              <div key={idx} className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 mb-1">
                   <StarRating rating={review.rating} readonly />
-                  <span className="text-[10px] font-semibold text-slate-700">{review.reviewerName}</span>
+                  <span className="text-[11px] font-semibold text-slate-700">
+                    {review.reviewerName}
+                  </span>
                 </div>
-                <p className="text-[9px] text-slate-600 leading-relaxed">{review.reviewText}</p>
+                <p className="text-[10px] text-slate-600 leading-relaxed">
+                  {review.reviewText}
+                </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-[10px] text-slate-400 italic">No reviews added yet.</p>
+          <p className="text-[11px] text-slate-400 italic">
+            No reviews added yet.
+          </p>
         )}
+      </div>
+
+      {/* Bottom CTA button */}
+      <div className="px-5 py-4 border-t border-slate-100 flex justify-center">
+        <button
+          type="button"
+          className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          disabled
+        >
+          {formData.ctaText || "Quote Approved"}
+        </button>
       </div>
     </div>
   );
@@ -340,7 +419,10 @@ function QuoteFormFields({
       const base64 = await fileToBase64(files[i]);
       newImages.push(base64);
     }
-    setFormData({ ...formData, galleryImages: [...formData.galleryImages, ...newImages] });
+    setFormData({
+      ...formData,
+      galleryImages: [...formData.galleryImages, ...newImages],
+    });
   };
 
   const handleRemoveGalleryImage = (index: number) => {
@@ -353,10 +435,7 @@ function QuoteFormFields({
   const addReview = () => {
     setFormData({
       ...formData,
-      reviews: [
-        ...formData.reviews,
-        { reviewerName: "", reviewText: "", rating: 5 },
-      ],
+      reviews: [...formData.reviews, { reviewerName: "", reviewText: "", rating: 5 }],
     });
   };
 
@@ -378,38 +457,47 @@ function QuoteFormFields({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ── Company Branding Section ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-          <Image size={13} className="text-blue-500" />
+        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+          <Image size={14} className="text-blue-500" />
           Company Branding
         </h4>
         <div className="space-y-3">
           {/* Company Logo */}
           <div>
-            <Label className="text-[11px] text-slate-600">Upload Company Logo</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Upload Company Logo
+            </Label>
             <div
-              className="mt-1 border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+              className="mt-1.5 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
               onClick={() => logoInputRef.current?.click()}
             >
               {formData.companyLogo ? (
                 <div className="flex items-center justify-between">
-                  <img src={formData.companyLogo} alt="Logo" className="h-8 object-contain" />
+                  <img
+                    src={formData.companyLogo}
+                    alt="Logo"
+                    className="h-8 object-contain"
+                    crossOrigin="anonymous"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setFormData({ ...formData, companyLogo: null });
                     }}
-                    className="text-red-400 hover:text-red-600"
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                   >
                     <X size={14} />
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
-                  <Upload size={16} className="text-slate-400" />
-                  <span className="text-[10px] text-slate-500">Upload Company Logo</span>
+                  <Upload size={18} className="text-slate-400" />
+                  <span className="text-[11px] text-slate-500">
+                    Upload Logo
+                  </span>
                 </div>
               )}
             </div>
@@ -424,20 +512,30 @@ function QuoteFormFields({
 
           {/* Team Photo */}
           <div>
-            <Label className="text-[11px] text-slate-600">Team Photo</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Team Photo
+            </Label>
+            <p className="text-[10px] text-slate-400 mb-1">
+              Best if there are people in it
+            </p>
             <div
-              className="mt-1 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+              className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
               onClick={() => photoInputRef.current?.click()}
             >
               {formData.teamPhoto ? (
                 <div className="flex items-center justify-between">
-                  <img src={formData.teamPhoto} alt="Team" className="h-20 object-cover rounded mx-auto" />
+                  <img
+                    src={formData.teamPhoto}
+                    alt="Team Photo"
+                    className="h-10 object-cover rounded"
+                    crossOrigin="anonymous"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setFormData({ ...formData, teamPhoto: null });
                     }}
-                    className="absolute text-red-400 hover:text-red-600"
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                   >
                     <X size={14} />
                   </button>
@@ -445,8 +543,9 @@ function QuoteFormFields({
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <Upload size={18} className="text-slate-400" />
-                  <span className="text-[10px] text-slate-500">Upload Company Photo</span>
-                  <span className="text-[9px] text-slate-400">Best if there are people in it</span>
+                  <span className="text-[11px] text-slate-500">
+                    Upload Company Photo
+                  </span>
                 </div>
               )}
             </div>
@@ -463,53 +562,63 @@ function QuoteFormFields({
 
       {/* ── Bio Section ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-          <Quote size={13} className="text-blue-500" />
+        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+          <Edit3 size={13} className="text-blue-500" />
           Bio Section
         </h4>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
-            <Label className="text-[11px] text-slate-600">Bio Title</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Bio Title
+            </Label>
             <Input
               value={formData.bioTitle}
               onChange={(e) => updateField("bioTitle", e.target.value)}
-              placeholder="Insert Bio Here"
-              className="h-8 text-xs mt-1"
+              className="mt-1 text-xs h-9"
+              placeholder="e.g. Utah's Highest Rated Pooper Scooper Service"
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">Bio Description</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Bio Description
+            </Label>
             <textarea
               value={formData.bioDescription}
               onChange={(e) => updateField("bioDescription", e.target.value)}
-              placeholder="Enter bio description here..."
-              rows={3}
-              className="w-full mt-1 text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+              placeholder="Describe your service..."
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">Bio Image</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Bio Image
+            </Label>
             <div
-              className="mt-1 border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+              className="mt-1.5 border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
               onClick={() => bioImageInputRef.current?.click()}
             >
               {formData.bioImage ? (
                 <div className="flex items-center justify-between">
-                  <img src={formData.bioImage} alt="Bio" className="h-12 object-cover rounded" />
+                  <img
+                    src={formData.bioImage}
+                    alt="Bio Image"
+                    className="h-10 object-cover rounded"
+                    crossOrigin="anonymous"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setFormData({ ...formData, bioImage: null });
                     }}
-                    className="text-red-400 hover:text-red-600"
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                   >
                     <X size={14} />
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-center gap-1">
-                  <Upload size={14} className="text-slate-400" />
-                  <span className="text-[10px] text-slate-500">Upload Image</span>
+                <div className="flex flex-col items-center gap-1">
+                  <Upload size={16} className="text-slate-400" />
+                  <span className="text-[11px] text-slate-500">Upload Image</span>
                 </div>
               )}
             </div>
@@ -526,28 +635,32 @@ function QuoteFormFields({
 
       {/* ── CTA Section ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-          <ChevronLeft size={13} className="text-blue-500" />
+        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+          <Quote size={13} className="text-blue-500" />
           CTA Section
         </h4>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
-            <Label className="text-[11px] text-slate-600">CTA Text (max 15 chars)</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              CTA Text
+            </Label>
             <Input
               value={formData.ctaText}
-              onChange={(e) => updateField("ctaText", e.target.value.slice(0, 15))}
-              placeholder="CTA text"
-              className="h-8 text-xs mt-1"
+              onChange={(e) => updateField("ctaText", e.target.value)}
+              className="mt-1 text-xs h-9"
+              placeholder="e.g. Quote Approved"
               maxLength={15}
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">CTA Description</Label>
-            <Input
+            <Label className="text-[11px] text-slate-600 font-medium">
+              CTA Description
+            </Label>
+            <textarea
               value={formData.ctaDescription}
               onChange={(e) => updateField("ctaDescription", e.target.value)}
-              placeholder="CTA bio description"
-              className="h-8 text-xs mt-1"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[60px]"
+              placeholder="Brief CTA description..."
             />
           </div>
         </div>
@@ -555,212 +668,231 @@ function QuoteFormFields({
 
       {/* ── Pricing Section ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-          <span className="text-blue-500">$</span>
+        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+          <Save size={13} className="text-blue-500" />
           Pricing
         </h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-[11px] text-slate-600">Total</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">Total</Label>
             <Input
               value={formData.pricingTotal}
               onChange={(e) => updateField("pricingTotal", e.target.value)}
+              className="mt-1 text-xs h-9"
               placeholder="$0.00"
-              className="h-8 text-xs mt-1"
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">Bio / Monthly</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              Monthly
+            </Label>
             <Input
               value={formData.pricingBio}
               onChange={(e) => updateField("pricingBio", e.target.value)}
+              className="mt-1 text-xs h-9"
               placeholder="$0.00"
-              className="h-8 text-xs mt-1"
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">6 Months</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              6 Months
+            </Label>
             <Input
               value={formData.pricingSixMonths}
               onChange={(e) => updateField("pricingSixMonths", e.target.value)}
+              className="mt-1 text-xs h-9"
               placeholder="$0.00"
-              className="h-8 text-xs mt-1"
             />
           </div>
           <div>
-            <Label className="text-[11px] text-slate-600">1 Year</Label>
+            <Label className="text-[11px] text-slate-600 font-medium">
+              1 Year
+            </Label>
             <Input
               value={formData.pricingOneYear}
               onChange={(e) => updateField("pricingOneYear", e.target.value)}
+              className="mt-1 text-xs h-9"
               placeholder="$0.00"
-              className="h-8 text-xs mt-1"
             />
           </div>
         </div>
       </div>
 
-      {/* ── Images Gallery Section ── */}
+      {/* ── Images Gallery ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
           <Image size={13} className="text-blue-500" />
-          Images
+          Images Gallery
         </h4>
-        <div className="flex flex-wrap gap-2">
-          {formData.galleryImages.map((img, idx) => (
-            <div
-              key={idx}
-              className="relative w-16 h-16 rounded border border-slate-200 overflow-hidden group"
-            >
-              <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
-              <button
-                onClick={() => handleRemoveGalleryImage(idx)}
-                className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={10} />
-              </button>
-            </div>
-          ))}
-          <label className="w-16 h-16 rounded border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 bg-slate-50">
-            <div className="flex flex-col items-center gap-0.5">
-              <Plus size={14} className="text-slate-400" />
-              <span className="text-[8px] text-slate-400">Upload</span>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => handleGalleryUpload(e.target.files)}
-            />
-          </label>
+        <div
+          className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+          onClick={() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.multiple = true;
+            input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files);
+            input.click();
+          }}
+        >
+          <Upload size={18} className="text-slate-400 mx-auto mb-1" />
+          <span className="text-[11px] text-slate-500">Upload Images</span>
         </div>
+        {formData.galleryImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {formData.galleryImages.map((img, idx) => (
+              <div
+                key={idx}
+                className="relative w-16 h-16 rounded-lg border border-slate-200 overflow-hidden shadow-sm"
+              >
+                <img
+                  src={img}
+                  alt={`Gallery ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
+                <button
+                  onClick={() => handleRemoveGalleryImage(idx)}
+                  className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                >
+                  <X size={9} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Reviews Section ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-          <Star size={13} className="text-blue-500" />
-          Reviews
-        </h4>
-        <div className="space-y-2">
-          {formData.reviews.map((review, idx) => (
-            <div key={idx} className="bg-slate-50 rounded-lg p-2 border border-slate-200">
-              <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <Star size={13} className="text-blue-500" />
+            Reviews
+          </h4>
+          <button
+            type="button"
+            onClick={addReview}
+            className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <Plus size={12} />
+            Add Review
+          </button>
+        </div>
+        {formData.reviews.map((review, idx) => (
+          <div key={idx} className="bg-slate-50 rounded-lg p-3 mb-2 border border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
                 <StarRating
                   rating={review.rating}
                   onRate={(r) => updateReview(idx, { rating: r })}
                 />
-                <button
-                  onClick={() => removeReview(idx)}
-                  className="text-red-400 hover:text-red-600 ml-auto"
-                >
-                  <Trash2 size={12} />
-                </button>
+                <input
+                  type="text"
+                  value={review.reviewerName}
+                  onChange={(e) =>
+                    updateReview(idx, { reviewerName: e.target.value })
+                  }
+                  placeholder="Reviewer name"
+                  className="text-[11px] bg-transparent border-none outline-none font-semibold text-slate-700 w-28"
+                />
               </div>
-              <Input
-                value={review.reviewerName}
-                onChange={(e) => updateReview(idx, { reviewerName: e.target.value })}
-                placeholder="Reviewer name"
-                className="h-7 text-xs mb-1"
-              />
-              <textarea
-                value={review.reviewText}
-                onChange={(e) => updateReview(idx, { reviewText: e.target.value })}
-                placeholder="Review text..."
-                rows={2}
-                className="w-full text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
-              />
+              <button
+                onClick={() => removeReview(idx)}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
-          ))}
-          <button
-            onClick={addReview}
-            className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-[10px] text-slate-500 hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1"
-          >
-            <Plus size={12} />
-            Upload Testimonial/Review
-          </button>
-        </div>
+            <textarea
+              value={review.reviewText}
+              onChange={(e) => updateReview(idx, { reviewText: e.target.value })}
+              placeholder="Review text..."
+              className="w-full text-[10px] bg-white border border-slate-200 rounded px-2 py-1.5 outline-none focus:border-blue-300 min-h-[40px] resize-none"
+            />
+          </div>
+        ))}
       </div>
 
-      {/* ── Request Scheduling Fields (Existing) ── */}
+      {/* ── Scheduling Sliders ── */}
       <div className="border-t border-slate-200 pt-4">
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Save size={13} className="text-blue-500" />
-          Request Scheduling
+        <h4 className="text-xs font-bold text-slate-700 mb-4 flex items-center gap-1.5">
+          <FileText size={13} className="text-blue-500" />
+          Follow-Up Scheduling
         </h4>
 
         {/* Initial Request Scheduling */}
         <div className="mb-4">
-          <Label className="text-[11px] text-slate-600 block mb-1">Initial Request Scheduling</Label>
-          <p className="text-[10px] text-slate-400 mb-2">
-            Choose when to send review requests to your contacts.
-          </p>
-          <div className="text-center text-lg font-bold text-blue-600 mb-2">
-            {TIMING_LABELS[initialTiming]}
-          </div>
-          <div className="mb-1">
+          <Label className="text-[11px] text-slate-600 font-medium">
+            Initial Request Scheduling
+          </Label>
+          <div className="mt-2">
             <input
               type="range"
               min={0}
               max={4}
               step={1}
               value={initialTiming}
-              onChange={(e) => onTimingChange(Number.parseInt(e.target.value, 10))}
+              onChange={(event) =>
+                onTimingChange(Number.parseInt(event.target.value, 10))
+              }
               style={{ background: sliderBackground(initialTiming, 4) }}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md"
-              aria-label="Initial request timing"
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+              aria-label="Initial outreach timing"
             />
             <div className="flex justify-between mt-1">
-              <span className="text-[9px] text-slate-500">Immediately</span>
-              <span className="text-[9px] text-slate-500">Next Day</span>
-              <span className="text-[9px] text-slate-500">48h Later</span>
-              <span className="text-[9px] text-slate-500">72h Later</span>
-              <span className="text-[9px] text-slate-500">1 Week</span>
+              {TIMING_LABELS.map((label) => (
+                <span
+                  key={label}
+                  className="text-[9px] text-slate-500 text-center flex-1"
+                >
+                  {label}
+                </span>
+              ))}
             </div>
-          </div>
-          <div className="bg-blue-50 rounded px-2 py-1 text-[10px] text-blue-600 mt-1">
-            Stored in <code className="font-mono">{"{{custom_values.initial_request_scheduling}}"}</code>
           </div>
         </div>
 
         {/* Follow-up Requests */}
         <div className="mb-4">
-          <Label className="text-[11px] text-slate-600 block mb-1">Follow-up Requests</Label>
-          <p className="text-[10px] text-slate-400 mb-2">
-            Select the number of follow-up requests to send if no response is received.
-          </p>
-          <div className="text-center text-lg font-bold text-blue-600 mb-2">
-            {followUpCount === 0 ? "No Follow-ups" : `${followUpCount} Follow-up${followUpCount > 1 ? "s" : ""}`}
-          </div>
-          <div className="mb-1">
+          <Label className="text-[11px] text-slate-600 font-medium">
+            Follow-up Requests
+          </Label>
+          <div className="mt-2">
             <input
               type="range"
               min={0}
               max={3}
               step={1}
               value={followUpCount}
-              onChange={(e) => onFollowUpChange(Number.parseInt(e.target.value, 10))}
-              style={{ background: sliderBackground(followUpCount) }}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md"
-              aria-label="Number of follow-up requests"
+              onChange={(event) =>
+                onFollowUpChange(Number.parseInt(event.target.value, 10))
+              }
+              style={{ background: sliderBackground(followUpCount, 3) }}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+              aria-label="Follow-up count"
             />
             <div className="flex justify-between mt-1">
-              <span className="text-[9px] text-slate-500">0</span>
-              <span className="text-[9px] text-slate-500">1</span>
-              <span className="text-[9px] text-slate-500">2</span>
-              <span className="text-[9px] text-slate-500">3</span>
+              {["0", "1", "2", "3"].map((val) => (
+                <span
+                  key={val}
+                  className="text-[9px] text-slate-500 text-center flex-1"
+                >
+                  {val}
+                </span>
+              ))}
             </div>
           </div>
-          <div className="bg-blue-50 rounded px-2 py-1 text-[10px] text-blue-600 mt-1">
-            Stored in <code className="font-mono">{"{{custom_values.follow_up_limit}}"}</code>
-          </div>
         </div>
+      </div>
 
-        {/* Save Button */}
+      {/* ── Save Button ── */}
+      <div className="border-t border-slate-200 pt-4">
         <button
+          type="button"
           onClick={onSave}
           disabled={isSaving}
-          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <>
@@ -828,8 +960,8 @@ export default function CustomQuoteLinkPopup({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl w-[95vw] p-0 gap-0 overflow-hidden max-h-[90vh]">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-200 bg-slate-50">
+      <DialogContent className="max-w-[92vw] w-[92vw] sm:max-w-[90vw] lg:max-w-[88vw] p-0 gap-0 overflow-hidden max-h-[92vh] rounded-xl">
+        <DialogHeader className="px-7 pt-5 pb-3 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-lg font-bold text-slate-800">
@@ -872,14 +1004,14 @@ export default function CustomQuoteLinkPopup({
             className={`${
               activeTab === "preview" ? "block" : "hidden lg:block"
             } bg-white border-r border-slate-200 overflow-y-auto`}
-            style={{ maxHeight: "calc(90vh - 60px)" }}
+            style={{ maxHeight: "calc(92vh - 60px)" }}
           >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-blue-600 flex items-center gap-1.5">
                   Template
                 </h3>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                <span className="text-[10px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
                   Preview
                 </span>
               </div>
@@ -892,14 +1024,14 @@ export default function CustomQuoteLinkPopup({
             className={`${
               activeTab === "form" ? "block" : "hidden lg:block"
             } overflow-y-auto bg-slate-50`}
-            style={{ maxHeight: "calc(90vh - 60px)" }}
+            style={{ maxHeight: "calc(92vh - 60px)" }}
           >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-blue-600 flex items-center gap-1.5">
                   Create Yours
                 </h3>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                <span className="text-[10px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
                   Form Fields
                 </span>
               </div>

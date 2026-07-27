@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, Sparkles, X, Star, FileText } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles, X, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -236,7 +236,13 @@ export default function RequestScheduling() {
                   <button
                     type="button"
                     className={`rs-option-card ${isSelected ? "rs-option-selected" : ""}`}
-                    onClick={() => setSelectedOption(option)}
+                    onClick={() => {
+                      setSelectedOption(option);
+                      // Open popup when Custom Quote & Link card is clicked
+                      if (option === "Custom Quote & Link") {
+                        setQuotePopupOpen(true);
+                      }
+                    }}
                   >
                     {/* "Most Popular" badge on S&G Link tile */}
                     {option === "S&G Link" && (
@@ -398,18 +404,6 @@ export default function RequestScheduling() {
             </div>
           </div>
         </section>
-
-        {/* Custom Quote & Link trigger button */}
-        <div className="rs-custom-quote-bar">
-          <button
-            type="button"
-            className="rs-custom-quote-btn"
-            onClick={() => setQuotePopupOpen(true)}
-          >
-            <FileText className="h-4 w-4" />
-            Custom Quote & Link
-          </button>
-        </div>
 
         <div className="rs-save-bar">
           <button type="button" className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
