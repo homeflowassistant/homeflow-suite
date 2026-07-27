@@ -101,8 +101,8 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
 
 // Default prefilled content from pawsitivelypoopfree.com/quote/new-quote-title/
 const DEFAULT_FORM: QuoteFormData = {
-  companyLogo: "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/rmps-logotype-horizontal-colour@2x.svg",
-  teamPhoto: "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020085-scaled.jpg",
+  companyLogo: "/quote-preview/company-logo.svg",
+  teamPhoto: "/quote-preview/team-photo.jpg",
   bioTitle: "Utah's Highest Rated Pooper Scooper Service",
   bioDescription:
     "Serving dog owners across the Wasatch Front, our Utah team keeps your yard clean, fresh, and hassle-free. Whether you\u2019re in Salt Lake, Utah County, Davis, or the surrounding areas, we provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, Rocky Mountain Pooper Scoopers is here to make life easier\u2014one yard at a time.",
@@ -114,12 +114,12 @@ const DEFAULT_FORM: QuoteFormData = {
   pricingSixMonths: "$0.00",
   pricingOneYear: "$0.00",
   galleryImages: [
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/IMG_5482-2-scaled.jpg",
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/pexels-pixabay-247522-scaled.jpg",
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020138-scaled.jpg",
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/pexels-theroommarketing-com-536177-13157651-scaled.jpg",
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020085-scaled.jpg",
-    "https://pawsitivelypoopfree.com/wp-content/uploads/2025/09/P1020117-scaled.jpg",
+    "/quote-preview/gallery-1.jpg",
+    "/quote-preview/gallery-2.jpg",
+    "/quote-preview/gallery-3.jpg",
+    "/quote-preview/gallery-4.jpg",
+    "/quote-preview/gallery-5.jpg",
+    "/quote-preview/gallery-6.jpg",
   ],
   reviews: [
     {
@@ -200,12 +200,12 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full">
       {/* Header with logo */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+      <div className="flex items-center justify-center px-5 py-4 border-b border-slate-100">
         {formData.companyLogo ? (
           <img
             src={formData.companyLogo}
             alt="Company Logo"
-            className="h-10 object-contain"
+            className="h-12 object-contain"
             crossOrigin="anonymous"
           />
         ) : (
@@ -213,14 +213,6 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
             Your Logo
           </div>
         )}
-        <span className="text-[11px] text-slate-400 font-medium">
-          Quote of{" "}
-          {new Date().toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </span>
       </div>
 
       {/* Hero image */}
