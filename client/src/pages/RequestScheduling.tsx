@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, Sparkles, X, ArrowRight, Star } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles, X, Star, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -343,49 +343,30 @@ export default function RequestScheduling() {
           </div>
         </section>
 
-        {/* ─── Redesigned Timeline with two rows and dashed blue arrows ─── */}
+        {/* ─── Timeline with two rows ─── */}
         <section className="rs-card rs-timeline-section">
           <h2 className="rs-title">Timeline</h2>
           <div className="rs-timeline-redesigned">
             {/* First row: Day 1 → Day 3 → Day 5 → Day 8 → Day 12 → Day 26 */}
             <div className="rs-timeline-row">
-              {FIRST_ROW.map((step, idx) => (
+              {FIRST_ROW.map((step) => (
                 <div key={step.day} className="rs-timeline-row-inner">
                   <div className="rs-timeline-step">
                     <span className="rs-timeline-step-day">{step.day}</span>
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
-                  {idx < FIRST_ROW.length - 1 && (
-                    <ArrowRight className="rs-timeline-dashed-arrow" />
-                  )}
                 </div>
               ))}
             </div>
 
-            {/* Curved connector from Day 26 (end of row 1) to Day 60 (start of row 2) */}
-            <div className="rs-timeline-curve-connector">
-              <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="rs-timeline-curve-svg">
-                <path
-                  d="M 0 0 C 30 0, 70 60, 100 60"
-                  fill="none"
-                  stroke="var(--primary)"
-                  strokeWidth="2"
-                  strokeDasharray="6 4"
-                />
-              </svg>
-            </div>
-
             {/* Second row: Day 60 → Day 90 → Day 180 → Day 270 → Day 360 */}
             <div className="rs-timeline-row">
-              {SECOND_ROW.map((step, idx) => (
+              {SECOND_ROW.map((step) => (
                 <div key={step.day} className="rs-timeline-row-inner">
                   <div className="rs-timeline-step">
                     <span className="rs-timeline-step-day">{step.day}</span>
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
-                  {idx < SECOND_ROW.length - 1 && (
-                    <ArrowRight className="rs-timeline-dashed-arrow" />
-                  )}
                 </div>
               ))}
             </div>
@@ -417,6 +398,18 @@ export default function RequestScheduling() {
             </div>
           </div>
         </section>
+
+        {/* Custom Quote & Link trigger button */}
+        <div className="rs-custom-quote-bar">
+          <button
+            type="button"
+            className="rs-custom-quote-btn"
+            onClick={() => setQuotePopupOpen(true)}
+          >
+            <FileText className="h-4 w-4" />
+            Custom Quote & Link
+          </button>
+        </div>
 
         <div className="rs-save-bar">
           <button type="button" className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
