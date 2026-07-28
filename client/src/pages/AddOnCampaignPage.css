@@ -61,6 +61,17 @@
   padding: 28px 32px;
 }
 
+.aoc-lite-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.aoc-lite-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .aoc-lite-label {
   font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 900;
@@ -77,6 +88,20 @@
   line-height: 1.65;
   margin: 0;
   text-align: center;
+}
+
+.aoc-lite-phone {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aoc-lite-phone-img {
+  width: 150px;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 16px;
 }
 
 /* ─── Duration Section ─── */
@@ -378,6 +403,13 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
+  .aoc-lite-inner {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .aoc-lite-phone-img {
+    width: 130px;
+  }
   .aoc-timeline-wrapper {
     flex-direction: column;
     align-items: stretch;

@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./AddOnCampaignPage.css";
 
+// ─── Example image ───────────────────────────────────────────────────
+const ADDON_SMS_EXAMPLE = "/addon-sms-example.png";
+
 // ─── Constants ────────────────────────────────────────────────────────
 const ADDON_DURATION_OPTIONS = [
   "4 Weeks",
@@ -147,14 +150,25 @@ export default function AddOnCampaignPage() {
 
         {/* ── LITE Info Card ── */}
         <section className="aoc-lite-card">
-          <div className="aoc-lite-label">LITE</div>
-          <p className="aoc-lite-text">
-            Add-On Follow-Up helps you promote extra services to current customers without feeling
-            pushy. Send a text message every 2 weeks for 1 to 3 months to stay top of mind, educate
-            customers, and gently remind them about helpful add-ons like deodorizer, disinfectant,
-            or deterrent services. Consistent follow-up helps customers see the value of extra
-            services over time, increasing revenue while making upgrades feel easy and natural.
-          </p>
+          <div className="aoc-lite-inner">
+            <div className="aoc-lite-content">
+              <div className="aoc-lite-label">LITE</div>
+              <p className="aoc-lite-text">
+                Add-On Follow-Up helps you promote extra services to current customers without feeling
+                pushy. Send a text message every 2 weeks for 1 to 3 months to stay top of mind, educate
+                customers, and gently remind them about helpful add-ons like deodorizer, disinfectant,
+                or deterrent services. Consistent follow-up helps customers see the value of extra
+                services over time, increasing revenue while making upgrades feel easy and natural.
+              </p>
+            </div>
+            <div className="aoc-lite-phone">
+              <img
+                src={ADDON_SMS_EXAMPLE}
+                alt="Add-On SMS example on mobile phone"
+                className="aoc-lite-phone-img"
+              />
+            </div>
+          </div>
         </section>
 
         {/* ── Add-On Duration Section ── */}
