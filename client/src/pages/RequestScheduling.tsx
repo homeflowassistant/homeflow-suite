@@ -3,6 +3,7 @@ import { CheckCircle2, Link2, Clock3, Sparkles, X, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
+import SGLinkPopup from "@/components/SGLinkPopup";
 // Example images served from /public via Vite
 const EXAMPLE_EMAIL = "/lite.png";
 const EXAMPLE_SG_ONBOARDING = "/S&G.png";
@@ -98,6 +99,7 @@ export default function RequestScheduling() {
   const [followUpCount, setFollowUpCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
   const [quotePopupOpen, setQuotePopupOpen] = useState(false);
+  const [sgLinkPopupOpen, setSgLinkPopupOpen] = useState(false);
 
   // Note: getSettings requires contactId (per-contact GHL fetch),
   // but this is a location-level page. State is driven by URL params.
@@ -241,6 +243,10 @@ export default function RequestScheduling() {
                       // Open popup when Custom Quote & Link card is clicked
                       if (option === "Custom Quote & Link") {
                         setQuotePopupOpen(true);
+                      }
+                      // Open popup when S&G Link card is clicked
+                      if (option === "S&G Link") {
+                        setSgLinkPopupOpen(true);
                       }
                     }}
                   >
@@ -423,6 +429,13 @@ export default function RequestScheduling() {
         onTimingChange={setInitialTiming}
         onFollowUpChange={setFollowUpCount}
         onSaveSuccess={handleQuoteSaveSuccess}
+      />
+
+      {/* S&G Link Popup */}
+      <SGLinkPopup
+        open={sgLinkPopupOpen}
+        onOpenChange={setSgLinkPopupOpen}
+        locationId={locationId}
       />
     </div>
   );

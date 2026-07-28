@@ -345,4 +345,38 @@ const CV = {
           },
         };
       }),
+
+    /**
+     * Save S&G Link base onboarding link to GHL custom value.
+     * Saves to: base_onboarding_link (accessible via {{custom_values.base_onboarding_link}})
+     */
+    saveSgLinkSettings: publicProcedure
+      .input(
+        z.object({
+          locationId: z.string().min(1),
+          baseOnboardingLink: z.string().min(1, "Base onboarding link is required"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const locationId = input.locationId.trim();
+        if (!locationId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
+        }
+
+        const result = await upsertGhlCustomValue(
+          locationId,
+          "base_onboarding_link",
+          input.baseOnboardingLink.trim()
+        );
+
+        return {
+          success: true,
+          saved: {
+            base_onboarding_link: result.value,
+          },
+          results: {
+            base_onboarding_link: { action: "created_or_updated", id: result.id },
+          },
+        };
+      }),
   });
