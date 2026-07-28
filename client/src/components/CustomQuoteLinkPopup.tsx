@@ -100,7 +100,7 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
 const DEFAULT_FORM: QuoteFormData = {
   companyName: "[Your Company Name]",
   timeCompanyStarted: "2018",
-  companyLogo: "/quote-preview/company-logo.svg",
+  companyLogo: "/quote-preview/generic-logo.jpg",
   teamPhoto: "/quote-preview/dog-photo.jpg",
   bioTitle: "[service area] Highest Rated Pooper Scooper Service",
   bioDescription:
@@ -211,7 +211,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       </div>
 
       {/* Company name (centered, matching live site) */}
-      <div className="px-5 py-2 ">
+      <div className="px-5 py-2 text-center">
         <h2 className="text-sm font-bold text-slate-800">
           {formData.companyName || "Your Company Name"}
         </h2>
@@ -1019,6 +1019,38 @@ export default function CustomQuoteLinkPopup({
         leadFollowUpOption: leadFollowUpOption,
         initialRequestScheduling: TIMING_LABELS[initialTiming],
         followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
+        // Map popup form data to the GHL custom value schema (same as Reactivation page)
+        customQuoteData: {
+          businessLogo: formData.companyLogo ?? undefined,
+          businessName: formData.companyName || undefined,
+          businessOwnerName: formData.timeCompanyStarted || undefined,
+          bioText: formData.bioDescription || undefined,
+          companyImage: formData.teamPhoto ?? undefined,
+          discountOffer: formData.offers[0]?.name || undefined,
+          offerDescription: formData.offers[0]?.description || undefined,
+          offerImage: formData.offers[0]?.image ?? undefined,
+          sendQuoteAutomatically: true,
+          tosLink: "",
+          showCardSection: true,
+          image1: formData.galleryImages[0] ?? undefined,
+          image2: formData.galleryImages[1] ?? undefined,
+          image3: formData.galleryImages[2] ?? undefined,
+          image4: formData.galleryImages[3] ?? undefined,
+          image5: formData.galleryImages[4] ?? undefined,
+          image6: formData.galleryImages[5] ?? undefined,
+          review1: formData.testimonialScreenshots[0] ?? undefined,
+          review1Photo: formData.testimonialHeadshots[0] ?? undefined,
+          review1Name: formData.testimonialNames[0] || undefined,
+          review2: formData.testimonialScreenshots[1] ?? undefined,
+          review2Photo: formData.testimonialHeadshots[1] ?? undefined,
+          review2Name: formData.testimonialNames[1] || undefined,
+          review3: formData.testimonialScreenshots[2] ?? undefined,
+          review3Photo: formData.testimonialHeadshots[2] ?? undefined,
+          review3Name: formData.testimonialNames[2] || undefined,
+          review4: formData.testimonialScreenshots[3] ?? undefined,
+          review4Photo: formData.testimonialHeadshots[3] ?? undefined,
+          review4Name: formData.testimonialNames[3] || undefined,
+        },
       });
       toast.success("Settings saved successfully.");
       onSaveSuccess();
@@ -1029,7 +1061,7 @@ export default function CustomQuoteLinkPopup({
     } finally {
       setIsSaving(false);
     }
-  }, [locationId, leadFollowUpOption, initialTiming, followUpCount, saveMutation, onSaveSuccess, onOpenChange]);
+  }, [locationId, leadFollowUpOption, initialTiming, followUpCount, formData, saveMutation, onSaveSuccess, onOpenChange]);
 
   const handleClose = (open: boolean) => {
     if (!open) {
