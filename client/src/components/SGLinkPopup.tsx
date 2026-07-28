@@ -218,15 +218,8 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                   </button>
                 </div>
 
-                {/* GHL custom field info */}
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-xs text-slate-500">
-                    <strong>Saved to:</strong>{" "}
-                    <code className="px-1 py-0.5 bg-slate-200 rounded text-xs font-mono">
-                      &#123;&#123;custom_values.base_onboarding_link&#125;&#125;
-                    </code>
-                  </p>
-                </div>
+                
+                
               </div>
             </div>
           </div>

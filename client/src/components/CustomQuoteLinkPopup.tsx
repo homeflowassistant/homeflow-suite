@@ -27,7 +27,7 @@
  *   - Reviews: exactly 4 required (no add/remove)
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -962,52 +962,7 @@ export default function CustomQuoteLinkPopup({
   const [formData, setFormData] = useState<QuoteFormData>(DEFAULT_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"template" | "create">("template");
-  const leftPanelRef = useRef<HTMLDivElement>(null);
-  const rightPanelRef = useRef<HTMLDivElement>(null);
-  const isSyncingScroll = useRef(false);
-
-  // Synced scrolling: when left panel scrolls, right panel scrolls proportionally
-  useEffect(() => {
-    const leftPanel = leftPanelRef.current;
-    const rightPanel = rightPanelRef.current;
-    if (!leftPanel || !rightPanel) return;
-
-    const handleLeftScroll = () => {
-      if (isSyncingScroll.current) return;
-      isSyncingScroll.current = true;
-      const leftMax = leftPanel.scrollHeight - leftPanel.clientHeight;
-      const rightMax = rightPanel.scrollHeight - rightPanel.clientHeight;
-      if (leftMax > 0 && rightMax > 0) {
-        const ratio = leftPanel.scrollTop / leftMax;
-        rightPanel.scrollTop = ratio * rightMax;
-      }
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
-    };
-
-    const handleRightScroll = () => {
-      if (isSyncingScroll.current) return;
-      isSyncingScroll.current = true;
-      const leftMax = leftPanel.scrollHeight - leftPanel.clientHeight;
-      const rightMax = rightPanel.scrollHeight - rightPanel.clientHeight;
-      if (leftMax > 0 && rightMax > 0) {
-        const ratio = rightPanel.scrollTop / rightMax;
-        leftPanel.scrollTop = ratio * leftMax;
-      }
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
-    };
-
-    leftPanel.addEventListener("scroll", handleLeftScroll, { passive: true });
-    rightPanel.addEventListener("scroll", handleRightScroll, { passive: true });
-
-    return () => {
-      leftPanel.removeEventListener("scroll", handleLeftScroll);
-      rightPanel.removeEventListener("scroll", handleRightScroll);
-    };
-  }, [open]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const saveMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
@@ -1072,9 +1027,9 @@ export default function CustomQuoteLinkPopup({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[96vw] lg:max-w-[92vw] xl:max-w-[1600px] p-0 gap-0 overflow-hidden max-h-[95vh] rounded-xl border-2 border-blue-600">
+      <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[96vw] lg:max-w-[92vw] xl:max-w-[1600px] p-0 gap-0 max-h-[95vh] rounded-xl border-2 border-blue-600 flex flex-col">
         {/* Header */}
-        <DialogHeader className="px-6 pt-5 pb-3 bg-slate-50 border-b border-slate-200">
+        <DialogHeader className="px-6 pt-5 pb-3 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <DialogTitle className="text-2xl font-bold text-blue-700 mb-2">
             Custom Quote & Link
           </DialogTitle>
@@ -1093,7 +1048,7 @@ export default function CustomQuoteLinkPopup({
         </DialogHeader>
 
         {/* Tab buttons */}
-        <div className="flex items-center justify-center gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200">
+        <div className="flex items-center justify-center gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <button
             onClick={() => setActiveTab("template")}
             className={`px-8 py-2 text-sm font-bold rounded-md transition-colors ${
@@ -1116,15 +1071,14 @@ export default function CustomQuoteLinkPopup({
           </button>
         </div>
 
-        {/* Split panel body */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden" style={{ height: "calc(95vh - 220px)" }}>
+        {/* Split panel body - scrollable */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
           {/* Left Panel: Template Preview */}
           <div
-            ref={leftPanelRef}
             className={`${
               activeTab === "template" ? "block" : "hidden lg:block"
-            } bg-blue-50 border-r-2 border-blue-300 overflow-y-auto`}
-            style={{ maxHeight: "100%" }}
+            } bg-blue-50 border-r-2 border-blue-300`}
           >
             <div className="p-4">
               <QuoteTemplatePreview formData={formData} />
@@ -1133,11 +1087,9 @@ export default function CustomQuoteLinkPopup({
 
           {/* Right Panel: Form Fields */}
           <div
-            ref={rightPanelRef}
             className={`${
               activeTab === "create" ? "block" : "hidden lg:block"
-            } bg-white overflow-y-auto`}
-            style={{ maxHeight: "100%" }}
+            } bg-white`}
           >
             <div className="p-5">
               <QuoteFormFields
@@ -1148,6 +1100,7 @@ export default function CustomQuoteLinkPopup({
               />
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
