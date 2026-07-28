@@ -100,7 +100,7 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
 const DEFAULT_FORM: QuoteFormData = {
   companyName: "[Your Company Name]",
   timeCompanyStarted: "2018",
-  companyLogo: "/quote-preview/generic-logo.jpg",
+  companyLogo: "/quote-preview/company-logo.svg",
   teamPhoto: "/quote-preview/dog-photo.jpg",
   bioTitle: "[service area] Highest Rated Pooper Scooper Service",
   bioDescription:
@@ -211,7 +211,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       </div>
 
       {/* Company name (centered, matching live site) */}
-      <div className="px-5 py-2 text-center">
+      <div className="px-5 py-2 ">
         <h2 className="text-sm font-bold text-slate-800">
           {formData.companyName || "Your Company Name"}
         </h2>
