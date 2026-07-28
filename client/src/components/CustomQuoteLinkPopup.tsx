@@ -1,26 +1,32 @@
 /**
  * CustomQuoteLinkPopup Component
  *
- * A split-panel popup dialog that appears on the Follow-Up (Request Scheduling) page.
- * Triggered by clicking the "Custom Quote & Link" option card.
+ * Split-panel popup dialog matching the Canva slide 7 design for the
+ * Follow-Up (Request Scheduling) page. Triggered by clicking the
+ * "Custom Quote & Link" option card.
  *
- * Left Panel:  Visual quote template preview pre-filled with reference content
- *              from pawsitivelypoopfree.com — shows a service quote with company logo,
- *              team photo, bio, pricing, images gallery, and reviews.
- *
- * Right Panel: The existing form fields from the Request Scheduling page —
- *              Company branding uploads, bio, CTA, pricing, gallery, reviews,
- *              Initial Request Scheduling slider, Follow-up Requests slider,
- *              and Save button. All fields map to the same GHL custom values
- *              via the existing saveCustomValuesSettings mutation.
+ * Layout (per Canva design):
+ *   - Title: "Custom Quote & Link" with "How it works" instructions
+ *   - Two tab buttons: "Template" | "Create Yours"
+ *   - Left panel: Read-only quote template preview (prefilled)
+ *   - Right panel: Form fields for creating the quote
+ *   - Synced scrolling between left and right panels
  *
  * Backend:  No changes. Reuses trpc.requestScheduling.saveCustomValuesSettings.
- *           Custom fields: lead_follow_up_option, initial_request_scheduling, follow_up_limit
- *
  * Modular:  Designed to be duplicated/extended for S&G Link popup in the future.
+ *
+ * Defaults:
+ *   - Logo: generic-logo.jpg
+ *   - Team Photo: dog-photo.jpg
+ *   - Bio Title: [service area] Highest Rated Pooper Scooper Service
+ *   - Bio Description: generic service description with [company name]
+ *   - CTA: "Quote Approved" (not editable)
+ *   - No pricing fields
+ *   - Gallery: max 6 images, defaults with dog photos
+ *   - Reviews: exactly 4 required (no add/remove)
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,20 +34,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Upload,
   X,
   Image,
   Star,
-  Quote,
   Save,
   Loader2,
-  Trash2,
-  Plus,
-  FileText,
-  Edit3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -49,31 +49,18 @@ import { trpc } from "@/lib/trpc";
 // ─── Types ───────────────────────────────────────────────────────────
 
 interface QuoteFormData {
-  // Company branding
+  companyName: string;
+  timeCompanyStarted: string;
   companyLogo: string | null;
   teamPhoto: string | null;
-  // Bio section
   bioTitle: string;
   bioDescription: string;
-  bioImage: string | null;
-  // CTA section
-  ctaText: string;
-  ctaDescription: string;
-  // Pricing
-  pricingBio: string;
-  pricingTotal: string;
-  pricingSixMonths: string;
-  pricingOneYear: string;
-  // Images gallery
+  offerText: string;
+  offerDescription: string;
   galleryImages: string[];
-  // Reviews
-  reviews: ReviewEntry[];
-}
-
-interface ReviewEntry {
-  reviewerName: string;
-  reviewText: string;
-  rating: number;
+  testimonialHeadshots: (string | null)[];
+  testimonialNames: string[];
+  testimonialScreenshots: (string | null)[];
 }
 
 interface CustomQuoteLinkPopupProps {
@@ -81,7 +68,7 @@ interface CustomQuoteLinkPopupProps {
   onOpenChange: (open: boolean) => void;
   locationId: string;
   leadFollowUpOption: "Lite" | "S&G Link" | "Custom Quote & Link";
-  initialTiming: number; // 0-4 (matches 5-option slider on RequestScheduling page)
+  initialTiming: number;
   followUpCount: number;
   onTimingChange: (value: number) => void;
   onFollowUpChange: (value: number) => void;
@@ -99,55 +86,38 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   3: "3",
 };
 
-// Default prefilled content from pawsitivelypoopfree.com/quote/new-quote-title/
+// ─── Default prefilled content ───────────────────────────────────────
+
 const DEFAULT_FORM: QuoteFormData = {
-  companyLogo: "/quote-preview/company-logo.svg",
-  teamPhoto: "/quote-preview/team-photo.jpg",
-  bioTitle: "Utah's Highest Rated Pooper Scooper Service",
+  companyName: "[Your Company Name]",
+  timeCompanyStarted: "2018",
+  companyLogo: "/quote-preview/generic-logo.jpg",
+  teamPhoto: "/quote-preview/dog-photo.jpg",
+  bioTitle: "[service area] Highest Rated Pooper Scooper Service",
   bioDescription:
-    "Serving dog owners across the Wasatch Front, our Utah team keeps your yard clean, fresh, and hassle-free. Whether you\u2019re in Salt Lake, Utah County, Davis, or the surrounding areas, we provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, Rocky Mountain Pooper Scoopers is here to make life easier\u2014one yard at a time.",
-  bioImage: null,
-  ctaText: "Quote Approved",
-  ctaDescription: "Click to approve this quote and schedule your service.",
-  pricingBio: "$19.00",
-  pricingTotal: "$9.99",
-  pricingSixMonths: "$0.00",
-  pricingOneYear: "$0.00",
+    "Serving dog owners across the city, our team keeps your yard clean, fresh, and hassle-free. We provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, [company name] is here to make life easier\u2014one yard at a time.",
+  offerText: "2 Weeks FREE",
+  offerDescription: "Try our service free for 2 weeks. No commitment required.",
   galleryImages: [
-    "/quote-preview/gallery-1.jpg",
-    "/quote-preview/gallery-2.jpg",
-    "/quote-preview/gallery-3.jpg",
-    "/quote-preview/gallery-4.jpg",
-    "/quote-preview/gallery-5.jpg",
-    "/quote-preview/gallery-6.jpg",
+    "/quote-preview/dog-photo.jpg",
+    "/quote-preview/dog-photo-2.jpg",
+    "/quote-preview/dog-photo-3.jpg",
+    "/quote-preview/dog-photo-4.jpg",
+    "/quote-preview/dog-photo-5.jpg",
+    "/quote-preview/dog-photo-6.jpg",
   ],
-  reviews: [
-    {
-      reviewerName: "Joshua & Megan",
-      reviewText:
-        "I thought hiring a pooper scooper was lazy\u2026 until I tried it. Now I tell all my neighbors. It\u2019s like outsourcing laundry: not glamorous, but it changes your week.",
-      rating: 5,
-    },
-    {
-      reviewerName: "Amber K.",
-      reviewText:
-        "They didn\u2019t just scoop \u2014 they noticed my gate hinge was loose and mentioned it so I could fix it before the dog escaped. Small details like that make me trust them completely.",
-      rating: 5,
-    },
-    {
-      reviewerName: "Marcus L.",
-      reviewText:
-        "With two big labs, it used to feel like a minefield out there. Now it\u2019s just\u2026 a yard. Clean, fresh, and useable again. Pricing is fair, and honestly cheaper than the arguments I used to have with my kids about whose turn it was.",
-      rating: 5,
-    },
-    {
-      reviewerName: "Samantha P.",
-      reviewText:
-        "They text me before arriving, close the gate every time, and even give the dog a pat if he\u2019s out. Super reliable and respectful service. My only regret is not signing up sooner.",
-      rating: 5,
-    },
+  testimonialHeadshots: [
+    null,
+    "/quote-preview/review-avatar-2.jpg",
+    "/quote-preview/review-avatar-3.jpg",
+    null,
   ],
+  testimonialNames: ["Joshua & Megan", "Amber K.", "Marcus L.", "Samantha P."],
+  testimonialScreenshots: [null, null, null, null],
 };
+
+// Maximum number of gallery images allowed
+const MAX_GALLERY_IMAGES = 6;
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -198,9 +168,9 @@ function StarRating({ rating, onRate, readonly }: { rating: number; onRate?: (r:
 
 function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full">
-      {/* Header with logo */}
-      <div className="flex items-center justify-center px-5 py-4 border-b border-slate-100">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Header with company logo */}
+      <div className="flex items-center justify-center px-5 py-4 border-b border-slate-100 bg-slate-50">
         {formData.companyLogo ? (
           <img
             src={formData.companyLogo}
@@ -215,19 +185,29 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         )}
       </div>
 
-      {/* Hero image */}
+      {/* Company name */}
+      <div className="px-5 py-2 text-center">
+        <h2 className="text-sm font-bold text-slate-800">
+          {formData.companyName || "Your Company Name"}
+        </h2>
+        {formData.timeCompanyStarted && (
+          <p className="text-[10px] text-slate-400">Est. {formData.timeCompanyStarted}</p>
+        )}
+      </div>
+
+      {/* Hero / team photo */}
       <div className="relative">
         {formData.teamPhoto ? (
           <img
             src={formData.teamPhoto}
             alt="Team Photo"
-            className="w-full h-44 object-cover"
+            className="w-full h-40 object-cover"
             crossOrigin="anonymous"
           />
         ) : (
-          <div className="w-full h-44 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+          <div className="w-full h-40 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
             <div className="text-center">
-              <Image className="w-10 h-10 text-slate-300 mx-auto mb-1" />
+              <Image className="w-8 h-8 text-slate-300 mx-auto mb-1" />
               <span className="text-[11px] text-slate-400">
                 Upload Company Photo
               </span>
@@ -243,55 +223,26 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </h3>
         <p className="text-[11px] text-slate-600 leading-relaxed">
           {formData.bioDescription ||
-            "Your bio description will appear here. Explain your service, what makes you different, and why customers should choose you."}
+            "Your bio description will appear here."}
         </p>
       </div>
 
-      {/* Pricing section */}
+      {/* Offer / CTA section (non-editable) */}
       <div className="px-5 py-4 border-b border-slate-100">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold text-slate-800">
-            {formData.pricingBio || "Free Trial"}
+            {formData.offerText || "2 Weeks FREE"}
           </span>
           <span className="bg-red-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full">
             FREE
           </span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">Total</span>
-            <span className="block text-[11px] font-bold text-slate-700">
-              {formData.pricingTotal || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">Monthly</span>
-            <span className="block text-[11px] font-bold text-slate-700">
-              {formData.pricingBio || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">6 Months</span>
-            <span className="block text-[11px] font-bold text-slate-700">
-              {formData.pricingSixMonths || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">1 Year</span>
-            <span className="block text-[11px] font-bold text-slate-700">
-              {formData.pricingOneYear || "$0.00"}
-            </span>
-          </div>
-        </div>
       </div>
 
-      {/* CTA section */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <p className="text-xs font-semibold text-blue-700 mb-0.5">
-          {formData.ctaText || "CTA text here"}
-        </p>
-        <p className="text-[11px] text-slate-500">
-          {formData.ctaDescription || "CTA description here"}
+      {/* Offer description */}
+      <div className="px-5 py-3 border-b border-slate-100 bg-blue-50">
+        <p className="text-[11px] text-blue-700 font-medium">
+          {formData.offerDescription || "Offer description here"}
         </p>
       </div>
 
@@ -300,12 +251,12 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <h4 className="text-[11px] font-bold text-slate-700 mb-2.5">
           Images
         </h4>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="grid grid-cols-3 gap-2">
           {formData.galleryImages.length > 0 ? (
             formData.galleryImages.map((img, idx) => (
               <div
                 key={idx}
-                className="w-16 h-16 rounded-lg border border-slate-200 overflow-hidden flex-shrink-0 shadow-sm"
+                className="aspect-square rounded-lg border border-slate-200 overflow-hidden shadow-sm"
               >
                 <img
                   src={img}
@@ -320,7 +271,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="w-16 h-16 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center flex-shrink-0"
+                  className="aspect-square rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center"
                 >
                   <Image size={14} className="text-slate-300" />
                 </div>
@@ -333,37 +284,35 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       {/* Reviews section */}
       <div className="px-5 py-4">
         <h4 className="text-[11px] font-bold text-slate-700 mb-3">Reviews</h4>
-        {formData.reviews.length > 0 ? (
-          <div className="space-y-3 max-h-40 overflow-y-auto">
-            {formData.reviews.map((review, idx) => (
-              <div key={idx} className="bg-slate-50 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <StarRating rating={review.rating} readonly />
-                  <span className="text-[11px] font-semibold text-slate-700">
-                    {review.reviewerName}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-600 leading-relaxed">
-                  {review.reviewText}
-                </p>
+        <div className="space-y-3">
+          {formData.testimonialNames.filter((n) => n).map((name, idx) => (
+            <div key={idx} className="bg-slate-50 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <StarRating rating={5} readonly />
+                <span className="text-[11px] font-semibold text-slate-700">
+                  {name}
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[11px] text-slate-400 italic">
-            No reviews added yet.
-          </p>
-        )}
+              {formData.testimonialScreenshots[idx] && (
+                <img
+                  src={formData.testimonialScreenshots[idx]!}
+                  alt={`Testimonial ${name}`}
+                  className="w-full rounded mt-2 border border-slate-100"
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Bottom CTA button */}
-      <div className="px-5 py-4 border-t border-slate-100 flex justify-center">
+      <div className="px-5 py-4 border-t border-slate-100 flex justify-center bg-slate-50">
         <button
           type="button"
           className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
           disabled
         >
-          {formData.ctaText || "Quote Approved"}
+          Quote Approved
         </button>
       </div>
     </div>
@@ -375,29 +324,23 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 function QuoteFormFields({
   formData,
   setFormData,
-  initialTiming,
-  followUpCount,
-  onTimingChange,
-  onFollowUpChange,
   onSave,
   isSaving,
 }: {
   formData: QuoteFormData;
   setFormData: (data: QuoteFormData) => void;
-  initialTiming: number;
-  followUpCount: number;
-  onTimingChange: (v: number) => void;
-  onFollowUpChange: (v: number) => void;
   onSave: () => void;
   isSaving: boolean;
 }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const bioImageInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const testimonialScreenshotRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const testimonialHeadshotRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleImageUpload = async (
     file: File | undefined,
-    field: "companyLogo" | "teamPhoto" | "bioImage"
+    field: keyof QuoteFormData
   ) => {
     if (!file) return;
     const base64 = await fileToBase64(file);
@@ -406,14 +349,16 @@ function QuoteFormFields({
 
   const handleGalleryUpload = async (files: FileList | null) => {
     if (!files) return;
+    const remainingSlots = MAX_GALLERY_IMAGES - formData.galleryImages.length;
+    if (remainingSlots <= 0) return;
     const newImages: string[] = [];
-    for (let i = 0; i < files.length; i++) {
+    for (let i = 0; i < Math.min(files.length, remainingSlots); i++) {
       const base64 = await fileToBase64(files[i]);
       newImages.push(base64);
     }
     setFormData({
       ...formData,
-      galleryImages: [...formData.galleryImages, ...newImages],
+      galleryImages: [...formData.galleryImages, ...newImages].slice(0, MAX_GALLERY_IMAGES),
     });
   };
 
@@ -424,330 +369,192 @@ function QuoteFormFields({
     });
   };
 
-  const addReview = () => {
-    setFormData({
-      ...formData,
-      reviews: [...formData.reviews, { reviewerName: "", reviewText: "", rating: 5 }],
-    });
-  };
-
-  const updateReview = (index: number, updates: Partial<ReviewEntry>) => {
-    const updated = [...formData.reviews];
-    updated[index] = { ...updated[index], ...updates };
-    setFormData({ ...formData, reviews: updated });
-  };
-
-  const removeReview = (index: number) => {
-    setFormData({
-      ...formData,
-      reviews: formData.reviews.filter((_, i) => i !== index),
-    });
-  };
-
-  const updateField = (field: keyof QuoteFormData, value: string) => {
-    setFormData({ ...formData, [field]: value });
+  const updateTestimonial = (
+    index: number,
+    field: "testimonialHeadshots" | "testimonialNames" | "testimonialScreenshots",
+    value: string | null
+  ) => {
+    const updated = [...formData[field]];
+    updated[index] = value;
+    setFormData({ ...formData, [field]: updated });
   };
 
   return (
-    <div className="space-y-5">
-      {/* ── Company Branding Section ── */}
+    <div className="space-y-4">
+      {/* ── Upload Company Logo ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Image size={14} className="text-blue-500" />
-          Company Branding
-        </h4>
-        <div className="space-y-3">
-          {/* Company Logo */}
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Upload Company Logo
-            </Label>
+        <label className="text-[11px] text-slate-500 font-medium">Upload Company logo</label>
+        <div className="mt-1 flex items-center gap-2">
+          {formData.companyLogo ? (
+            <div className="relative">
+              <img
+                src={formData.companyLogo}
+                alt="Logo"
+                className="h-8 object-contain rounded border border-slate-200"
+                crossOrigin="anonymous"
+              />
+              <button
+                onClick={() => setFormData({ ...formData, companyLogo: null })}
+                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X size={9} />
+              </button>
+            </div>
+          ) : (
             <div
-              className="mt-1.5 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+              className="w-10 h-10 rounded border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center cursor-pointer hover:border-blue-400"
               onClick={() => logoInputRef.current?.click()}
             >
-              {formData.companyLogo ? (
-                <div className="flex items-center justify-between">
-                  <img
-                    src={formData.companyLogo}
-                    alt="Logo"
-                    className="h-8 object-contain"
-                    crossOrigin="anonymous"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFormData({ ...formData, companyLogo: null });
-                    }}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <Upload size={18} className="text-slate-400" />
-                  <span className="text-[11px] text-slate-500">
-                    Upload Logo
-                  </span>
-                </div>
-              )}
+              <Upload size={14} className="text-slate-400" />
             </div>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e.target.files?.[0], "companyLogo")}
-            />
-          </div>
-
-          {/* Team Photo */}
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Team Photo
-            </Label>
-            <p className="text-[10px] text-slate-400 mb-1">
-              Best if there are people in it
-            </p>
-            <div
-              className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
-              onClick={() => photoInputRef.current?.click()}
-            >
-              {formData.teamPhoto ? (
-                <div className="flex items-center justify-between">
-                  <img
-                    src={formData.teamPhoto}
-                    alt="Team Photo"
-                    className="h-10 object-cover rounded"
-                    crossOrigin="anonymous"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFormData({ ...formData, teamPhoto: null });
-                    }}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <Upload size={18} className="text-slate-400" />
-                  <span className="text-[11px] text-slate-500">
-                    Upload Company Photo
-                  </span>
-                </div>
-              )}
-            </div>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e.target.files?.[0], "teamPhoto")}
-            />
-          </div>
+          )}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleImageUpload(e.target.files?.[0], "companyLogo")}
+          />
         </div>
       </div>
 
-      {/* ── Bio Section ── */}
+      {/* ── Enter Name ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Edit3 size={13} className="text-blue-500" />
-          Bio Section
-        </h4>
-        <div className="space-y-3">
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Bio Title
-            </Label>
-            <Input
-              value={formData.bioTitle}
-              onChange={(e) => updateField("bioTitle", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="e.g. Utah's Highest Rated Pooper Scooper Service"
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Bio Description
-            </Label>
-            <textarea
-              value={formData.bioDescription}
-              onChange={(e) => updateField("bioDescription", e.target.value)}
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
-              placeholder="Describe your service..."
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Bio Image
-            </Label>
-            <div
-              className="mt-1.5 border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
-              onClick={() => bioImageInputRef.current?.click()}
-            >
-              {formData.bioImage ? (
-                <div className="flex items-center justify-between">
-                  <img
-                    src={formData.bioImage}
-                    alt="Bio Image"
-                    className="h-10 object-cover rounded"
-                    crossOrigin="anonymous"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFormData({ ...formData, bioImage: null });
-                    }}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <Upload size={16} className="text-slate-400" />
-                  <span className="text-[11px] text-slate-500">Upload Image</span>
-                </div>
-              )}
-            </div>
-            <input
-              ref={bioImageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e.target.files?.[0], "bioImage")}
-            />
-          </div>
-        </div>
+        <label className="text-[11px] text-slate-500 font-medium">Enter Name</label>
+        <Input
+          value={formData.companyName}
+          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+          className="mt-1 text-xs h-8"
+          placeholder="Company name"
+        />
       </div>
 
-      {/* ── CTA Section ── */}
+      {/* ── Time Company Started ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Quote size={13} className="text-blue-500" />
-          CTA Section
-        </h4>
-        <div className="space-y-3">
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              CTA Text
-            </Label>
-            <Input
-              value={formData.ctaText}
-              onChange={(e) => updateField("ctaText", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="e.g. Quote Approved"
-              maxLength={15}
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              CTA Description
-            </Label>
-            <textarea
-              value={formData.ctaDescription}
-              onChange={(e) => updateField("ctaDescription", e.target.value)}
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[60px]"
-              placeholder="Brief CTA description..."
-            />
-          </div>
-        </div>
+        <label className="text-[11px] text-slate-500 font-medium">Time Company Started</label>
+        <Input
+          value={formData.timeCompanyStarted}
+          onChange={(e) => setFormData({ ...formData, timeCompanyStarted: e.target.value })}
+          className="mt-1 text-xs h-8"
+          placeholder="e.g. 2018"
+        />
       </div>
 
-      {/* ── Pricing Section ── */}
+      {/* ── Upload Company Photo (large area) ── */}
       <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Save size={13} className="text-blue-500" />
-          Pricing
-        </h4>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">Total</Label>
-            <Input
-              value={formData.pricingTotal}
-              onChange={(e) => updateField("pricingTotal", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="$0.00"
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              Monthly
-            </Label>
-            <Input
-              value={formData.pricingBio}
-              onChange={(e) => updateField("pricingBio", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="$0.00"
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              6 Months
-            </Label>
-            <Input
-              value={formData.pricingSixMonths}
-              onChange={(e) => updateField("pricingSixMonths", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="$0.00"
-            />
-          </div>
-          <div>
-            <Label className="text-[11px] text-slate-600 font-medium">
-              1 Year
-            </Label>
-            <Input
-              value={formData.pricingOneYear}
-              onChange={(e) => updateField("pricingOneYear", e.target.value)}
-              className="mt-1 text-xs h-9"
-              placeholder="$0.00"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Images Gallery ── */}
-      <div>
-        <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-          <Image size={13} className="text-blue-500" />
-          Images Gallery
-        </h4>
+        <label className="text-[11px] text-slate-500 font-medium">Upload Company Photo</label>
+        <p className="text-[10px] text-slate-400 italic mb-1">(best if there are people in it)</p>
         <div
-          className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
-          onClick={() => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = "image/*";
-            input.multiple = true;
-            input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files);
-            input.click();
-          }}
+          className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+          onClick={() => photoInputRef.current?.click()}
         >
-          <Upload size={18} className="text-slate-400 mx-auto mb-1" />
-          <span className="text-[11px] text-slate-500">Upload Images</span>
+          {formData.teamPhoto ? (
+            <div className="relative inline-block">
+              <img
+                src={formData.teamPhoto}
+                alt="Team Photo"
+                className="h-24 object-cover rounded"
+                crossOrigin="anonymous"
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFormData({ ...formData, teamPhoto: null });
+                }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload size={24} className="text-slate-400" />
+              <span className="text-xs text-slate-500 font-medium">Upload Company Photo</span>
+              <span className="text-[10px] text-slate-400">(best if there are people in it)</span>
+            </div>
+          )}
         </div>
-        {formData.galleryImages.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {formData.galleryImages.map((img, idx) => (
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleImageUpload(e.target.files?.[0], "teamPhoto")}
+        />
+      </div>
+
+      {/* ── Insert Bio Here ── */}
+      <div>
+        <textarea
+          value={formData.bioTitle + "\n\n" + formData.bioDescription}
+          onChange={(e) => {
+            const parts = e.target.value.split("\n\n");
+            setFormData({
+              ...formData,
+              bioTitle: parts[0] || "",
+              bioDescription: parts.slice(1).join("\n\n") || "",
+            });
+          }}
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 min-h-[100px] resize-y"
+          placeholder="Insert Bio Here"
+        />
+      </div>
+
+      {/* ── Upload Image (6 slots, max 6 total) ── */}
+      <div>
+        <label className="text-[11px] text-slate-500 font-medium">Upload Image (max 6)</label>
+        <div className="grid grid-cols-6 gap-2 mt-1.5">
+          {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => {
+            const isFilled = formData.galleryImages[idx] !== undefined;
+            const slotCount = formData.galleryImages.length;
+            return (
               <div
                 key={idx}
-                className="relative w-16 h-16 rounded-lg border border-slate-200 overflow-hidden shadow-sm"
+                className="border border-dashed border-slate-300 rounded-lg p-2 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50 flex flex-col items-center gap-1"
+                onClick={() => {
+                  if (slotCount >= MAX_GALLERY_IMAGES && !isFilled) {
+                    toast.warning("Maximum 6 images allowed.");
+                    return;
+                  }
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.multiple = true;
+                  input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files);
+                  input.click();
+                }}
               >
-                <img
-                  src={img}
-                  alt={`Gallery ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
-                />
+                {isFilled ? (
+                  <>
+                    <img
+                      src={formData.galleryImages[idx]}
+                      alt={`Slot ${idx + 1}`}
+                      className="w-8 h-8 object-cover rounded"
+                      crossOrigin="anonymous"
+                    />
+                    <span className="text-[8px] text-slate-400">Replace</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={12} className="text-slate-400" />
+                    <span className="text-[9px] text-slate-400">Upload</span>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" />
+        {formData.galleryImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {formData.galleryImages.map((img, idx) => (
+              <div key={idx} className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" crossOrigin="anonymous" />
                 <button
                   onClick={() => handleRemoveGalleryImage(idx)}
-                  className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                  className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center"
                 >
-                  <X size={9} />
+                  <X size={8} />
                 </button>
               </div>
             ))}
@@ -755,127 +562,109 @@ function QuoteFormFields({
         )}
       </div>
 
-      {/* ── Reviews Section ── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Star size={13} className="text-blue-500" />
-            Reviews
-          </h4>
-          <button
-            type="button"
-            onClick={addReview}
-            className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
-          >
-            <Plus size={12} />
-            Add Review
-          </button>
-        </div>
-        {formData.reviews.map((review, idx) => (
-          <div key={idx} className="bg-slate-50 rounded-lg p-3 mb-2 border border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <StarRating
-                  rating={review.rating}
-                  onRate={(r) => updateReview(idx, { rating: r })}
-                />
-                <input
-                  type="text"
-                  value={review.reviewerName}
-                  onChange={(e) =>
-                    updateReview(idx, { reviewerName: e.target.value })
+      {/* ── Testimonials (exactly 4 required, no add/remove) ── */}
+      <div className="space-y-4">
+        <label className="text-[11px] text-slate-500 font-medium">Testimonials (4 required)</label>
+        {formData.testimonialNames.map((name, idx) => (
+          <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+            {/* Headshot upload */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 w-16">Headshot</span>
+              {formData.testimonialHeadshots[idx] ? (
+                <div className="relative">
+                  <img
+                    src={formData.testimonialHeadshots[idx]!}
+                    alt={`Headshot ${name}`}
+                    className="w-8 h-8 rounded-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                  <button
+                    onClick={() => updateTestimonial(idx, "testimonialHeadshots", null)}
+                    className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                  >
+                    <X size={8} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full border border-dashed border-slate-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-400"
+                  onClick={() => testimonialHeadshotRefs.current[idx]?.click()}
+                >
+                  <Upload size={10} className="text-slate-400" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={(el) => {
+                  testimonialHeadshotRefs.current[idx] = el;
+                  if (el) {
+                    el.onchange = (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0];
+                      if (file) fileToBase64(file).then((b64) => updateTestimonial(idx, "testimonialHeadshots", b64));
+                    };
                   }
-                  placeholder="Reviewer name"
-                  className="text-[11px] bg-transparent border-none outline-none font-semibold text-slate-700 w-28"
-                />
-              </div>
-              <button
-                onClick={() => removeReview(idx)}
-                className="text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <Trash2 size={12} />
-              </button>
+                }}
+              />
             </div>
-            <textarea
-              value={review.reviewText}
-              onChange={(e) => updateReview(idx, { reviewText: e.target.value })}
-              placeholder="Review text..."
-              className="w-full text-[10px] bg-white border border-slate-200 rounded px-2 py-1.5 outline-none focus:border-blue-300 min-h-[40px] resize-none"
-            />
+
+            {/* Testimonial name */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 w-16">Name</span>
+              <Input
+                value={name}
+                onChange={(e) => updateTestimonial(idx, "testimonialNames", e.target.value)}
+                className="text-xs h-7 flex-1"
+                placeholder="Testimonial name"
+                required
+              />
+            </div>
+
+            {/* Testimonial screenshot */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 w-16">Screenshot</span>
+              {formData.testimonialScreenshots[idx] ? (
+                <div className="relative flex-1">
+                  <img
+                    src={formData.testimonialScreenshots[idx]!}
+                    alt={`Screenshot ${name}`}
+                    className="w-full h-16 object-cover rounded border border-slate-200"
+                    crossOrigin="anonymous"
+                  />
+                  <button
+                    onClick={() => updateTestimonial(idx, "testimonialScreenshots", null)}
+                    className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                  >
+                    <X size={9} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="flex-1 border border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:border-blue-400 bg-white"
+                  onClick={() => testimonialScreenshotRefs.current[idx]?.click()}
+                >
+                  <Upload size={14} className="text-slate-400 mx-auto mb-0.5" />
+                  <span className="text-[10px] text-slate-400">Upload Testimonial Screenshot</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={(el) => {
+                  testimonialScreenshotRefs.current[idx] = el;
+                  if (el) {
+                    el.onchange = (ev: Event) => {
+                      const file = (ev.target as HTMLInputElement).files?.[0];
+                      if (file) fileToBase64(file).then((b64) => updateTestimonial(idx, "testimonialScreenshots", b64));
+                    };
+                  }
+                }}
+              />
+            </div>
           </div>
         ))}
-      </div>
-
-      {/* ── Scheduling Sliders ── */}
-      <div className="border-t border-slate-200 pt-4">
-        <h4 className="text-xs font-bold text-slate-700 mb-4 flex items-center gap-1.5">
-          <FileText size={13} className="text-blue-500" />
-          Follow-Up Scheduling
-        </h4>
-
-        {/* Initial Request Scheduling */}
-        <div className="mb-4">
-          <Label className="text-[11px] text-slate-600 font-medium">
-            Initial Request Scheduling
-          </Label>
-          <div className="mt-2">
-            <input
-              type="range"
-              min={0}
-              max={4}
-              step={1}
-              value={initialTiming}
-              onChange={(event) =>
-                onTimingChange(Number.parseInt(event.target.value, 10))
-              }
-              style={{ background: sliderBackground(initialTiming, 4) }}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-              aria-label="Initial outreach timing"
-            />
-            <div className="flex justify-between mt-1">
-              {TIMING_LABELS.map((label) => (
-                <span
-                  key={label}
-                  className="text-[9px] text-slate-500 text-center flex-1"
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Follow-up Requests */}
-        <div className="mb-4">
-          <Label className="text-[11px] text-slate-600 font-medium">
-            Follow-up Requests
-          </Label>
-          <div className="mt-2">
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={1}
-              value={followUpCount}
-              onChange={(event) =>
-                onFollowUpChange(Number.parseInt(event.target.value, 10))
-              }
-              style={{ background: sliderBackground(followUpCount, 3) }}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-              aria-label="Follow-up count"
-            />
-            <div className="flex justify-between mt-1">
-              {["0", "1", "2", "3"].map((val) => (
-                <span
-                  key={val}
-                  className="text-[9px] text-slate-500 text-center flex-1"
-                >
-                  {val}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ── Save Button ── */}
@@ -918,7 +707,53 @@ export default function CustomQuoteLinkPopup({
 }: CustomQuoteLinkPopupProps) {
   const [formData, setFormData] = useState<QuoteFormData>(DEFAULT_FORM);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"preview" | "form">("preview");
+  const [activeTab, setActiveTab] = useState<"template" | "create">("template");
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+
+  // Synced scrolling: when left panel scrolls, right panel scrolls proportionally
+  useEffect(() => {
+    const leftPanel = leftPanelRef.current;
+    const rightPanel = rightPanelRef.current;
+    if (!leftPanel || !rightPanel) return;
+
+    const handleLeftScroll = () => {
+      if (isSyncingScroll.current) return;
+      isSyncingScroll.current = true;
+      const leftMax = leftPanel.scrollHeight - leftPanel.clientHeight;
+      const rightMax = rightPanel.scrollHeight - rightPanel.clientHeight;
+      if (leftMax > 0 && rightMax > 0) {
+        const ratio = leftPanel.scrollTop / leftMax;
+        rightPanel.scrollTop = ratio * rightMax;
+      }
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    };
+
+    const handleRightScroll = () => {
+      if (isSyncingScroll.current) return;
+      isSyncingScroll.current = true;
+      const leftMax = leftPanel.scrollHeight - leftPanel.clientHeight;
+      const rightMax = rightPanel.scrollHeight - rightPanel.clientHeight;
+      if (leftMax > 0 && rightMax > 0) {
+        const ratio = rightPanel.scrollTop / rightMax;
+        leftPanel.scrollTop = ratio * leftMax;
+      }
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    };
+
+    leftPanel.addEventListener("scroll", handleLeftScroll, { passive: true });
+    rightPanel.addEventListener("scroll", handleRightScroll, { passive: true });
+
+    return () => {
+      leftPanel.removeEventListener("scroll", handleLeftScroll);
+      rightPanel.removeEventListener("scroll", handleRightScroll);
+    };
+  }, [open]);
 
   const saveMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
@@ -944,7 +779,6 @@ export default function CustomQuoteLinkPopup({
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      // Reset form when closing
       setFormData(DEFAULT_FORM);
     }
     onOpenChange(open);
@@ -952,88 +786,76 @@ export default function CustomQuoteLinkPopup({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[92vw] w-[92vw] sm:max-w-[90vw] lg:max-w-[88vw] p-0 gap-0 overflow-hidden max-h-[92vh] rounded-xl">
-        <DialogHeader className="px-7 pt-5 pb-3 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-lg font-bold text-slate-800">
-                Custom Quote & Link
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                Design your quote template and configure follow-up scheduling.
-              </DialogDescription>
-            </div>
-            {/* Tab switcher for mobile */}
-            <div className="flex lg:hidden items-center gap-1 bg-slate-200 rounded-lg p-0.5">
-              <button
-                onClick={() => setActiveTab("preview")}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  activeTab === "preview"
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-600"
-                }`}
-              >
-                Template
-              </button>
-              <button
-                onClick={() => setActiveTab("form")}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  activeTab === "form"
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-600"
-                }`}
-              >
-                Create Yours
-              </button>
+      <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[92vw] lg:max-w-[85vw] xl:max-w-[1400px] p-0 gap-0 overflow-hidden max-h-[90vh] rounded-xl border-2 border-blue-600">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-5 pb-3 bg-slate-50 border-b border-slate-200">
+          <DialogTitle className="text-2xl font-bold text-blue-700 mb-2">
+            Custom Quote & Link
+          </DialogTitle>
+          <div className="space-y-0.5">
+            <DialogDescription className="text-sm font-bold text-slate-700">
+              How it works:
+            </DialogDescription>
+            <div className="text-[12px] text-slate-500 space-y-0.5">
+              <p>1. Upload all empty files (example on the left)</p>
+              <p>2. Fill out the empty text boxes</p>
+              <p>3. Replace the default images</p>
+              <p>4. Add the testimonials</p>
             </div>
           </div>
         </DialogHeader>
 
+        {/* Tab buttons */}
+        <div className="flex items-center justify-center gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab("template")}
+            className={`px-8 py-2 text-sm font-bold rounded-md transition-colors ${
+              activeTab === "template"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+            }`}
+          >
+            Template
+          </button>
+          <button
+            onClick={() => setActiveTab("create")}
+            className={`px-8 py-2 text-sm font-bold rounded-md transition-colors ${
+              activeTab === "create"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+            }`}
+          >
+            Create Yours
+          </button>
+        </div>
+
         {/* Split panel body */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden" style={{ height: "calc(90vh - 210px)" }}>
           {/* Left Panel: Template Preview */}
           <div
+            ref={leftPanelRef}
             className={`${
-              activeTab === "preview" ? "block" : "hidden lg:block"
-            } bg-white border-r border-slate-200 overflow-y-auto`}
-            style={{ maxHeight: "calc(92vh - 60px)" }}
+              activeTab === "template" ? "block" : "hidden lg:block"
+            } bg-blue-50 border-r-2 border-blue-300 overflow-y-auto`}
+            style={{ maxHeight: "100%" }}
           >
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-blue-600 flex items-center gap-1.5">
-                  Template
-                </h3>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                  Preview
-                </span>
-              </div>
+            <div className="p-4">
               <QuoteTemplatePreview formData={formData} />
             </div>
           </div>
 
           {/* Right Panel: Form Fields */}
           <div
+            ref={rightPanelRef}
             className={`${
-              activeTab === "form" ? "block" : "hidden lg:block"
-            } overflow-y-auto bg-slate-50`}
-            style={{ maxHeight: "calc(92vh - 60px)" }}
+              activeTab === "create" ? "block" : "hidden lg:block"
+            } bg-white overflow-y-auto`}
+            style={{ maxHeight: "100%" }}
           >
             <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-blue-600 flex items-center gap-1.5">
-                  Create Yours
-                </h3>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                  Form Fields
-                </span>
-              </div>
               <QuoteFormFields
                 formData={formData}
                 setFormData={setFormData}
-                initialTiming={initialTiming}
-                followUpCount={followUpCount}
-                onTimingChange={onTimingChange}
-                onFollowUpChange={onFollowUpChange}
                 onSave={handleSave}
                 isSaving={isSaving}
               />
