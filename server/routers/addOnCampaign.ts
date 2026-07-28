@@ -4,7 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getLocationCustomValueMap, upsertGhlCustomValue } from "../ghl-service";
 
 // ─── Add-On Duration options ─────────────────────────────────────────
-// Mapped to: {{custom_values.addon_duration}}
+// UI labels shown to the user
 const ADDON_DURATION_LABELS = [
   "4 Weeks",
   "6 Weeks",
@@ -14,10 +14,20 @@ const ADDON_DURATION_LABELS = [
 ] as const;
 type AddonDuration = (typeof ADDON_DURATION_LABELS)[number];
 
-// ─── Custom value key name (GHL) ─────────────────────────────────────
-const CV = {
-  addonDuration: "addon_duration",
-} as const;
+// The value that gets stored in GHL (matches the option tokens in GHL)
+const ADDON_DURATION_TO_GHL_VALUE: Record<AddonDuration, string> = {
+  "4 Weeks": "4_weeks",
+  "6 Weeks": "6_weeks",
+  "8 Weeks": "8_weeks",
+  "10 Weeks": "10_weeks",
+  "12 Weeks": "12_weeks",
+};
+
+// ─── Custom value names (GHL) ────────────────────────────────────────
+// GHL display name used for WRITING (what GHL calls it)
+const CV_WRITE_NAME = "Add-On Duration (options: 4_weeks, 6_weeks, 8_weeks, 10_weeks, 12_weeks)";
+// GHL field key used for READING (the {{custom_values.addon_duration}} key)
+const CV_READ_KEY = "addon_duration";
 
 // ─── Normalize a duration label → index ──────────────────────────────
 function addonDurationToIndex(value: string): number {
@@ -39,6 +49,19 @@ function addonDurationToIndex(value: string): number {
     "12 wk": 4,
     "12w": 4,
   };
+
+  // Also try matching against stored GHL values (4_weeks, 6_weeks, etc.)
+  const ghlToIndex: Record<string, number> = {
+    "4_weeks": 0,
+    "6_weeks": 1,
+    "8_weeks": 2,
+    "10_weeks": 3,
+    "12_weeks": 4,
+  };
+
+  const lower = value.trim().toLowerCase().replace(/\s+/g, "_");
+  if (ghlToIndex[lower] !== undefined) return ghlToIndex[lower];
+
   return (
     map[normalized] ??
     ADDON_DURATION_LABELS.findIndex((l) => l.toLowerCase() === normalized) ??
@@ -50,6 +73,7 @@ function addonDurationToIndex(value: string): number {
 export const addOnCampaignRouter = router({
   /**
    * Load current add-on campaign settings from GHL custom values.
+   * Reads from {{custom_values.addon_duration}} key.
    */
   getSettings: publicProcedure
     .input(z.object({ locationId: z.string().min(1) }))
@@ -69,7 +93,7 @@ export const addOnCampaignRouter = router({
         return result;
       };
 
-      const savedDuration = get(CV.addonDuration);
+      const savedDuration = get(CV_READ_KEY);
 
       return {
         addonDuration: addonDurationToIndex(savedDuration),
@@ -78,7 +102,8 @@ export const addOnCampaignRouter = router({
 
   /**
    * Save add-on campaign settings to GHL custom values.
-   * Writes addon_duration as one of: "4 Weeks" | "6 Weeks" | "8 Weeks" | "10 Weeks" | "12 Weeks"
+   * Updates the existing "Add-On Duration" custom value (fieldKey: addon_duration).
+   * Stores the GHL option token (e.g., "4_weeks", "10_weeks").
    */
   saveSettings: publicProcedure
     .input(
@@ -94,10 +119,14 @@ export const addOnCampaignRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
         }
 
+        // Use the GHL display name so findCustomValueId can match the existing field
+        // The stored value is the option token (e.g., "10_weeks")
+        const ghlValue = ADDON_DURATION_TO_GHL_VALUE[input.addonDuration];
+
         await upsertGhlCustomValue(
           locationId,
-          CV.addonDuration,
-          input.addonDuration
+          CV_WRITE_NAME,
+          ghlValue
         );
 
         return { success: true };
@@ -111,7 +140,6 @@ export const addOnCampaignRouter = router({
             message: "GHL authentication failed. Your access token may be missing or expired.",
           });
         }
-        // Let the actual GHL error message through so the client can show it
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: msg || "Failed to save add-on campaign settings. Please try again.",
