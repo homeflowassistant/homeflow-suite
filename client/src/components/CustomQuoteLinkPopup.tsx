@@ -193,9 +193,9 @@ function StarRating({ rating, onRate, readonly }: { rating: number; onRate?: (r:
 
 function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header with company logo */}
-      <div className="flex items-center justify-center px-5 py-4 border-b border-slate-100 bg-slate-50">
+    <div className="bg-white overflow-hidden">
+      {/* Header with company logo (centered, no border, matching live site) */}
+      <div className="flex items-center justify-center px-5 py-4">
         {formData.companyLogo ? (
           <img
             src={formData.companyLogo}
@@ -210,7 +210,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         )}
       </div>
 
-      {/* Company name */}
+      {/* Company name (centered, matching live site) */}
       <div className="px-5 py-2 text-center">
         <h2 className="text-sm font-bold text-slate-800">
           {formData.companyName || "Your Company Name"}
@@ -220,7 +220,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         )}
       </div>
 
-      {/* Hero / team photo */}
+      {/* Hero / team photo (full width, no padding, matching live site) */}
       <div className="relative">
         {formData.teamPhoto ? (
           <img
@@ -241,85 +241,94 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         )}
       </div>
 
-      {/* Bio section */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h3 className="text-sm font-bold text-slate-800 mb-1.5">
+      {/* Bio section (left-aligned, no card, matching live site) */}
+      <div className="px-5 py-4">
+        <h3 className="text-base font-bold text-slate-800 mb-2">
           {formData.bioTitle || "Your Bio Title Here"}
         </h3>
-        <p className="text-[11px] text-slate-600 leading-relaxed">
+        <p className="text-xs text-slate-600 leading-relaxed">
           {formData.bioDescription ||
             "Your bio description will appear here."}
         </p>
       </div>
 
       {/* Offer sections (2 offers matching reference website) */}
-      {formData.offers.map((offer, offerIdx) => (
-        <div key={offerIdx} className="px-5 py-4 border-b border-slate-100">
-          {/* Offer name (fixed) */}
-          <h4 className="text-sm font-bold text-slate-800 mb-0.5">
-            {offer.name}
-          </h4>
-          {/* Offer price (fixed, small) */}
-          <span className="text-[11px] text-slate-500 mb-3 block">
-            {offer.price}
-          </span>
-          {/* Description + Image side by side */}
-          <div className="flex gap-3 mt-2">
-            <div className="flex-1">
-              <p className="text-[11px] text-slate-600 leading-relaxed">
+      <div className="px-5 pt-4">
+        {formData.offers.map((offer, offerIdx) => (
+          <div key={offerIdx} className="py-4">
+            {/* Offer name (fixed) */}
+            <h4 className="text-sm font-bold text-slate-800 mb-0.5">
+              {offer.name}
+            </h4>
+            {/* Offer price (fixed, small) */}
+            <span className="text-[11px] text-slate-500 mb-3 block">
+              {offer.price}
+            </span>
+            {/* Description on left + Image on right (matching live site) */}
+            <div className="flex gap-3 items-start mt-2">
+              <p className="text-[11px] text-slate-600 leading-relaxed flex-1">
                 {offer.description || "Offer description here"}
               </p>
+              <div className="w-20 h-16 flex-shrink-0">
+                {offer.image ? (
+                  <img
+                    src={offer.image}
+                    alt={`Offer ${offerIdx + 1}`}
+                    className="w-full h-full object-cover rounded-md"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 rounded-md flex items-center justify-center">
+                    <Image size={14} className="text-slate-300" />
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="w-24 h-20 flex-shrink-0">
-              {offer.image ? (
-                <img
-                  src={offer.image}
-                  alt={`Offer ${offerIdx + 1}`}
-                  className="w-full h-full object-cover rounded-lg border border-slate-200"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
-                  <Image size={14} className="text-slate-300" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-
-      {/* Pricing table (matching reference website) */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        {formData.offers.map((offer, offerIdx) => (
-          <div key={offerIdx} className="grid grid-cols-3 gap-2 py-2 border-b border-slate-100 text-[10px]">
-            <div className="text-slate-500">Qty.</div>
-            <div className="text-center text-slate-700">1</div>
-            <div className="text-right font-medium text-slate-700">{offer.price}</div>
           </div>
         ))}
-        <div className="grid grid-cols-3 gap-2 py-2 border-b border-slate-100 text-[10px]">
-          <div className="font-medium text-slate-600">Subtotal</div>
+      </div>
+
+      {/* Pricing table (matching reference website - QTY. | PRICE PER VISIT | TOTAL) */}
+      <div className="px-5 py-4">
+        {formData.offers.map((offer, offerIdx) => (
+          <div key={offerIdx}>
+            <div className="grid grid-cols-3 gap-4 py-1.5 text-[10px]">
+              <div className="text-right text-slate-500 uppercase tracking-wide font-medium">QTY.</div>
+              <div className="text-right text-slate-500 uppercase tracking-wide font-medium">PRICE PER VISIT</div>
+              <div className="text-right text-slate-500 uppercase tracking-wide font-medium">TOTAL</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 py-1.5 text-[11px] border-b border-slate-100">
+              <div className="text-right text-slate-700">1</div>
+              <div className="text-right text-slate-700">{offer.price}</div>
+              <div className="text-right font-medium text-slate-700">{offer.price}</div>
+            </div>
+          </div>
+        ))}
+        {/* Subtotal */}
+        <div className="grid grid-cols-3 gap-4 py-1.5 text-[11px] border-b border-slate-100">
+          <div className="text-left text-slate-600">Subtotal</div>
           <div></div>
-          <div className="text-right font-bold text-slate-700">{formData.price1 || "$9.99"}</div>
+          <div className="text-right font-medium text-slate-700">{formData.price1 || "$9.99"}</div>
         </div>
-        <div className="grid grid-cols-3 gap-2 py-2 text-[10px]">
-          <div className="font-bold text-slate-800">Total</div>
+        {/* Total */}
+        <div className="grid grid-cols-3 gap-4 py-1.5 text-[11px]">
+          <div className="text-left font-bold text-slate-800">Total</div>
           <div></div>
           <div className="text-right font-bold text-slate-800">{formData.price2 || "$9.99"}</div>
         </div>
       </div>
 
-      {/* Images gallery */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h4 className="text-[11px] font-bold text-slate-700 mb-2.5">
+      {/* Images gallery (single row matching live site) */}
+      <div className="px-5 py-4">
+        <h3 className="text-base font-bold text-slate-800 mb-3">
           Images
-        </h4>
-        <div className="grid grid-cols-3 gap-2">
+        </h3>
+        <div className="flex gap-2 overflow-x-auto">
           {formData.galleryImages.length > 0 ? (
             formData.galleryImages.map((img, idx) => (
               <div
                 key={idx}
-                className="aspect-square rounded-lg border border-slate-200 overflow-hidden shadow-sm"
+                className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden shadow-sm"
               >
                 <img
                   src={img}
@@ -334,7 +343,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="aspect-square rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center"
+                  className="w-20 h-20 flex-shrink-0 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center"
                 >
                   <Image size={14} className="text-slate-300" />
                 </div>
@@ -344,35 +353,64 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </div>
       </div>
 
-      {/* Reviews section */}
+      {/* Reviews section (matching live site - avatar + name on same row, stars below, no cards) */}
       <div className="px-5 py-4">
-        <h4 className="text-[11px] font-bold text-slate-700 mb-3">Reviews</h4>
-        <div className="space-y-3">
-          {formData.testimonialNames.filter((n) => n).map((name, idx) => (
-            <div key={idx} className="bg-slate-50 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 mb-1">
-                <StarRating rating={5} readonly />
-                <span className="text-[11px] font-semibold text-slate-700">
-                  {name}
-                </span>
+        <h3 className="text-base font-bold text-slate-800 mb-4">Reviews</h3>
+        <div className="space-y-5">
+          {formData.testimonialNames.map((name, idx) => (
+            <div key={idx}>
+              {/* Avatar + Name on same row */}
+              <div className="flex items-center gap-2 mb-1">
+                {formData.testimonialHeadshots[idx] ? (
+                  <img
+                    src={formData.testimonialHeadshots[idx]!}
+                    alt={name}
+                    className="w-8 h-8 rounded-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                    <span className="text-[10px] text-slate-400">👤</span>
+                  </div>
+                )}
+                <span className="text-sm font-medium text-slate-700">{name}</span>
               </div>
-              {formData.testimonialScreenshots[idx] && (
+              {/* Star rating on its own row */}
+              <div className="flex gap-0.5 mb-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} size={14} className="fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              {/* Review text */}
+              {formData.testimonialScreenshots[idx] ? (
                 <img
                   src={formData.testimonialScreenshots[idx]!}
                   alt={`Testimonial ${name}`}
-                  className="w-full rounded mt-2 border border-slate-100"
+                  className="w-full rounded-lg border border-slate-100"
+                  crossOrigin="anonymous"
                 />
+              ) : (
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  {idx === 0 && "I thought hiring a pooper scooper was lazy... until I tried it. Now I tell all my neighbors. It's like outsourcing laundry: not glamorous, but it changes your week."}
+                  {idx === 1 && "They didn't just scoop — they noticed my gate hinge was loose and mentioned it so I could fix it before the dog escaped. Small details like that make me trust them completely."}
+                  {idx === 2 && "With two big labs, it used to feel like a minefield out there. Now it's just... a yard. Clean, fresh, and useable again. Pricing is fair, and honestly cheaper than the arguments I used to have with my kids about whose turn it was."}
+                  {idx === 3 && "They text me before arriving, close the gate every time, and even give the dog a pat if he's out. Super reliable and respectful service. My only regret is not signing up sooner."}
+                </p>
+              )}
+              {/* Separator */}
+              {idx < formData.testimonialNames.length - 1 && (
+                <div className="border-b border-slate-100 mt-4"></div>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Bottom CTA button */}
-      <div className="px-5 py-4 border-t border-slate-100 flex justify-center bg-slate-50">
+      {/* Bottom CTA button (centered, matching live site green pill) */}
+      <div className="px-5 py-6 flex justify-center">
         <button
           type="button"
-          className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-full transition-colors"
           disabled
         >
           Quote Approved
