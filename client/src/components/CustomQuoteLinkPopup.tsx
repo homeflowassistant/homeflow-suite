@@ -57,6 +57,9 @@ interface QuoteFormData {
   bioDescription: string;
   offerText: string;
   offerDescription: string;
+  offerPhoto: string | null;
+  price1: string;
+  price2: string;
   galleryImages: string[];
   testimonialHeadshots: (string | null)[];
   testimonialNames: string[];
@@ -98,6 +101,9 @@ const DEFAULT_FORM: QuoteFormData = {
     "Serving dog owners across the city, our team keeps your yard clean, fresh, and hassle-free. We provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, [company name] is here to make life easier\u2014one yard at a time.",
   offerText: "2 Weeks FREE",
   offerDescription: "Try our service free for 2 weeks. No commitment required.",
+  offerPhoto: "/quote-preview/dog-photo.jpg",
+  price1: "$9.99",
+  price2: "$19.00",
   galleryImages: [
     "/quote-preview/dog-photo.jpg",
     "/quote-preview/dog-photo-2.jpg",
@@ -227,7 +233,26 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </p>
       </div>
 
-      {/* Offer / CTA section (non-editable) */}
+      {/* Offer photo */}
+      <div className="px-5 py-4 border-b border-slate-100">
+        {formData.offerPhoto ? (
+          <img
+            src={formData.offerPhoto}
+            alt="Offer"
+            className="w-full h-32 object-cover rounded-lg border border-slate-200"
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <div className="w-full h-32 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
+            <div className="text-center">
+              <Image className="w-6 h-6 text-slate-300 mx-auto mb-1" />
+              <span className="text-[10px] text-slate-400">Offer Photo</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Offer / CTA section */}
       <div className="px-5 py-4 border-b border-slate-100">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold text-slate-800">
@@ -244,6 +269,50 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <p className="text-[11px] text-blue-700 font-medium">
           {formData.offerDescription || "Offer description here"}
         </p>
+      </div>
+
+      {/* Pricing section */}
+      <div className="px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold text-slate-800">Total</span>
+          <span className="bg-red-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full">
+            FREE
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="text-center">
+            <span className="block text-[10px] text-slate-500">Total</span>
+            <span className="block text-sm font-bold text-slate-700">
+              {formData.price1 || "$0.00"}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="block text-[10px] text-slate-500">Monthly</span>
+            <span className="block text-sm font-bold text-slate-700">
+              {formData.price2 || "$0.00"}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="block text-[10px] text-slate-500">6 Months</span>
+            <span className="block text-sm font-bold text-slate-700">
+              {formData.price2 || "$0.00"}
+            </span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="text-center">
+            <span className="block text-[10px] text-slate-500">1 Year</span>
+            <span className="block text-sm font-bold text-slate-700">
+              {formData.price2 || "$0.00"}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="block text-[10px] text-slate-500">Bio/Monthly</span>
+            <span className="block text-sm font-bold text-slate-700">
+              {formData.price2 || "$0.00"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Images gallery */}
@@ -334,6 +403,7 @@ function QuoteFormFields({
 }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const offerPhotoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const testimonialScreenshotRefs = useRef<(HTMLInputElement | null)[]>([]);
   const testimonialHeadshotRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -498,6 +568,91 @@ function QuoteFormFields({
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 min-h-[100px] resize-y"
           placeholder="Insert Bio Here"
         />
+      </div>
+
+      {/* ── Offer + Offer description (side by side) ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-slate-500 font-medium">Offer</label>
+          <Input
+            value={formData.offerText}
+            onChange={(e) => setFormData({ ...formData, offerText: e.target.value })}
+            className="mt-1 text-xs h-8"
+            placeholder="Offer text"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] text-slate-500 font-medium">Offer description</label>
+          <Input
+            value={formData.offerDescription}
+            onChange={(e) => setFormData({ ...formData, offerDescription: e.target.value })}
+            className="mt-1 text-xs h-8"
+            placeholder="Offer description"
+          />
+        </div>
+      </div>
+
+      {/* ── Offer Photo ── */}
+      <div>
+        <label className="text-[11px] text-slate-500 font-medium">Offer Photo</label>
+        <div
+          className="mt-1 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
+          onClick={() => offerPhotoInputRef.current?.click()}
+        >
+          {formData.offerPhoto ? (
+            <div className="relative inline-block">
+              <img
+                src={formData.offerPhoto}
+                alt="Offer Photo"
+                className="h-20 object-cover rounded"
+                crossOrigin="anonymous"
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFormData({ ...formData, offerPhoto: null });
+                }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload size={20} className="text-slate-400" />
+              <span className="text-xs text-slate-500 font-medium">Upload Offer Photo</span>
+            </div>
+          )}
+        </div>
+        <input
+          ref={offerPhotoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleImageUpload(e.target.files?.[0], "offerPhoto")}
+        />
+      </div>
+
+      {/* ── Price + Price (side by side) ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-slate-500 font-medium">Price</label>
+          <Input
+            value={formData.price1}
+            onChange={(e) => setFormData({ ...formData, price1: e.target.value })}
+            className="mt-1 text-xs h-8"
+            placeholder="Price"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] text-slate-500 font-medium">Price</label>
+          <Input
+            value={formData.price2}
+            onChange={(e) => setFormData({ ...formData, price2: e.target.value })}
+            className="mt-1 text-xs h-8"
+            placeholder="Price"
+          />
+        </div>
       </div>
 
       {/* ── Upload Image (6 slots, max 6 total) ── */}
