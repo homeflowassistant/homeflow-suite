@@ -121,17 +121,17 @@ export default function SGLinkPopup({
       }
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="max-w-[80vw] max-h-[90vh] overflow-y-auto p-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-blue-700">
+      <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[96vw] lg:max-w-[92vw] xl:max-w-[1600px] p-0 gap-0 overflow-hidden max-h-[95vh] rounded-xl border-2 border-blue-600">
+        <div className="px-6 pt-6 pb-4 border-b border-blue-100">
+          <DialogTitle className="text-2xl font-bold text-blue-700">
             Sweep & Go Base Onboarding Link
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+          <DialogDescription className="text-sm text-muted-foreground mt-1">
             Watch the video below to learn how to find your base onboarding link, then paste it in the field below.
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-2">
+        <div className="p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Left Panel: Video + Instructions */}
           <div className="space-y-5">
             {/* YouTube Video */}
