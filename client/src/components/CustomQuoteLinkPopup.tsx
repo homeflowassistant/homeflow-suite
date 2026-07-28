@@ -20,8 +20,9 @@
  *   - Team Photo: dog-photo.jpg
  *   - Bio Title: [service area] Highest Rated Pooper Scooper Service
  *   - Bio Description: generic service description with [company name]
- *   - CTA: "Quote Approved" (not editable)
- *   - No pricing fields
+ *   - Offer 1: WEEKLY | Dog Waste Removal ($19.00) - name/price fixed, description + image editable
+ *   - Offer 2: 2 Weeks FREE ($0.00) - name/price fixed, description + image editable
+ *   - Pricing: Subtotal + Total ($9.99)
  *   - Gallery: max 6 images, defaults with dog photos
  *   - Reviews: exactly 4 required (no add/remove)
  */
@@ -48,6 +49,13 @@ import { trpc } from "@/lib/trpc";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
+interface QuoteOffer {
+  name: string;          // Fixed / read-only
+  price: string;         // Fixed / read-only
+  description: string;   // Editable
+  image: string | null;  // Editable (upload)
+}
+
 interface QuoteFormData {
   companyName: string;
   timeCompanyStarted: string;
@@ -55,11 +63,9 @@ interface QuoteFormData {
   teamPhoto: string | null;
   bioTitle: string;
   bioDescription: string;
-  offerText: string;
-  offerDescription: string;
-  offerPhoto: string | null;
-  price1: string;
-  price2: string;
+  offers: QuoteOffer[];    // Two offers: paid + free
+  price1: string;          // Subtotal
+  price2: string;          // Total
   galleryImages: string[];
   testimonialHeadshots: (string | null)[];
   testimonialNames: string[];
@@ -99,11 +105,24 @@ const DEFAULT_FORM: QuoteFormData = {
   bioTitle: "[service area] Highest Rated Pooper Scooper Service",
   bioDescription:
     "Serving dog owners across the city, our team keeps your yard clean, fresh, and hassle-free. We provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, [company name] is here to make life easier\u2014one yard at a time.",
-  offerText: "2 Weeks FREE",
-  offerDescription: "Try our service free for 2 weeks. No commitment required.",
-  offerPhoto: "/quote-preview/dog-photo.jpg",
+  offers: [
+    {
+      name: "WEEKLY | Dog Waste Removal",
+      price: "$19.00",
+      description:
+        "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. \ud83d\udc3e",
+      image: "/quote-preview/offer-image-1.png",
+    },
+    {
+      name: "2 Weeks FREE",
+      price: "$0.00",
+      description:
+        "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. \ud83d\udc3e",
+      image: "/quote-preview/offer-image-2.png",
+    },
+  ],
   price1: "$9.99",
-  price2: "$19.00",
+  price2: "$9.99",
   galleryImages: [
     "/quote-preview/dog-photo.jpg",
     "/quote-preview/dog-photo-2.jpg",
@@ -118,7 +137,7 @@ const DEFAULT_FORM: QuoteFormData = {
     "/quote-preview/review-avatar-3.jpg",
     null,
   ],
-  testimonialNames: ["Joshua & Megan", "Amber K.", "Marcus L.", "Samantha P."],
+  testimonialNames: ["Joshua -n- Megan", "Amber K.", "Marcus L.", "Samantha P."],
   testimonialScreenshots: [null, null, null, null],
 };
 
@@ -233,85 +252,60 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </p>
       </div>
 
-      {/* Offer photo */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        {formData.offerPhoto ? (
-          <img
-            src={formData.offerPhoto}
-            alt="Offer"
-            className="w-full h-32 object-cover rounded-lg border border-slate-200"
-            crossOrigin="anonymous"
-          />
-        ) : (
-          <div className="w-full h-32 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
-            <div className="text-center">
-              <Image className="w-6 h-6 text-slate-300 mx-auto mb-1" />
-              <span className="text-[10px] text-slate-400">Offer Photo</span>
+      {/* Offer sections (2 offers matching reference website) */}
+      {formData.offers.map((offer, offerIdx) => (
+        <div key={offerIdx} className="px-5 py-4 border-b border-slate-100">
+          {/* Offer name (fixed) */}
+          <h4 className="text-sm font-bold text-slate-800 mb-0.5">
+            {offer.name}
+          </h4>
+          {/* Offer price (fixed, small) */}
+          <span className="text-[11px] text-slate-500 mb-3 block">
+            {offer.price}
+          </span>
+          {/* Description + Image side by side */}
+          <div className="flex gap-3 mt-2">
+            <div className="flex-1">
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                {offer.description || "Offer description here"}
+              </p>
+            </div>
+            <div className="w-24 h-20 flex-shrink-0">
+              {offer.image ? (
+                <img
+                  src={offer.image}
+                  alt={`Offer ${offerIdx + 1}`}
+                  className="w-full h-full object-cover rounded-lg border border-slate-200"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
+                  <Image size={14} className="text-slate-300" />
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      ))}
 
-      {/* Offer / CTA section */}
+      {/* Pricing table (matching reference website) */}
       <div className="px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold text-slate-800">
-            {formData.offerText || "2 Weeks FREE"}
-          </span>
-          <span className="bg-red-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full">
-            FREE
-          </span>
+        {formData.offers.map((offer, offerIdx) => (
+          <div key={offerIdx} className="grid grid-cols-3 gap-2 py-2 border-b border-slate-100 text-[10px]">
+            <div className="text-slate-500">Qty.</div>
+            <div className="text-center text-slate-700">1</div>
+            <div className="text-right font-medium text-slate-700">{offer.price}</div>
+          </div>
+        ))}
+        <div className="grid grid-cols-3 gap-2 py-2 border-b border-slate-100 text-[10px]">
+          <div className="font-medium text-slate-600">Subtotal</div>
+          <div></div>
+          <div className="text-right font-bold text-slate-700">{formData.price1 || "$9.99"}</div>
         </div>
-      </div>
-
-      {/* Offer description */}
-      <div className="px-5 py-3 border-b border-slate-100 bg-blue-50">
-        <p className="text-[11px] text-blue-700 font-medium">
-          {formData.offerDescription || "Offer description here"}
-        </p>
-      </div>
-
-      {/* Pricing section */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold text-slate-800">Total</span>
-          <span className="bg-red-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full">
-            FREE
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">Total</span>
-            <span className="block text-sm font-bold text-slate-700">
-              {formData.price1 || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">Monthly</span>
-            <span className="block text-sm font-bold text-slate-700">
-              {formData.price2 || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">6 Months</span>
-            <span className="block text-sm font-bold text-slate-700">
-              {formData.price2 || "$0.00"}
-            </span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">1 Year</span>
-            <span className="block text-sm font-bold text-slate-700">
-              {formData.price2 || "$0.00"}
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-500">Bio/Monthly</span>
-            <span className="block text-sm font-bold text-slate-700">
-              {formData.price2 || "$0.00"}
-            </span>
-          </div>
+        <div className="grid grid-cols-3 gap-2 py-2 text-[10px]">
+          <div className="font-bold text-slate-800">Total</div>
+          <div></div>
+          <div className="text-right font-bold text-slate-800">{formData.price2 || "$9.99"}</div>
         </div>
       </div>
 
@@ -403,7 +397,7 @@ function QuoteFormFields({
 }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const offerPhotoInputRef = useRef<HTMLInputElement>(null);
+  const offerImageRefs = useRef<(HTMLInputElement | null)[]>([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const testimonialScreenshotRefs = useRef<(HTMLInputElement | null)[]>([]);
   const testimonialHeadshotRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -570,87 +564,154 @@ function QuoteFormFields({
         />
       </div>
 
-      {/* ── Offer + Offer description (side by side) ── */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-slate-500 font-medium">Offer</label>
-          <Input
-            value={formData.offerText}
-            onChange={(e) => setFormData({ ...formData, offerText: e.target.value })}
-            className="mt-1 text-xs h-8"
-            placeholder="Offer text"
-          />
-        </div>
-        <div>
-          <label className="text-[11px] text-slate-500 font-medium">Offer description</label>
-          <Input
-            value={formData.offerDescription}
-            onChange={(e) => setFormData({ ...formData, offerDescription: e.target.value })}
-            className="mt-1 text-xs h-8"
-            placeholder="Offer description"
-          />
-        </div>
-      </div>
-
-      {/* ── Offer Photo ── */}
-      <div>
-        <label className="text-[11px] text-slate-500 font-medium">Offer Photo</label>
-        <div
-          className="mt-1 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
-          onClick={() => offerPhotoInputRef.current?.click()}
-        >
-          {formData.offerPhoto ? (
-            <div className="relative inline-block">
-              <img
-                src={formData.offerPhoto}
-                alt="Offer Photo"
-                className="h-20 object-cover rounded"
-                crossOrigin="anonymous"
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFormData({ ...formData, offerPhoto: null });
+      {/* ── Offer 1: WEEKLY | Dog Waste Removal ── */}
+      <div className="space-y-2">
+        <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          {/* Offer name (fixed/read-only) */}
+          <div>
+            <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[0]?.name}</span>
+          </div>
+          {/* Offer price (fixed/read-only, small) */}
+          <div>
+            <span className="text-[11px] text-slate-500">{formData.offers[0]?.price}</span>
+          </div>
+          {/* Description + Image side by side */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-slate-400">Description</label>
+              <textarea
+                value={formData.offers[0]?.description || ""}
+                onChange={(e) => {
+                  const offers = [...formData.offers];
+                  offers[0] = { ...offers[0], description: e.target.value };
+                  setFormData({ ...formData, offers });
                 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                className="w-full mt-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 min-h-[70px] resize-y"
+                placeholder="Offer description"
+              />
+            </div>
+            <div className="w-24">
+              <label className="text-[10px] text-slate-400">Image</label>
+              <div
+                className="mt-1 border-2 border-dashed border-slate-300 rounded-md h-[70px] flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors bg-white overflow-hidden relative"
+                onClick={() => offerImageRefs.current[0]?.click()}
               >
-                <X size={11} />
-              </button>
+                {formData.offers[0]?.image ? (
+                  <img
+                    src={formData.offers[0].image}
+                    alt="Offer 1 image"
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <Upload size={14} className="text-slate-400" />
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={(el) => { offerImageRefs.current[0] = el; }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    fileToBase64(file).then((b64) => {
+                      const offers = [...formData.offers];
+                      offers[0] = { ...offers[0], image: b64 };
+                      setFormData({ ...formData, offers });
+                    });
+                  }
+                }}
+              />
             </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Upload size={20} className="text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Upload Offer Photo</span>
-            </div>
-          )}
+          </div>
         </div>
-        <input
-          ref={offerPhotoInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleImageUpload(e.target.files?.[0], "offerPhoto")}
-        />
       </div>
 
-      {/* ── Price + Price (side by side) ── */}
+      {/* ── Offer 2: 2 Weeks FREE ── */}
+      <div className="space-y-2">
+        <label className="text-[11px] text-slate-500 font-medium">Offer 2</label>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          {/* Offer name (fixed/read-only) */}
+          <div>
+            <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[1]?.name}</span>
+          </div>
+          {/* Offer price (fixed/read-only, small) */}
+          <div>
+            <span className="text-[11px] text-slate-500">{formData.offers[1]?.price}</span>
+          </div>
+          {/* Description + Image side by side */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-slate-400">Description</label>
+              <textarea
+                value={formData.offers[1]?.description || ""}
+                onChange={(e) => {
+                  const offers = [...formData.offers];
+                  offers[1] = { ...offers[1], description: e.target.value };
+                  setFormData({ ...formData, offers });
+                }}
+                className="w-full mt-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 min-h-[70px] resize-y"
+                placeholder="Offer description"
+              />
+            </div>
+            <div className="w-24">
+              <label className="text-[10px] text-slate-400">Image</label>
+              <div
+                className="mt-1 border-2 border-dashed border-slate-300 rounded-md h-[70px] flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors bg-white overflow-hidden relative"
+                onClick={() => offerImageRefs.current[1]?.click()}
+              >
+                {formData.offers[1]?.image ? (
+                  <img
+                    src={formData.offers[1].image}
+                    alt="Offer 2 image"
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <Upload size={14} className="text-slate-400" />
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={(el) => { offerImageRefs.current[1] = el; }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    fileToBase64(file).then((b64) => {
+                      const offers = [...formData.offers];
+                      offers[1] = { ...offers[1], image: b64 };
+                      setFormData({ ...formData, offers });
+                    });
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Subtotal + Total (side by side) ── */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] text-slate-500 font-medium">Price</label>
+          <label className="text-[11px] text-slate-500 font-medium">Subtotal</label>
           <Input
             value={formData.price1}
             onChange={(e) => setFormData({ ...formData, price1: e.target.value })}
             className="mt-1 text-xs h-8"
-            placeholder="Price"
+            placeholder="Subtotal"
           />
         </div>
         <div>
-          <label className="text-[11px] text-slate-500 font-medium">Price</label>
+          <label className="text-[11px] text-slate-500 font-medium">Total</label>
           <Input
             value={formData.price2}
             onChange={(e) => setFormData({ ...formData, price2: e.target.value })}
             className="mt-1 text-xs h-8"
-            placeholder="Price"
+            placeholder="Total"
           />
         </div>
       </div>
@@ -941,7 +1002,7 @@ export default function CustomQuoteLinkPopup({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[92vw] lg:max-w-[85vw] xl:max-w-[1400px] p-0 gap-0 overflow-hidden max-h-[90vh] rounded-xl border-2 border-blue-600">
+      <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[96vw] lg:max-w-[92vw] xl:max-w-[1600px] p-0 gap-0 overflow-hidden max-h-[95vh] rounded-xl border-2 border-blue-600">
         {/* Header */}
         <DialogHeader className="px-6 pt-5 pb-3 bg-slate-50 border-b border-slate-200">
           <DialogTitle className="text-2xl font-bold text-blue-700 mb-2">
@@ -952,10 +1013,11 @@ export default function CustomQuoteLinkPopup({
               How it works:
             </DialogDescription>
             <div className="text-[12px] text-slate-500 space-y-0.5">
-              <p>1. Upload all empty files (example on the left)</p>
-              <p>2. Fill out the empty text boxes</p>
+              <p>1. Upload all empty image files (example on the left)</p>
+              <p>2. Fill out the editable text boxes (offer descriptions, bio)</p>
               <p>3. Replace the default images</p>
-              <p>4. Add the testimonials</p>
+              <p>4. Add the 4 testimonials</p>
+              <p>5. Click Save Settings</p>
             </div>
           </div>
         </DialogHeader>
@@ -985,7 +1047,7 @@ export default function CustomQuoteLinkPopup({
         </div>
 
         {/* Split panel body */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden" style={{ height: "calc(90vh - 210px)" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden" style={{ height: "calc(95vh - 220px)" }}>
           {/* Left Panel: Template Preview */}
           <div
             ref={leftPanelRef}
