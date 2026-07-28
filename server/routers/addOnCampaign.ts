@@ -104,18 +104,17 @@ export const addOnCampaignRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         const msg = error instanceof Error ? error.message : "Unknown error";
+        console.error("[addOnCampaign] saveSettings error:", msg);
         if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("token")) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "GHL authentication failed. Your access token may be missing or expired.",
           });
         }
-        if (msg.includes("400") || msg.includes("Bad Request")) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Failed to save: ${msg}` });
-        }
+        // Let the actual GHL error message through so the client can show it
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to save add-on campaign settings. Please try again.",
+          message: msg || "Failed to save add-on campaign settings. Please try again.",
         });
       }
     }),
