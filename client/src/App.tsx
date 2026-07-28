@@ -6,12 +6,14 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import AddContactsPage from "./pages/AddContactsPage";
 import RequestScheduling from "./pages/RequestScheduling";
 import ReactivationPage from "./pages/ReactivationPage";
+import AddOnCampaignPage from "./pages/AddOnCampaignPage";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/request-scheduling"} component={RequestScheduling} />
       <Route path={"/reactivation"} component={ReactivationPage} />
+      <Route path={"/add-on-campaign"} component={AddOnCampaignPage} />
       <Route path={"/add-contacts"} component={AddContactsPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />

@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { ghlRouter } from "./routers/ghl";
 import { requestSchedulingRouter } from "./routers/requestScheduling";
 import { reactivationRouter } from "./routers/reactivation";
+import { addOnCampaignRouter } from "./routers/addOnCampaign";
 
 export const appRouter = router({
   system: systemRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   ghl: ghlRouter,
   requestScheduling: requestSchedulingRouter,
   reactivation: reactivationRouter,
+  addOnCampaign: addOnCampaignRouter,
 });
 
 export type AppRouter = typeof appRouter;
