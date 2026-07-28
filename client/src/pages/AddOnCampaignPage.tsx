@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import "./AddOnCampaignPage.css";
 
 // ─── Example image ───────────────────────────────────────────────────
-const ADDON_SMS_EXAMPLE = "../public/addon-sms-example.png";
+const ADDON_SMS_EXAMPLE = "/addon-sms-example.png";
 
 // ─── Constants ────────────────────────────────────────────────────────
 const ADDON_DURATION_OPTIONS = [
