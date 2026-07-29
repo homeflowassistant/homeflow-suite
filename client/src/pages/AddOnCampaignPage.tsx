@@ -21,11 +21,11 @@ type AddonDuration = (typeof ADDON_DURATION_OPTIONS)[number];
 // SMS every 2 weeks: Day 1, Day 14, Day 28, Day 42, Day 56, Day 70
 const TIMELINE_STEPS = [
   { day: "Day 1", label: "SMS 1" },
-  { day: "Day 14", label: "SMS 1" },
-  { day: "Day 28", label: "SMS 1" },
-  { day: "Day 42", label: "SMS 1" },
-  { day: "Day 60", label: "SMS 1" },
-  { day: "Day 90", label: "SMS 1" },
+  { day: "Day 14", label: "SMS 2" },
+  { day: "Day 28", label: "SMS 3" },
+  { day: "Day 42", label: "SMS 4" },
+  { day: "Day 60", label: "SMS 5" },
+  { day: "Day 90", label: "SMS 6" },
 ];
 const FIRST_ROW = TIMELINE_STEPS.slice(0, 3);
 const SECOND_ROW = TIMELINE_STEPS.slice(3);
@@ -155,7 +155,7 @@ export default function AddOnCampaignPage() {
               <div className="aoc-lite-label">LITE</div>
               <p className="aoc-lite-text">
                 Add-On Follow-Up helps you promote extra services to current customers without feeling pushy.
-                Send a text message every few to stay top of mind, educate customers, and gently remind them about helpful add-ons like deodorizer, disinfectant, or deterrent services.
+                Send a text message every few weeks to stay top of mind, educate customers, and gently remind them about helpful add-ons like deodorizer, disinfectant, or deterrent services.
                 Consistent follow-up helps customers see the value of extra services over time, increasing revenue while making upgrades feel easy and natural.
               </p>
             </div>
