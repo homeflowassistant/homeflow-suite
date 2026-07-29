@@ -274,9 +274,10 @@ const CV = {
         }
 
         // ── Always-saved base fields ──────────────────────────────────
+        // FIX: Removed redundant dual-write to the display name alias which caused a
+        // Promise.all race condition resulting in 400 "A custom value with the same key already exists."
         const [leadOptionResults, initialResults, followUpResults] = await Promise.all([
           upsertGhlCustomValue(locationId, CV.leadFollowupOptions, input.leadFollowUpOption),
-          upsertGhlCustomValue(locationId, "Lead Follow-up Options (Lite, SG-Link, Custom-Link)", input.leadFollowUpOption),
           upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
           upsertGhlCustomValue(locationId, FOLLOW_UP_CUSTOM_VALUE_NAME, input.followUpLimit),
         ]);
@@ -329,9 +330,11 @@ const CV = {
             [CV.review4Name,  d.review4Name ?? ""],
           ];
 
-          await Promise.all(
-            quoteUpserts.map(([name, value]) => upsertGhlCustomValue(locationId, name, value))
-          );
+          // FIX: Execute sequentially to prevent race conditions between alias keys
+          // (e.g. homeflow_business_logo and company_logo may resolve to the same GHL custom value)
+          for (const [name, value] of quoteUpserts) {
+            await upsertGhlCustomValue(locationId, name, value);
+          }
         }
 
         return {

@@ -233,15 +233,12 @@ export const reactivationRouter = router({
         }
 
         // ── Always-saved base fields ──────────────────────────────────
+        // FIX: Removed redundant dual-write to the display name alias to prevent the same
+        // Promise.all race condition that causes 400 "already exists" on the Reactivation page.
         await Promise.all([
           upsertGhlCustomValue(
             locationId,
             CV.leadFollowupOptions,
-            OPTION_TO_GHL_VALUE[input.reactivationOption]
-          ),
-          upsertGhlCustomValue(
-            locationId,
-            "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
             OPTION_TO_GHL_VALUE[input.reactivationOption]
           ),
           upsertGhlCustomValue(
@@ -297,9 +294,10 @@ export const reactivationRouter = router({
             [CV.review4Name,  d.review4Name ?? ""],
           ];
 
-          await Promise.all(
-            quoteUpserts.map(([name, value]) => upsertGhlCustomValue(locationId, name, value))
-          );
+          // FIX: Execute sequentially to prevent race conditions between alias keys
+          for (const [name, value] of quoteUpserts) {
+            await upsertGhlCustomValue(locationId, name, value);
+          }
         }
 
         return { success: true };
