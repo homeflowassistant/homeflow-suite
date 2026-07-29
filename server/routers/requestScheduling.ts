@@ -276,6 +276,7 @@ const CV = {
         // ── Always-saved base fields ──────────────────────────────────
         const [leadOptionResults, initialResults, followUpResults] = await Promise.all([
           upsertGhlCustomValue(locationId, CV.leadFollowupOptions, input.leadFollowUpOption),
+          upsertGhlCustomValue(locationId, "Lead Follow-up Options (Lite, SG-Link, Custom-Link)", input.leadFollowUpOption),
           upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
           upsertGhlCustomValue(locationId, FOLLOW_UP_CUSTOM_VALUE_NAME, input.followUpLimit),
         ]);

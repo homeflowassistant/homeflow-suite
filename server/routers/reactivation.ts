@@ -241,6 +241,11 @@ export const reactivationRouter = router({
           ),
           upsertGhlCustomValue(
             locationId,
+            "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
+            OPTION_TO_GHL_VALUE[input.reactivationOption]
+          ),
+          upsertGhlCustomValue(
+            locationId,
             CV.onetimeServiceScheduling,
             input.onetimeTiming
           ),

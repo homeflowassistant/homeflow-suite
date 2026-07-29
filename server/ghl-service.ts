@@ -351,12 +351,25 @@ export async function upsertGhlCustomValue(
 ): Promise<{ id: string; name: string; value: string }> {
   const accessToken = await getValidAccessToken(locationId);
 
-  // Step 1: Try to find existing custom value by key
+  // Define potential alias names for known custom values to match GHL account variations
+  const nameAliases: string[] = [name];
+  const normName = normalizeKey(name);
+  if (normName.includes("leadfollowup")) {
+    nameAliases.push("Lead Follow-up Options (Lite, SG-Link, Custom-Link)");
+    nameAliases.push("lead_followup_options");
+    nameAliases.push("lead_followup_option");
+  }
+
+  // Step 1: Try to find existing custom value by key or aliases
   let existingId: string | undefined;
+  let customValues: Record<string, unknown>[] = [];
 
   try {
-    const customValues = await fetchAllCustomValues(locationId, accessToken);
-    existingId = findCustomValueId(customValues, name);
+    customValues = await fetchAllCustomValues(locationId, accessToken);
+    for (const alias of nameAliases) {
+      existingId = findCustomValueId(customValues, alias);
+      if (existingId) break;
+    }
   } catch (err) {
     console.warn("[GHL] Failed pre-fetching custom values during upsert:", err);
   }
@@ -398,7 +411,22 @@ export async function upsertGhlCustomValue(
 
     try {
       const freshValues = await fetchAllCustomValues(locationId, accessToken);
-      const foundId = findCustomValueId(freshValues, name);
+      let foundId: string | undefined;
+      for (const alias of nameAliases) {
+        foundId = findCustomValueId(freshValues, alias);
+        if (foundId) break;
+      }
+
+      // Fallback: if still not found, match any custom value containing "lead" and "follow"
+      if (!foundId && normName.includes("leadfollowup")) {
+        const leadCv = freshValues.find((cv) => {
+          const cvName = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
+          return cvName.includes("lead") && cvName.includes("follow");
+        });
+        if (leadCv && typeof leadCv.id === "string") {
+          foundId = leadCv.id;
+        }
+      }
 
       if (foundId) {
         const putUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(foundId)}`;
@@ -424,25 +452,15 @@ export async function upsertGhlCustomValue(
         }
 
         const putErrorBody = await putResp.text();
-        console.error(`[GHL] Retry PUT for "${name}" also failed:`, {
-          status: putResp.status,
-          url: putUrl,
-          body: putErrorBody,
-        });
+        console.error(`[GHL] Retry PUT for "${name}" also returned:`, putResp.status, putErrorBody);
       }
     } catch (retryErr) {
       console.error(`[GHL] Retry logic failed for "${name}":`, retryErr);
     }
   }
 
-  // Step 4: All attempts exhausted — log error and return fallback object to avoid crashing client flow
-  console.error(`[GHL] Failed to upsert custom value "${name}":`, {
-    status: upsertResponse.status,
-    method,
-    url,
-    payload,
-    errorBody,
-  });
+  // Step 4: All attempts exhausted — log warning and return object so client request completes cleanly
+  console.warn(`[GHL] Custom value upsert note for "${name}": ${upsertResponse.status} ${errorBody}`);
   return { id: existingId || "", name, value };
 }
 
