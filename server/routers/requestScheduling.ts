@@ -140,6 +140,7 @@ const customQuoteDataSchema = z.object({
   businessLogo:       z.string().optional(),
   businessName:       z.string().optional(),
   businessOwnerName:  z.string().optional(),
+  quoteTitle:         z.string().optional(),
   bioText:            z.string().optional(),
   companyImage:       z.string().optional(),
   discountOffer:      z.string().optional(),
@@ -283,6 +284,7 @@ const CV = {
         if (input.leadFollowUpOption === "Custom Quote & Link" && input.customQuoteData) {
           const d = input.customQuoteData;
           const bio = d.bioText ?? "";
+          const title = d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service";
 
           const quoteUpserts: Array<[string, string]> = [
             // Dual-write: logo
@@ -293,8 +295,8 @@ const CV = {
             [CV.companyName,       d.businessName ?? ""],
             // Owner name
             [CV.businessOwnerName, d.businessOwnerName ?? ""],
-            // Dual-write: bio → quote_title AND company_description
-            [CV.quoteTitle,        bio],
+            // Separate quoteTitle and companyDescription
+            [CV.quoteTitle,        title],
             [CV.companyDescription,bio],
             // Company photo
             [CV.companyImage,      d.companyImage ?? ""],
