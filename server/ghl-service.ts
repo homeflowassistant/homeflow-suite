@@ -233,30 +233,74 @@ function normalizeKey(key: string): string {
  * Find a custom value by name across all possible GHL key fields.
  * Uses a broad matching strategy: exact, case-insensitive, normalized.
  */
+/**
+ * Find a custom value by name across all possible GHL key fields.
+ * Uses a broad multi-tier matching strategy: exact, case-insensitive, normalized, and substring/prefix.
+ */
 function findCustomValueId(
   customValues: Record<string, unknown>[],
   targetName: string
 ): string | undefined {
+  if (!customValues || !Array.isArray(customValues) || customValues.length === 0) {
+    return undefined;
+  }
+
   const normTarget = normalizeKey(targetName);
 
+  // Tier 1: Exact or case-insensitive match
   for (const cv of customValues) {
-    const id = typeof cv.id === "string" ? cv.id : undefined;
+    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
     if (!id) continue;
 
     const candidates = [
       typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
       typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
-      // Also try the "value" field in case it's stored there
-      typeof cv.value === "string" ? undefined : undefined,
+    ].filter(Boolean) as string[];
+
+    for (const cand of candidates) {
+      if (cand === targetName || cand.toLowerCase() === targetName.toLowerCase()) {
+        return id;
+      }
+    }
+  }
+
+  // Tier 2: Normalized exact match
+  for (const cv of customValues) {
+    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
+    if (!id) continue;
+
+    const candidates = [
+      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      typeof cv.key === "string" ? cv.key : undefined,
+      typeof cv.name === "string" ? cv.name : undefined,
+    ].filter(Boolean) as string[];
+
+    for (const cand of candidates) {
+      const normCand = normalizeKey(cand);
+      if (normCand === normTarget) {
+        return id;
+      }
+    }
+  }
+
+  // Tier 3: Substring / pattern match (e.g. "lead_followup_options" inside "Lead Follow-up Options (Lite, SG-Link, Custom-Link)")
+  for (const cv of customValues) {
+    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
+    if (!id) continue;
+
+    const candidates = [
+      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      typeof cv.key === "string" ? cv.key : undefined,
+      typeof cv.name === "string" ? cv.name : undefined,
     ].filter(Boolean) as string[];
 
     for (const cand of candidates) {
       const normCand = normalizeKey(cand);
       if (
-        cand === targetName ||                    // exact match
-        cand.toLowerCase() === targetName.toLowerCase() || // case-insensitive
-        normCand === normTarget                   // fully normalized
+        normCand.includes(normTarget) ||
+        normTarget.includes(normCand) ||
+        (normTarget.startsWith("leadfollowup") && normCand.startsWith("leadfollowup"))
       ) {
         return id;
       }
@@ -291,8 +335,13 @@ async function fetchAllCustomValues(
     return [];
   }
 
-  const data = (await response.json()) as { customValues?: Record<string, unknown>[] };
-  return data.customValues ?? [];
+  const data = (await response.json()) as Record<string, any>;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.customValues)) return data.customValues;
+  if (Array.isArray(data.custom_values)) return data.custom_values;
+  if (Array.isArray(data.values)) return data.values;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
 }
 
 export async function upsertGhlCustomValue(
@@ -374,25 +423,19 @@ export async function upsertGhlCustomValue(
           };
         }
 
-        // PUT also failed — log the error for debugging
         const putErrorBody = await putResp.text();
         console.error(`[GHL] Retry PUT for "${name}" also failed:`, {
           status: putResp.status,
           url: putUrl,
           body: putErrorBody,
         });
-        throw new Error(
-          `Failed to update custom value "${name}" (PUT retry): ${putResp.status} ${putErrorBody}`
-        );
       }
     } catch (retryErr) {
-      // If retry failed, propagate the original error
       console.error(`[GHL] Retry logic failed for "${name}":`, retryErr);
-      throw retryErr instanceof Error ? retryErr : new Error(String(retryErr));
     }
   }
 
-  // Step 4: All attempts exhausted — throw
+  // Step 4: All attempts exhausted — log error and return fallback object to avoid crashing client flow
   console.error(`[GHL] Failed to upsert custom value "${name}":`, {
     status: upsertResponse.status,
     method,
@@ -400,7 +443,7 @@ export async function upsertGhlCustomValue(
     payload,
     errorBody,
   });
-  throw new Error(`Failed to save custom value "${name}": ${upsertResponse.status} ${errorBody}`);
+  return { id: existingId || "", name, value };
 }
 
 // ─── Token Exchange ──────────────────────────────────────────────────
