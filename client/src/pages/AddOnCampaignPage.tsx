@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Clock3, Link2, ExternalLink } from "lucide-react";
+import { Clock3, Link2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./AddOnCampaignPage.css";
@@ -24,8 +24,8 @@ const TIMELINE_STEPS = [
   { day: "Day 14", label: "SMS 1" },
   { day: "Day 28", label: "SMS 1" },
   { day: "Day 42", label: "SMS 1" },
-  { day: "Day 56 to Day 60", label: "SMS 1" },
-  { day: "Day 70 to Day 90", label: "SMS 1" },
+  { day: "Day 60", label: "SMS 1" },
+  { day: "Day 90", label: "SMS 1" },
 ];
 const FIRST_ROW = TIMELINE_STEPS.slice(0, 3);
 const SECOND_ROW = TIMELINE_STEPS.slice(3);
@@ -237,7 +237,10 @@ export default function AddOnCampaignPage() {
                       <span className="aoc-timeline-step-label">{step.label}</span>
                     </div>
                     {idx < FIRST_ROW.length - 1 && (
-                      <div className="aoc-timeline-arrow"><ArrowRight className="h-4 w-4 text-primary opacity-40" /></div>
+                      <svg className="aoc-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                        <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                      </svg>
                     )}
                   </div>
                 ))}
@@ -252,7 +255,10 @@ export default function AddOnCampaignPage() {
                       <span className="aoc-timeline-step-label">{step.label}</span>
                     </div>
                     {idx < SECOND_ROW.length - 1 && (
-                      <div className="aoc-timeline-arrow"><ArrowRight className="h-4 w-4 text-primary opacity-40" /></div>
+                      <svg className="aoc-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                        <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                      </svg>
                     )}
                   </div>
                 ))}
