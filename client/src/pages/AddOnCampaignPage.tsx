@@ -24,8 +24,8 @@ const TIMELINE_STEPS = [
   { day: "Day 14", label: "SMS 1" },
   { day: "Day 28", label: "SMS 1" },
   { day: "Day 42", label: "SMS 1" },
-  { day: "Day 56", label: "SMS 1" },
-  { day: "Day 70", label: "SMS 1" },
+  { day: "Day 56 to Day 60", label: "SMS 1" },
+  { day: "Day 70 to Day 90", label: "SMS 1" },
 ];
 const FIRST_ROW = TIMELINE_STEPS.slice(0, 3);
 const SECOND_ROW = TIMELINE_STEPS.slice(3);
@@ -237,7 +237,7 @@ export default function AddOnCampaignPage() {
                       <span className="aoc-timeline-step-label">{step.label}</span>
                     </div>
                     {idx < FIRST_ROW.length - 1 && (
-                      <ArrowRight className="h-4 w-4 text-primary opacity-40 mt-4 flex-shrink-0" />
+                      <div className="aoc-timeline-arrow"><ArrowRight className="h-4 w-4 text-primary opacity-40" /></div>
                     )}
                   </div>
                 ))}
@@ -252,7 +252,7 @@ export default function AddOnCampaignPage() {
                       <span className="aoc-timeline-step-label">{step.label}</span>
                     </div>
                     {idx < SECOND_ROW.length - 1 && (
-                      <ArrowRight className="h-4 w-4 text-primary opacity-40 mt-4 flex-shrink-0" />
+                      <div className="aoc-timeline-arrow"><ArrowRight className="h-4 w-4 text-primary opacity-40" /></div>
                     )}
                   </div>
                 ))}

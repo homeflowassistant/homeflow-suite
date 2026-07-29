@@ -309,6 +309,20 @@
   line-height: 1.3;
 }
 
+/* ─── Timeline Arrow (5x longer tail) ─── */
+.aoc-timeline-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.aoc-timeline-arrow svg {
+  width: 120px;
+  height: 16px;
+}
+
 /* ─── Vertical Cyan Divider ─── */
 .aoc-timeline-vertical-divider {
   width: 3px;
