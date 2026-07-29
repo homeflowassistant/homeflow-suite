@@ -20,7 +20,7 @@ type AddonDuration = (typeof ADDON_DURATION_OPTIONS)[number];
 // Timeline Data for Add-On Campaign (3 Month / ~12 Weeks)
 // SMS every 2 weeks: Day 1, Day 14, Day 28, Day 42, Day 56, Day 70
 const TIMELINE_STEPS = [
-  { day: "Day 1",  label: "SMS 1" },
+  { day: "Day 1", label: "SMS 1" },
   { day: "Day 14", label: "SMS 1" },
   { day: "Day 28", label: "SMS 1" },
   { day: "Day 42", label: "SMS 1" },
@@ -154,11 +154,9 @@ export default function AddOnCampaignPage() {
             <div className="aoc-lite-content">
               <div className="aoc-lite-label">LITE</div>
               <p className="aoc-lite-text">
-                Add-On Follow-Up helps you promote extra services to current customers without feeling
-                pushy. Send a text message every 2 weeks for 1 to 3 months to stay top of mind, educate
-                customers, and gently remind them about helpful add-ons like deodorizer, disinfectant,
-                or deterrent services. Consistent follow-up helps customers see the value of extra
-                services over time, increasing revenue while making upgrades feel easy and natural.
+                Add-On Follow-Up helps you promote extra services to current customers without feeling pushy.
+                Send a text message every few to stay top of mind, educate customers, and gently remind them about helpful add-ons like deodorizer, disinfectant, or deterrent services.
+                Consistent follow-up helps customers see the value of extra services over time, increasing revenue while making upgrades feel easy and natural.
               </p>
             </div>
             <div className="aoc-lite-phone">
@@ -271,7 +269,7 @@ export default function AddOnCampaignPage() {
             {/* CTA (right side) */}
             <div className="aoc-timeline-cta">
               <p className="aoc-timeline-cta-text">
-                To personalize<br />your SMS and<br />email prompts
+                To personalize<br />your prompts
               </p>
               <button
                 type="button"
