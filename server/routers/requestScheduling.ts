@@ -274,13 +274,19 @@ const CV = {
         }
 
         // ── Always-saved base fields ──────────────────────────────────
-        // FIX: Removed redundant dual-write to the display name alias which caused a
-        // Promise.all race condition resulting in 400 "A custom value with the same key already exists."
-        const [leadOptionResults, initialResults, followUpResults] = await Promise.all([
-          upsertGhlCustomValue(locationId, CV.leadFollowupOptions, input.leadFollowUpOption),
-          upsertGhlCustomValue(locationId, "initial_request_scheduling", input.initialRequestScheduling),
-          upsertGhlCustomValue(locationId, FOLLOW_UP_CUSTOM_VALUE_NAME, input.followUpLimit),
-        ]);
+        // STRICT UPDATE ONLY: We do not want to ever POST/create these base fields,
+        // because doing so causes the 400 "already exists" error if the name/key matching fails.
+        // We will strictly PUT to the existing keys.
+        await updateExistingCustomValuesOnly(locationId, {
+          [CV.leadFollowupOptions]: input.leadFollowUpOption,
+          "initial_request_scheduling": input.initialRequestScheduling,
+          [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
+        });
+
+        // We no longer return the created IDs, because we only updated existing ones.
+        const leadOptionResults = { value: input.leadFollowUpOption, id: "updated" };
+        const initialResults = { value: input.initialRequestScheduling, id: "updated" };
+        const followUpResults = { value: input.followUpLimit, id: "updated" };
 
         // ── Custom Quote fields (only when Custom Quote & Link is selected) ──
         if (input.leadFollowUpOption === "Custom Quote & Link" && input.customQuoteData) {

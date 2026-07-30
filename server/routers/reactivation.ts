@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getLocationCustomValueMap, upsertGhlCustomValue } from "../ghl-service";
+import { getLocationCustomValueMap, upsertGhlCustomValue, updateExistingCustomValuesOnly } from "../ghl-service.js";
 
 // ─── Reactivation campaign option values ─────────────────────────────
 // "Lite"              → saved as "Lite"         to lead_followup_options
@@ -233,20 +233,11 @@ export const reactivationRouter = router({
         }
 
         // ── Always-saved base fields ──────────────────────────────────
-        // FIX: Removed redundant dual-write to the display name alias to prevent the same
-        // Promise.all race condition that causes 400 "already exists" on the Reactivation page.
-        await Promise.all([
-          upsertGhlCustomValue(
-            locationId,
-            CV.leadFollowupOptions,
-            OPTION_TO_GHL_VALUE[input.reactivationOption]
-          ),
-          upsertGhlCustomValue(
-            locationId,
-            CV.onetimeServiceScheduling,
-            input.onetimeTiming
-          ),
-        ]);
+        // STRICT UPDATE ONLY: Never POST/create base fields to avoid 400 "already exists" errors.
+        await updateExistingCustomValuesOnly(locationId, {
+          [CV.leadFollowupOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
+          [CV.onetimeServiceScheduling]: input.onetimeTiming,
+        });
 
         // ── Custom Quote fields ───────────────────────────────────────
         if (input.reactivationOption === "Custom Quote & Link" && input.customQuoteData) {
