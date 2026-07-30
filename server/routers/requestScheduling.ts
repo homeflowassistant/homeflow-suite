@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc.js";
 import { getLocationAccessToken } from "../helpers/tokenHelper.js";
-import { getCustomFieldIdByName, upsertGhlCustomValue } from "../ghl-service.js";
+import { getCustomFieldIdByName, upsertGhlCustomValue, uploadToGhlMedia, updateExistingCustomValuesOnly } from "../ghl-service.js";
 
 const FOLLOW_UP_CUSTOM_VALUE_NAME = "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)";
 
@@ -285,56 +285,68 @@ const CV = {
         // ── Custom Quote fields (only when Custom Quote & Link is selected) ──
         if (input.leadFollowUpOption === "Custom Quote & Link" && input.customQuoteData) {
           const d = input.customQuoteData;
-          const bio = d.bioText ?? "";
-          const title = d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service";
 
-          const quoteUpserts: Array<[string, string]> = [
-            // Dual-write: logo
-            [CV.businessLogo,      d.businessLogo ?? ""],
-            [CV.companyLogo,       d.businessLogo ?? ""],
-            // Dual-write: name
-            [CV.businessName,      d.businessName ?? ""],
-            [CV.companyName,       d.businessName ?? ""],
-            // Owner name
-            [CV.businessOwnerName, d.businessOwnerName ?? ""],
-            // Separate quoteTitle and companyDescription
-            [CV.quoteTitle,        title],
-            [CV.companyDescription,bio],
-            // Company photo
-            [CV.companyImage,      d.companyImage ?? ""],
-            // Offer
-            [CV.discountOffer,     d.discountOffer ?? ""],
-            // Settings
-            [CV.sendQuoteAutomatically, d.sendQuoteAutomatically ? "true" : "false"],
-            [CV.tosLink,           d.tosLink ?? ""],
-            [CV.showCardSection,   d.showCardSection ? "true" : "false"],
-            // Gallery images
-            [CV.image1, d.image1 ?? ""],
-            [CV.image2, d.image2 ?? ""],
-            [CV.image3, d.image3 ?? ""],
-            [CV.image4, d.image4 ?? ""],
-            [CV.image5, d.image5 ?? ""],
-            [CV.image6, d.image6 ?? ""],
-            // Reviews
-            [CV.review1,      d.review1 ?? ""],
-            [CV.review1Photo, d.review1Photo ?? ""],
-            [CV.review1Name,  d.review1Name ?? ""],
-            [CV.review2,      d.review2 ?? ""],
-            [CV.review2Photo, d.review2Photo ?? ""],
-            [CV.review2Name,  d.review2Name ?? ""],
-            [CV.review3,      d.review3 ?? ""],
-            [CV.review3Photo, d.review3Photo ?? ""],
-            [CV.review3Name,  d.review3Name ?? ""],
-            [CV.review4,      d.review4 ?? ""],
-            [CV.review4Photo, d.review4Photo ?? ""],
-            [CV.review4Name,  d.review4Name ?? ""],
-          ];
+          // Upload any base64 images to GHL Media Library; pass through existing URLs unchanged
+          const handleImg = async (val: string | undefined, name: string): Promise<string> => {
+            if (!val) return "";
+            if (val.startsWith("data:image")) {
+              return await uploadToGhlMedia(locationId, val, `${name}_${Date.now()}.png`);
+            }
+            return val;
+          };
 
-          // FIX: Execute sequentially to prevent race conditions between alias keys
-          // (e.g. homeflow_business_logo and company_logo may resolve to the same GHL custom value)
-          for (const [name, value] of quoteUpserts) {
-            await upsertGhlCustomValue(locationId, name, value);
-          }
+          // Upload all images concurrently
+          const [
+            businessLogoUrl,
+            companyImageUrl,
+            img1, img2, img3, img4, img5,
+            rev1Photo, rev2Photo, rev3Photo, rev4Photo,
+          ] = await Promise.all([
+            handleImg(d.businessLogo,    "business_logo"),
+            handleImg(d.companyImage,    "company_image"),
+            handleImg(d.image1,          "gallery_1"),
+            handleImg(d.image2,          "gallery_2"),
+            handleImg(d.image3,          "gallery_3"),
+            handleImg(d.image4,          "gallery_4"),
+            handleImg(d.image5,          "gallery_5"),
+            handleImg(d.review1Photo,    "review_1_photo"),
+            handleImg(d.review2Photo,    "review_2_photo"),
+            handleImg(d.review3Photo,    "review_3_photo"),
+            handleImg(d.review4Photo,    "review_4_photo"),
+          ]);
+
+          // Exact custom value keys — strictly update existing, never create new
+          const exactUpdates: Record<string, string> = {
+            "homeflow_business_logo":                           businessLogoUrl,
+            "homeflow_business_name":                           d.businessName ?? "",
+            "homeflow_business_owner_name":                     d.businessOwnerName ?? "",
+            "quote_title":                                      d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service",
+            "company_description":                              d.bioText ?? "",
+            "company_image":                                    companyImageUrl,
+            "discountfree_offer_for_reengagement_campaigns":    d.discountOffer ?? "",
+            "send_quote_automatically":                         d.sendQuoteAutomatically ? "true" : "false",
+            "tos_link":                                         d.tosLink ?? "",
+            "show_card_section":                                d.showCardSection ? "true" : "false",
+            "image_1":                                          img1,
+            "image_2":                                          img2,
+            "image_3":                                          img3,
+            "image_4":                                          img4,
+            "image_5":                                          img5,
+            "review_1":                                         d.review1 ?? "",
+            "review_1_name":                                    d.review1Name ?? "",
+            "review_1_photo":                                   rev1Photo,
+            "review_2":                                         d.review2 ?? "",
+            "review_2_name":                                    d.review2Name ?? "",
+            "review_2_photo":                                   rev2Photo,
+            "review_3":                                         d.review3 ?? "",
+            "review_3_name":                                    d.review3Name ?? "",
+            "review_3_photo":                                   rev3Photo,
+            "review_4":                                         d.review4 ?? "",
+            "review_4_name":                                    d.review4Name ?? "",
+            "review_4_photo":                                   rev4Photo,
+          };
+
+          await updateExistingCustomValuesOnly(locationId, exactUpdates);
         }
 
         return {

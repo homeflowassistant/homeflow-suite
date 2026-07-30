@@ -344,6 +344,106 @@ async function fetchAllCustomValues(
   return [];
 }
 
+export async function uploadToGhlMedia(
+  locationId: string,
+  base64Data: string,
+  fileName: string
+): Promise<string> {
+  const accessToken = await getValidAccessToken(locationId);
+
+  // If it's already a URL (not base64), return as-is
+  const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) return base64Data;
+
+  const mimeType = matches[1];
+  const buffer = Buffer.from(matches[2], "base64");
+
+  const formData = new FormData();
+  formData.append("file", new Blob([buffer], { type: mimeType }), fileName);
+  formData.append("hosted", "true");
+
+  const response = await fetch(
+    `https://services.leadconnectorhq.com/medias/files?companyId=${locationId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Version: "2021-07-28",
+      },
+      body: formData as any,
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("[GHL Media] Upload failed:", err);
+    return base64Data; // Fallback: return original value if upload fails
+  }
+
+  const data = (await response.json()) as Record<string, any>;
+  return data.fileId || data.url || base64Data;
+}
+
+export async function updateExistingCustomValuesOnly(
+  locationId: string,
+  updates: Record<string, string>
+): Promise<void> {
+  const accessToken = await getValidAccessToken(locationId);
+
+  // Step 1: Fetch all existing custom values for this sub-account
+  const cvs = await fetchAllCustomValues(locationId, accessToken);
+  if (!cvs || cvs.length === 0) {
+    console.warn(`[GHL] No custom values found for location ${locationId}. Skipping all updates.`);
+    return;
+  }
+
+  // Step 2: Build a map of key → id from existing custom values (checking fieldKey, key, and name)
+  const existingMap = new Map<string, string>();
+  for (const cv of cvs) {
+    const id = (cv.id || cv._id) as string | undefined;
+    if (!id) continue;
+
+    const keys = [
+      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      typeof cv.key === "string" ? cv.key : undefined,
+      typeof cv.name === "string" ? cv.name : undefined,
+    ].filter(Boolean) as string[];
+
+    for (const k of keys) {
+      existingMap.set(k, id);
+      existingMap.set(normalizeKey(k), id);
+    }
+  }
+
+  // Step 3: For each requested update, PUT only if the key already exists
+  const promises = Object.entries(updates).map(async ([key, value]) => {
+    const id = existingMap.get(key) || existingMap.get(normalizeKey(key));
+    if (!id) {
+      console.warn(`[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`);
+      return;
+    }
+
+    const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(id)}`;
+    const resp = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: "2021-07-28",
+      },
+      body: JSON.stringify({ name: key, value }),
+    });
+
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      console.error(`[GHL] PUT failed for custom value '${key}': ${resp.status} ${errBody}`);
+    }
+  });
+
+  await Promise.all(promises);
+}
+
 export async function upsertGhlCustomValue(
   locationId: string,
   name: string,
