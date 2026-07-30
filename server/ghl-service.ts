@@ -451,7 +451,15 @@ export async function upsertGhlCustomValue(
 ): Promise<{ id: string; name: string; value: string }> {
   const accessToken = await getValidAccessToken(locationId);
 
-  // Define potential alias names for known custom values to match GHL account variations
+  // Step 1: Fetch all existing custom values from the location
+  let customValues: Record<string, unknown>[] = [];
+  try {
+    customValues = await fetchAllCustomValues(locationId, accessToken);
+  } catch (err) {
+    console.warn("[GHL] Failed pre-fetching custom values during update:", err);
+  }
+
+  // Step 2: Search for existing custom value ID by key, name, or aliases
   const nameAliases: string[] = [name];
   const normName = normalizeKey(name);
   if (normName.includes("leadfollowup")) {
@@ -460,108 +468,56 @@ export async function upsertGhlCustomValue(
     nameAliases.push("lead_followup_option");
   }
 
-  // Step 1: Try to find existing custom value by key or aliases
   let existingId: string | undefined;
-  let customValues: Record<string, unknown>[] = [];
-
-  try {
-    customValues = await fetchAllCustomValues(locationId, accessToken);
-    for (const alias of nameAliases) {
-      existingId = findCustomValueId(customValues, alias);
-      if (existingId) break;
-    }
-  } catch (err) {
-    console.warn("[GHL] Failed pre-fetching custom values during upsert:", err);
+  for (const alias of nameAliases) {
+    existingId = findCustomValueId(customValues, alias);
+    if (existingId) break;
   }
 
-  // Step 2: Attempt POST (create) or PUT (update)
-  const url = existingId
-    ? `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(existingId)}`
-    : `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`;
+  // Broad fuzzy fallback for lead follow-up custom value if still not found
+  if (!existingId && normName.includes("leadfollowup")) {
+    const leadCv = customValues.find((cv) => {
+      const cvName = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
+      return cvName.includes("lead") && cvName.includes("follow");
+    });
+    if (leadCv && typeof leadCv.id === "string") {
+      existingId = leadCv.id;
+    }
+  }
 
-  const method = existingId ? "PUT" : "POST";
-  const payload: Record<string, unknown> = { name, value };
+  // Step 3: If no existing custom value ID is found in the sub-account, skip (NEVER POST)
+  if (!existingId) {
+    console.warn(`[GHL] Custom value '${name}' not found in sub-account location ${locationId}. Skipping PUT — will NOT create.`);
+    return { id: "skipped_not_found", name, value };
+  }
 
-  const upsertResponse = await fetch(url, {
-    method,
+  // Step 4: Send PUT strictly to update the existing custom value
+  const url = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(existingId)}`;
+
+  const resp = await fetch(url, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
       Version: GHL_API_VERSION,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ name, value }),
   });
 
-  if (upsertResponse.ok) {
-    const upsertData = (await upsertResponse.json()) as Record<string, any>;
-    const customValue = upsertData.customValue ?? upsertData;
+  if (resp.ok) {
+    const data = (await resp.json()) as Record<string, any>;
+    const cv = data.customValue ?? data;
     return {
-      id: typeof customValue.id === "string" ? customValue.id : existingId ?? "",
-      name: typeof customValue.name === "string" ? customValue.name : name,
-      value: typeof customValue.value === "string" ? customValue.value : value,
+      id: existingId,
+      name: typeof cv.name === "string" ? cv.name : name,
+      value: typeof cv.value === "string" ? cv.value : value,
     };
   }
 
-  const errorBody = await upsertResponse.text();
-
-  // Step 3: If POST failed with "already exists", do a fresh fetch + PUT retry
-  if (method === "POST" && (upsertResponse.status === 400 || errorBody.includes("already exists"))) {
-    console.log(`[GHL] POST failed for "${name}" with "already exists". Retrying via PUT...`);
-
-    try {
-      const freshValues = await fetchAllCustomValues(locationId, accessToken);
-      let foundId: string | undefined;
-      for (const alias of nameAliases) {
-        foundId = findCustomValueId(freshValues, alias);
-        if (foundId) break;
-      }
-
-      // Fallback: if still not found, match any custom value containing "lead" and "follow"
-      if (!foundId && normName.includes("leadfollowup")) {
-        const leadCv = freshValues.find((cv) => {
-          const cvName = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
-          return cvName.includes("lead") && cvName.includes("follow");
-        });
-        if (leadCv && typeof leadCv.id === "string") {
-          foundId = leadCv.id;
-        }
-      }
-
-      if (foundId) {
-        const putUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(foundId)}`;
-        const putResp = await fetch(putUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            Version: GHL_API_VERSION,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (putResp.ok) {
-          const putData = (await putResp.json()) as Record<string, any>;
-          const resCv = putData.customValue ?? putData;
-          return {
-            id: foundId,
-            name: typeof resCv.name === "string" ? resCv.name : name,
-            value: typeof resCv.value === "string" ? resCv.value : value,
-          };
-        }
-
-        const putErrorBody = await putResp.text();
-        console.error(`[GHL] Retry PUT for "${name}" also returned:`, putResp.status, putErrorBody);
-      }
-    } catch (retryErr) {
-      console.error(`[GHL] Retry logic failed for "${name}":`, retryErr);
-    }
-  }
-
-  // Step 4: All attempts exhausted — log warning and return object so client request completes cleanly
-  console.warn(`[GHL] Custom value upsert note for "${name}": ${upsertResponse.status} ${errorBody}`);
-  return { id: existingId || "", name, value };
+  const errBody = await resp.text();
+  console.error(`[GHL] PUT failed for custom value '${name}': ${resp.status} ${errBody}`);
+  return { id: existingId, name, value };
 }
 
 // ─── Token Exchange ──────────────────────────────────────────────────
