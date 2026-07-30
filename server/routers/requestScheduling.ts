@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc.js";
 import { getLocationAccessToken } from "../helpers/tokenHelper.js";
-import { getCustomFieldIdByName, upsertGhlCustomValue, uploadToGhlMedia, updateExistingCustomValuesOnly } from "../ghl-service.js";
+import { getCustomFieldIdByName, upsertGhlCustomValue, uploadToGhlMedia, updateExistingCustomValuesOnly, fetchAllCustomValues, findCustomValueId } from "../ghl-service.js";
 
 const FOLLOW_UP_CUSTOM_VALUE_NAME = "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)";
 
@@ -252,6 +252,50 @@ const CV = {
           initialTiming: REVERSE_TIMING_MAP[delayValue] ?? 0,
           followUpCount: Number.parseInt(followUpValue, 10) || 3,
           isPaused: tags.includes("Pause_Reviews"),
+        };
+      }),
+
+    getLocationSettings: publicProcedure
+      .input(z.object({ locationId: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const locationId = input.locationId.trim();
+        const accessToken = await getLocationAccessToken(locationId);
+
+        let customValues: Record<string, unknown>[] = [];
+        try {
+          customValues = await fetchAllCustomValues(locationId, accessToken);
+        } catch (err) {
+          console.warn("[GHL] Error fetching location custom values for settings:", err);
+        }
+
+        // Map lead_followup_options value
+        const leadOptionId = findCustomValueId(customValues, CV.leadFollowupOptions) || findCustomValueId(customValues, "Lead Follow-up Options (Lite, SG-Link, Custom-Link)");
+        const leadOptionCv = customValues.find((cv) => (cv.id || cv._id) === leadOptionId);
+        const rawOptVal = String(leadOptionCv?.value || "").trim();
+
+        let leadFollowUpOption: "Lite" | "S&G Link" | "Custom Quote & Link" = "Lite";
+        if (rawOptVal === "Custom-Link" || rawOptVal === "Custom Quote & Link") {
+          leadFollowUpOption = "Custom Quote & Link";
+        } else if (rawOptVal === "SG-Link" || rawOptVal === "S&G Link") {
+          leadFollowUpOption = "S&G Link";
+        } else if (rawOptVal === "Lite") {
+          leadFollowUpOption = "Lite";
+        }
+
+        // Map initial_request_scheduling value
+        const initialId = findCustomValueId(customValues, "initial_request_scheduling");
+        const initialCv = customValues.find((cv) => (cv.id || cv._id) === initialId);
+        const initialRequestScheduling = String(initialCv?.value || "72 Hours Later").trim();
+
+        // Map follow_up_limit value
+        const followUpId = findCustomValueId(customValues, FOLLOW_UP_CUSTOM_VALUE_NAME);
+        const followUpCv = customValues.find((cv) => (cv.id || cv._id) === followUpId);
+        const followUpLimit = String(followUpCv?.value || "3").trim();
+
+        return {
+          leadFollowUpOption,
+          initialRequestScheduling,
+          followUpLimit,
         };
       }),
 

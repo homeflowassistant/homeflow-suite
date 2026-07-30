@@ -237,7 +237,7 @@ function normalizeKey(key: string): string {
  * Find a custom value by name across all possible GHL key fields.
  * Uses a broad multi-tier matching strategy: exact, case-insensitive, normalized, and substring/prefix.
  */
-function findCustomValueId(
+export function findCustomValueId(
   customValues: Record<string, unknown>[],
   targetName: string
 ): string | undefined {
@@ -313,7 +313,7 @@ function findCustomValueId(
 /**
  * Fetch all custom values for a location.
  */
-async function fetchAllCustomValues(
+export async function fetchAllCustomValues(
   locationId: string,
   accessToken: string
 ): Promise<Record<string, unknown>[]> {

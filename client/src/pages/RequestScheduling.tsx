@@ -101,9 +101,11 @@ export default function RequestScheduling() {
   const [quotePopupOpen, setQuotePopupOpen] = useState(false);
   const [sgLinkPopupOpen, setSgLinkPopupOpen] = useState(false);
 
-  // Note: getSettings requires contactId (per-contact GHL fetch),
-  // but this is a location-level page. State is driven by URL params.
-  const settingsQuery = null;
+  // Query saved location-level custom values from GHL
+  const locationSettingsQuery = trpc.requestScheduling.getLocationSettings.useQuery(
+    { locationId },
+    { enabled: !!locationId }
+  );
 
   const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
@@ -111,29 +113,29 @@ export default function RequestScheduling() {
     toast(message, { style: isError ? { background: "var(--destructive)", color: "var(--destructive-foreground)" } : undefined });
   }, []);
 
+  // Update state when URL params or fetched location settings change
   useEffect(() => {
+    // Priority 1: URL query params (if provided)
     if (leadFollowUpOption && LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as any)) {
       setSelectedOption(leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]);
+    } else if (locationSettingsQuery.data?.leadFollowUpOption) {
+      setSelectedOption(locationSettingsQuery.data.leadFollowUpOption);
     }
 
     if (initialRequestScheduling) {
       setInitialTiming(timingCustomValueToIndex(initialRequestScheduling));
+    } else if (locationSettingsQuery.data?.initialRequestScheduling) {
+      setInitialTiming(timingCustomValueToIndex(locationSettingsQuery.data.initialRequestScheduling));
     }
 
     if (followUpLimit) {
       const val = parseInt(followUpLimit, 10);
       if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
+    } else if (locationSettingsQuery.data?.followUpLimit) {
+      const val = parseInt(locationSettingsQuery.data.followUpLimit, 10);
+      if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
     }
-  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit]);
-
-  // If no URL params are provided, fall back to saved location-level custom values
-  // (fetched via a separate location-level query when available).
-  useEffect(() => {
-    if (leadFollowUpOption || initialRequestScheduling || followUpLimit) {
-      return;
-    }
-    // No fallback query available without contactId; keep default state.
-  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit]);
+  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit, locationSettingsQuery.data]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -171,21 +173,8 @@ export default function RequestScheduling() {
   };
 
   const handleQuoteSaveSuccess = () => {
-    // Re-read URL params after popup save (the page will re-render with updated values)
-    const params = new URLSearchParams(window.location.search);
-    const opt = params.get("lead_follow_up_option");
-    if (opt && LEAD_FOLLOW_UP_OPTIONS.includes(opt as any)) {
-      setSelectedOption(opt as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]);
-    }
-    const timing = params.get("initial_request_scheduling");
-    if (timing) {
-      setInitialTiming(timingCustomValueToIndex(timing));
-    }
-    const fu = params.get("follow_up_limit");
-    if (fu) {
-      const val = parseInt(fu, 10);
-      if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
-    }
+    setSelectedOption("Custom Quote & Link");
+    locationSettingsQuery.refetch();
   };
 
   if (!locationId) {
