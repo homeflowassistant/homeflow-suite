@@ -75,6 +75,7 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
 };
 
 const DEFAULT_SCOOPING_LOGO = "/scooping-r-us-logo.png";
+const DEFAULT_AVATAR = "/default-avatar.jpg";
 
 // ─── Default prefilled content ───────────────────────────────────────
 
@@ -112,10 +113,10 @@ const DEFAULT_FORM: QuoteFormData = {
     DEFAULT_SCOOPING_LOGO,
   ],
   testimonialHeadshots: [
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
+    DEFAULT_AVATAR,
+    DEFAULT_AVATAR,
+    DEFAULT_AVATAR,
+    DEFAULT_AVATAR,
   ],
   testimonialNames: ["Joshua -n- Megan", "Amber K.", "Marcus L.", "Samantha P."],
   testimonialTexts: [
@@ -313,18 +314,12 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         {formData.testimonialNames.map((name, idx) => (
           <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
             <div className="flex items-center gap-2">
-              {formData.testimonialHeadshots[idx] ? (
-                <img
-                  src={formData.testimonialHeadshots[idx]!}
-                  alt={name}
-                  className="w-8 h-8 rounded-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                  <span className="text-[10px] text-slate-400">👤</span>
-                </div>
-              )}
+              <img
+                src={formData.testimonialHeadshots[idx] || DEFAULT_AVATAR}
+                alt={name}
+                className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm"
+                crossOrigin="anonymous"
+              />
               <span className="text-sm font-medium text-slate-700">{name}</span>
             </div>
             <div className="flex gap-0.5">
@@ -751,26 +746,34 @@ function QuoteFormFields({
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-400 w-16">Headshot</span>
               {formData.testimonialHeadshots[idx] ? (
-                <div className="relative">
+                <div className="relative group">
                   <img
                     src={formData.testimonialHeadshots[idx]!}
                     alt={`Headshot ${name}`}
-                    className="w-8 h-8 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer hover:opacity-80"
                     crossOrigin="anonymous"
+                    onClick={() => testimonialHeadshotRefs.current[idx]?.click()}
+                    title="Click to change headshot"
                   />
                   <button
                     onClick={() => updateTestimonial(idx, "testimonialHeadshots", null)}
-                    className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow"
+                    title="Remove headshot"
                   >
-                    <X size={8} />
+                    <X size={9} />
                   </button>
                 </div>
               ) : (
                 <div
-                  className="w-8 h-8 rounded-full border border-dashed border-slate-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-400"
+                  className="w-10 h-10 rounded-full border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center cursor-pointer hover:border-blue-400 overflow-hidden relative"
                   onClick={() => testimonialHeadshotRefs.current[idx]?.click()}
+                  title="Upload headshot"
                 >
-                  <Upload size={10} className="text-slate-400" />
+                  <img
+                    src={DEFAULT_AVATAR}
+                    alt="Default Headshot"
+                    className="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity"
+                  />
                 </div>
               )}
               <input
