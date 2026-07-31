@@ -23,6 +23,8 @@ interface ReviewConfirmProps {
         | "homeflow: inactive customer"
         | "add-on-campaign"
         | "quick-send";
+  /** If set, the tag picker is hidden and the tag is locked */
+  fixedTag?: boolean;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -32,6 +34,7 @@ export default function ReviewConfirm({
   mapping,
   locationId,
   tagName,
+  fixedTag = false,
   onBack,
   onComplete,
 }: ReviewConfirmProps) {
@@ -115,8 +118,9 @@ export default function ReviewConfirm({
         toast.success(
           `All ${totalSuccessful} contacts uploaded successfully!`,
           {
-            description:
-              totalEnrolled > 0
+            description: fixedTag
+              ? `${totalSuccessful} contacts tagged with "quick-send".`
+              : totalEnrolled > 0
                 ? `${totalEnrolled} contacts enrolled in Review Reactivation workflow.`
                 : dnd
                 ? "Contacts marked as DND — not enrolled in workflow."
@@ -173,28 +177,30 @@ export default function ReviewConfirm({
         </p>
       </div>
 
-      <div className="rounded-3xl border border-border bg-muted/70 p-4">
-        <p className="text-sm font-semibold text-foreground">Add contacts too:</p>
-        <div className="grid gap-2 pt-3 text-sm">
-          {[
-            { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
-            { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
-            { value: "add-on-campaign", label: "Add-on Campaign" },
-          ].map((option) => (
-            <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
-              <input
-                type="radio"
-                name="batchTag"
-                value={option.value}
-                checked={selectedTag === option.value}
-                onChange={() => setSelectedTag(option.value as typeof selectedTag)}
-                className="h-4 w-4 text-primary focus:ring-primary"
-              />
-              <span className="font-medium text-foreground">{option.label}</span>
-            </label>
-          ))}
+      {!fixedTag && (
+        <div className="rounded-3xl border border-border bg-muted/70 p-4">
+          <p className="text-sm font-semibold text-foreground">Add contacts to:</p>
+          <div className="grid gap-2 pt-3 text-sm">
+            {[
+              { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
+              { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
+              { value: "add-on-campaign", label: "Add-on Campaign" },
+            ].map((option) => (
+              <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
+                <input
+                  type="radio"
+                  name="batchTag"
+                  value={option.value}
+                  checked={selectedTag === option.value}
+                  onChange={() => setSelectedTag(option.value as typeof selectedTag)}
+                  className="h-4 w-4 text-primary focus:ring-primary"
+                />
+                <span className="font-medium text-foreground">{option.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* DND Toggle */}
       <div className="border rounded-lg p-4 flex items-center justify-between">

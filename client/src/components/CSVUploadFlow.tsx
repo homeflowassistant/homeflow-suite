@@ -40,14 +40,16 @@ const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
 
 interface CSVUploadFlowProps {
   locationId: string;
+  /** If set, the tag is locked to this value and the tag picker is hidden */
+  fixedTag?: "new lead (via homeflow)" | "homeflow: inactive customer" | "add-on-campaign" | "quick-send";
 }
 
-export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
+export default function CSVUploadFlow({ locationId, fixedTag }: CSVUploadFlowProps) {
   const [step, setStep] = useState<FlowStep>("upload");
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<ContactTagOption>("new lead (via homeflow)");
+  const [selectedTag, setSelectedTag] = useState<ContactTagOption>(fixedTag || "new lead (via homeflow)");
 
   const handleFileUploaded = (data: ParsedCSV) => {
     setParsedCSV(data);
@@ -93,27 +95,29 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
       <div>
         <CSVUpload onFileUploaded={handleFileUploaded} />
 
-        <div className="csv-tag-box">
-          <p className="csv-tag-title">Add contacts to:</p>
-          <div className="csv-tag-grid">
-            {TAG_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                className="scf-radio-label"
-              >
-                <input
-                  type="radio"
-                  name="csvTag"
-                  value={option.value}
-                  checked={selectedTag === option.value}
-                  onChange={() => setSelectedTag(option.value)}
-                  className="scf-radio"
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
+        {!fixedTag && (
+          <div className="csv-tag-box">
+            <p className="csv-tag-title">Add contacts to:</p>
+            <div className="csv-tag-grid">
+              {TAG_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="scf-radio-label"
+                >
+                  <input
+                    type="radio"
+                    name="csvTag"
+                    value={option.value}
+                    checked={selectedTag === option.value}
+                    onChange={() => setSelectedTag(option.value)}
+                    className="scf-radio"
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Steps 2 & 3: Modal dialog */}
@@ -155,6 +159,7 @@ export default function CSVUploadFlow({ locationId }: CSVUploadFlowProps) {
                 mapping={mapping}
                 locationId={locationId}
                 tagName={selectedTag}
+                fixedTag={!!fixedTag}
                 onBack={handleBack}
                 onComplete={handleComplete}
               />

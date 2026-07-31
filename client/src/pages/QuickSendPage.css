@@ -432,6 +432,108 @@
   overflow: hidden;
 }
 
+/* ─── Enlarged Modal ─── */
+.qs-modal-content--large {
+  max-width: 680px;
+  max-height: 720px;
+}
+
+/* ─── Modal Tabs ─── */
+.qs-modal-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.qs-modal-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+
+.qs-modal-tab:hover {
+  border-color: #93c5fd;
+  background: #f0f9ff;
+  color: #1e3a8a;
+}
+
+.qs-modal-tab--active {
+  border-color: #60a5fa;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+/* ─── CSV Upload Section ─── */
+.qs-csv-upload-section {
+  padding: 4px 0;
+}
+
+.qs-csv-upload-hint {
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border-radius: 10px;
+  border-left: 3px solid #60a5fa;
+}
+
+.qs-csv-upload-hint strong {
+  color: #1e3a8a;
+}
+
+/* ─── Modal Button Styles ─── */
+.qs-modal-btn {
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+
+.qs-modal-btn--cancel {
+  border: 1.5px solid #cbd5e1;
+  background: transparent;
+  color: #475569;
+}
+
+.qs-modal-btn--cancel:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.qs-modal-btn--confirm {
+  border: none;
+  background: #334155;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(51, 65, 85, 0.25);
+}
+
+.qs-modal-btn--confirm:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(51, 65, 85, 0.3);
+}
+
+.qs-modal-btn--confirm:disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .qs-modal-header {
   padding: 24px 28px 16px;
   border-bottom: 1px solid #e2e8f0;
@@ -655,6 +757,11 @@
   .qs-phone-screen {
     min-height: 380px;
   }
+
+  .qs-modal-content--large {
+    max-width: 90%;
+    max-height: 80vh;
+  }
 }
 
 @media (max-width: 640px) {
@@ -677,6 +784,20 @@
 
   .qs-save-btn {
     width: 100%;
+    justify-content: center;
+  }
+
+  .qs-modal-content--large {
+    max-width: 95%;
+    max-height: 85vh;
+  }
+
+  .qs-modal-tabs {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .qs-modal-tab {
     justify-content: center;
   }
 }
