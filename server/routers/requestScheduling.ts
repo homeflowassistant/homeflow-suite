@@ -339,11 +339,25 @@ const CV = {
           const d = input.customQuoteData;
 
           // Upload any base64 images to GHL Media Library; pass through existing URLs unchanged
+          const MIME_TO_EXT: Record<string, string> = {
+            "image/png":  ".png",
+            "image/jpeg": ".jpg",
+            "image/jpg":  ".jpg",
+            "image/webp": ".webp",
+            "image/gif":  ".gif",
+            "image/svg+xml": ".svg",
+          };
+
           const handleImg = async (val: string | undefined, name: string): Promise<string> => {
             if (!val) return "";
             if (val.startsWith("data:image")) {
-              return await uploadToGhlMedia(locationId, val, `${name}_${Date.now()}.png`);
+              // Extract MIME type from the data URI and pick the correct extension
+              const mimeMatch = val.match(/^data:([A-Za-z-+\/]+);/);
+              const ext = mimeMatch ? (MIME_TO_EXT[mimeMatch[1]] || ".png") : ".png";
+              const fileName = `${name}_${Date.now()}${ext}`;
+              return await uploadToGhlMedia(locationId, val, fileName);
             }
+            // Already a URL — return as-is
             return val;
           };
 

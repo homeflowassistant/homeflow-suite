@@ -351,12 +351,20 @@ export async function uploadToGhlMedia(
 ): Promise<string> {
   const accessToken = await getValidAccessToken(locationId);
 
-  // If it's already a URL (not base64), return as-is
+  // If it's already a URL (not base64), return as-is — no upload needed
   const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-  if (!matches || matches.length !== 3) return base64Data;
+  if (!matches || matches.length !== 3) {
+    console.log(`[GHL Media] Skipping upload for '${fileName}' — not base64, returning as-is.`);
+    return base64Data;
+  }
 
   const mimeType = matches[1];
-  const buffer = Buffer.from(matches[2], "base64");
+  const base64Content = matches[2];
+
+  // Convert base64 to binary buffer
+  const buffer = Buffer.from(base64Content, "base64");
+
+  console.log(`[GHL Media] Uploading '${fileName}' (type: ${mimeType}, size: ${buffer.length} bytes) to location ${locationId}`);
 
   // Use the v3 medias/upload-file endpoint with multipart form-data
   const formData = new FormData();
@@ -369,20 +377,44 @@ export async function uploadToGhlMedia(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Version: "v3",
+        Accept: "application/json",
       },
       body: formData as any,
     }
   );
 
+  const responseBody = await response.text();
+
   if (!response.ok) {
-    const err = await response.text();
-    console.error("[GHL Media] Upload failed:", err);
-    return base64Data; // Fallback: return original value if upload fails
+    console.error(`[GHL Media] Upload FAILED for '${fileName}': HTTP ${response.status} — ${responseBody}`);
+    // Return empty string instead of raw base64 so the Custom Value doesn't store junk
+    return "";
   }
 
-  const data = (await response.json()) as Record<string, any>;
-  // Return the hosted GCS URL — this is what should be stored in the Custom Value
-  return data.url || data.fileId || base64Data;
+  // Parse the JSON response
+  let data: Record<string, any>;
+  try {
+    data = JSON.parse(responseBody);
+  } catch (parseErr) {
+    console.error(`[GHL Media] Failed to parse upload response for '${fileName}': ${responseBody}`);
+    return "";
+  }
+
+  // The v3 API returns { fileId, url } — url is the hosted GCS URL
+  const hostedUrl = data.url;
+  if (hostedUrl) {
+    console.log(`[GHL Media] Upload SUCCESS for '${fileName}': ${hostedUrl}`);
+    return hostedUrl;
+  }
+
+  // Fallback: try fileId
+  if (data.fileId) {
+    console.warn(`[GHL Media] No 'url' in response for '${fileName}', falling back to fileId: ${data.fileId}`);
+    return data.fileId;
+  }
+
+  console.error(`[GHL Media] Unexpected response for '${fileName}': ${responseBody}`);
+  return "";
 }
 
 export async function updateExistingCustomValuesOnly(
