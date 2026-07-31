@@ -369,19 +369,30 @@ function QuoteFormFields({
     setFormData({ ...formData, [field]: base64 });
   };
 
-  const handleGalleryUpload = async (files: FileList | null) => {
+  const handleGalleryUpload = async (files: FileList | null, replaceIndex?: number) => {
     if (!files) return;
-    const remainingSlots = MAX_GALLERY_IMAGES - formData.galleryImages.length;
-    if (remainingSlots <= 0) return;
     const newImages: string[] = [];
-    for (let i = 0; i < Math.min(files.length, remainingSlots); i++) {
+    for (let i = 0; i < files.length; i++) {
       const base64 = await fileToBase64(files[i]);
       newImages.push(base64);
     }
-    setFormData({
-      ...formData,
-      galleryImages: [...formData.galleryImages, ...newImages].slice(0, MAX_GALLERY_IMAGES),
-    });
+    if (replaceIndex !== undefined) {
+      // Replace the specific slot
+      const updated = [...formData.galleryImages];
+      updated[replaceIndex] = newImages[0];
+      setFormData({ ...formData, galleryImages: updated });
+    } else {
+      // Append to fill empty slots
+      const updated = [...formData.galleryImages];
+      let slotIdx = 0;
+      for (let i = 0; i < newImages.length && slotIdx < MAX_GALLERY_IMAGES; i++) {
+        if (updated[slotIdx] === undefined || updated[slotIdx] === null) {
+          updated[slotIdx] = newImages[i];
+        }
+        slotIdx++;
+      }
+      setFormData({ ...formData, galleryImages: updated });
+    }
   };
 
   const handleRemoveGalleryImage = (index: number) => {
@@ -683,15 +694,10 @@ function QuoteFormFields({
                 key={idx}
                 className="border border-dashed border-slate-300 rounded-lg p-2 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50 flex flex-col items-center gap-1"
                 onClick={() => {
-                  if (slotCount >= MAX_GALLERY_IMAGES && !isFilled) {
-                    toast.warning("Maximum 6 images allowed.");
-                    return;
-                  }
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
-                  input.multiple = true;
-                  input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files);
+                  input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files, isFilled ? idx : undefined);
                   input.click();
                 }}
               >
