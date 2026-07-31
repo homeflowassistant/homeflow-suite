@@ -513,7 +513,7 @@ export default function QuickSendPage() {
         <header className="qs-page-header">
           <h1 className="qs-main-title">Quick Send</h1>
           <p className="qs-description">
-            Quick Send lets you send a one-time text message to customers. Perfect for promoting add-ons, seasonal reminders, referral offers, weather delays, service updates, or special promotions. A fast, simple way to stay top of mind, bring in extra revenue, and get more responses without long follow-up campaigns or extra back and forth. Messages are automatically spread out over a few days to help protect delivery and improve overall results.
+            Quick Send lets you send a one-time text message to customers. Perfect for promoting add-ons, seasonal reminders, referral offers, weather delays, service updates, or special promotions. A fast, simple way to stay top of mind, bring in extra revenue, and get more responses without long follow-up campaigns or extra back and forth. Messages may be spread out help protect delivery.
           </p>
           <h2 className="qs-how-title">How It works:</h2>
           <div className="qs-how-steps">
