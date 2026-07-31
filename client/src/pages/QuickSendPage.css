@@ -1,55 +1,58 @@
 /* ═══════════════════════════════════════════════════════════════════
    Quick Send Page Styles
-   Matching the Canva mockup (Slide 9) — Reference design
+   Redesigned to match reference mockup — unified content card with
+   overlapping phone preview, realistic device chrome, and consistent
+   brand tokens (cyan primary, navy headings) shared across the suite.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ─── Page Shell ─── */
 .qs-main {
   width: 100%;
   min-height: 0;
-  background: #f3f4f6;
+  background: var(--background);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .qs-shell {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 48px 48px 72px;
+  padding: 40px 40px 72px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 28px;
 }
 
 /* ─── Page Header ─── */
 .qs-page-header {
-  margin-bottom: 36px;
+  margin-bottom: 4px;
 }
 
 .qs-main-title {
-  font-size: 48px;
+  font-size: clamp(2.25rem, 4vw, 3rem);
   font-weight: 900;
+  font-style: italic;
   color: #1e3a8a;
   margin: 0 0 16px 0;
   font-family: var(--font-sans);
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .qs-description {
-  font-size: 16px;
-  color: #475569;
+  font-size: 15.5px;
+  color: var(--muted-foreground);
   line-height: 1.7;
-  margin: 0 0 20px 0;
+  margin: 0 0 22px 0;
   max-width: 780px;
   font-weight: 400;
 }
 
 .qs-how-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e3a8a;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
   margin: 0 0 10px 0;
   font-family: var(--font-sans);
   font-style: italic;
@@ -62,53 +65,38 @@
 }
 
 .qs-how-step {
-  font-size: 15px;
-  color: #475569;
+  font-size: 14.5px;
+  color: var(--foreground);
   line-height: 1.6;
   margin: 0;
   font-weight: 400;
 }
 
-/* ─── Content Layout: Card + Phone side by side ─── */
-.qs-content {
+/* ─── Unified Content Card: Message Form + Phone Preview ─── */
+.qs-content-card {
+  position: relative;
   display: flex;
-  gap: 0;
   align-items: flex-start;
-  position: relative;
+  gap: 24px;
+  background: var(--card);
+  border: 1.5px solid #bfdbfe;
+  border-radius: 20px;
+  padding: 40px 44px 44px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.05);
+  overflow: visible;
 }
 
-.qs-message-panel {
-  flex: 1;
+/* ─── Message Column ─── */
+.qs-message-col {
+  flex: 1 1 auto;
   min-width: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.qs-phone-preview {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 0;
-  margin-left: -20px;
-  position: relative;
-  z-index: 2;
-}
-
-/* ─── Message Card ─── */
-.qs-message-card {
-  background: #ffffff;
-  border: 1px solid #bfdbfe;
-  border-radius: 14px;
-  padding: 32px 36px 28px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .qs-message-card-title {
-  font-size: 28px;
+  font-size: clamp(22px, 2.6vw, 28px);
   font-weight: 800;
   color: #1e3a8a;
-  margin: 0 0 20px 0;
+  margin: 0 0 18px 0;
   font-family: var(--font-sans);
   letter-spacing: -0.02em;
 }
@@ -118,7 +106,7 @@
   width: 100%;
   min-height: 160px;
   border: 2px solid #60a5fa;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 18px 20px;
   font-size: 15px;
   font-family: var(--font-sans);
@@ -136,8 +124,8 @@
 }
 
 .qs-message-textarea:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 15%, transparent);
 }
 
 /* ─── Merge Fields Bar ─── */
@@ -162,9 +150,9 @@
   gap: 5px;
   padding: 7px 16px;
   border-radius: 8px;
-  border: 1.5px solid #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1.5px solid color-mix(in oklch, var(--primary) 45%, white);
+  background: color-mix(in oklch, var(--primary) 8%, white);
+  color: #0e7490;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -173,8 +161,8 @@
 }
 
 .qs-merge-trigger:hover {
-  background: #dbeafe;
-  border-color: #60a5fa;
+  background: color-mix(in oklch, var(--primary) 16%, white);
+  border-color: var(--primary);
 }
 
 /* ─── Merge Field Dropdown ─── */
@@ -232,7 +220,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--primary);
   flex-shrink: 0;
 }
 
@@ -253,7 +241,7 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  margin-top: 24px;
+  margin-top: 26px;
 }
 
 .qs-save-btn {
@@ -288,45 +276,119 @@
   cursor: not-allowed;
 }
 
-/* ─── Phone Preview ─── */
-.qs-phone-frame {
-  width: 320px;
-  background: #1a1a1a;
-  border-radius: 36px;
-  border: 1.5px solid #000000;
-  padding: 18px 16px 32px;
-  position: relative;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+/* ─── Phone Preview Column ─── */
+.qs-phone-col {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: -56px;
+  margin-right: -8px;
+  z-index: 2;
 }
 
-.qs-phone-notch {
-  width: 100px;
-  height: 18px;
-  background: #1a1a1a;
-  border-radius: 0 0 14px 14px;
+.qs-phone-frame {
+  position: relative;
+  width: 250px;
+  background: linear-gradient(165deg, #2b2b30 0%, #17171a 60%, #0a0a0c 100%);
+  border-radius: 42px;
+  padding: 14px;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.28),
+    0 4px 14px rgba(15, 23, 42, 0.14),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.06);
+}
+
+/* Realistic side buttons */
+.qs-phone-btn {
   position: absolute;
-  top: 0;
+  background: linear-gradient(180deg, #3a3a40, #121214);
+  border-radius: 3px;
+}
+
+.qs-phone-btn--mute {
+  left: -3px;
+  top: 92px;
+  width: 4px;
+  height: 26px;
+}
+
+.qs-phone-btn--vol-up {
+  left: -3px;
+  top: 132px;
+  width: 4px;
+  height: 46px;
+}
+
+.qs-phone-btn--vol-down {
+  left: -3px;
+  top: 188px;
+  width: 4px;
+  height: 46px;
+}
+
+.qs-phone-btn--power {
+  right: -3px;
+  top: 150px;
+  width: 4px;
+  height: 64px;
+}
+
+/* Dynamic island */
+.qs-phone-island {
+  position: absolute;
+  top: 26px;
   left: 50%;
   transform: translateX(-50%);
+  width: 84px;
+  height: 22px;
+  background: #0a0a0c;
+  border-radius: 14px;
+  z-index: 3;
 }
 
 .qs-phone-screen {
+  position: relative;
   background: #ffffff;
-  border-radius: 22px;
-  padding: 36px 16px 16px;
-  min-height: 420px;
+  border-radius: 30px;
+  padding: 44px 16px 22px;
+  min-height: 430px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.qs-phone-statusbar {
+  position: absolute;
+  top: 12px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: var(--font-sans);
+}
+
+.qs-phone-statusbar-icons {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #0f172a;
 }
 
 .qs-phone-bubble {
-  background: #38bdf8;
+  align-self: flex-end;
+  background: linear-gradient(180deg, #3fc6f8, #0ea5e9);
   color: #ffffff;
-  border-radius: 16px 16px 4px 16px;
-  padding: 14px 16px;
+  border-radius: 18px 18px 4px 18px;
+  padding: 13px 15px;
   font-size: 13px;
   line-height: 1.55;
-  max-width: 100%;
+  max-width: 92%;
   word-break: break-word;
-  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 3px 10px rgba(14, 165, 233, 0.25);
+  margin-top: 8px;
 }
 
 .qs-phone-bubble--empty {
@@ -334,6 +396,15 @@
   font-style: italic;
   background: #f1f5f9;
   box-shadow: none;
+}
+
+.qs-phone-home-indicator {
+  margin-top: auto;
+  align-self: center;
+  width: 120px;
+  height: 4px;
+  border-radius: 999px;
+  background: #cbd5e1;
 }
 
 /* ─── Contact Selection Modal ─── */
@@ -546,7 +617,7 @@
 .qs-selected-count {
   font-size: 14px;
   font-weight: 700;
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 /* ─── Loading Spinner ─── */
@@ -565,26 +636,24 @@
     padding: 32px 24px 48px;
   }
 
-  .qs-main-title {
-    font-size: 36px;
-  }
-
-  .qs-content {
+  .qs-content-card {
     flex-direction: column;
+    padding: 32px 28px 36px;
+    gap: 32px;
   }
 
-  .qs-phone-preview {
-    margin-left: 0;
-    margin-top: 32px;
-    align-items: center;
+  .qs-phone-col {
+    margin-top: 0;
+    margin-right: 0;
+    align-self: center;
   }
 
   .qs-phone-frame {
-    width: 240px;
+    width: 230px;
   }
 
   .qs-phone-screen {
-    min-height: 320px;
+    min-height: 380px;
   }
 }
 
@@ -593,19 +662,16 @@
     padding: 24px 16px 40px;
   }
 
-  .qs-main-title {
-    font-size: 30px;
-  }
-
-  .qs-message-card {
-    padding: 24px 20px;
+  .qs-content-card {
+    padding: 24px 20px 28px;
+    border-radius: 16px;
   }
 
   .qs-message-card-title {
     font-size: 22px;
   }
 
-  .qs-phone-preview {
+  .qs-phone-col {
     display: none;
   }
 

@@ -523,47 +523,45 @@ export default function QuickSendPage() {
           </div>
         </header>
 
-        {/* ── Content: Card + Phone ── */}
-        <div className="qs-content">
-          {/* ── Message Panel ── */}
-          <div className="qs-message-panel">
-            <div className="qs-message-card">
-              <h2 className="qs-message-card-title">Custom Message</h2>
+        {/* ── Content Card: Message Form + Phone Preview ── */}
+        <div className="qs-content-card">
+          {/* ── Message Column ── */}
+          <div className="qs-message-col">
+            <h2 className="qs-message-card-title">Custom Message</h2>
 
-              {/* Textarea with relative positioning for dropdown */}
-              <div style={{ position: "relative" }}>
-                <textarea
-                  ref={textareaRef}
-                  className="qs-message-textarea"
-                  placeholder="Hi, due to the weather, we are unable to come out today. We will see you next week. If you have any questions, text/call us at: (801) 111-1234"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  maxLength={1600}
-                />
+            {/* Textarea with relative positioning for dropdown */}
+            <div style={{ position: "relative" }}>
+              <textarea
+                ref={textareaRef}
+                className="qs-message-textarea"
+                placeholder="Hi, due to the weather, we are unable to come out today. We will see you next week. If you have any questions, text/call us at: (801) 111-1234"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={1600}
+              />
 
-                {/* Merge Field Dropdown */}
-                {showMergeDropdown && (
-                  <div ref={dropdownRef}>
-                    <MergeFieldDropdown
-                      onSelect={insertMergeField}
-                      onClose={() => setShowMergeDropdown(false)}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Merge Field Dropdown */}
+              {showMergeDropdown && (
+                <div ref={dropdownRef}>
+                  <MergeFieldDropdown
+                    onSelect={insertMergeField}
+                    onClose={() => setShowMergeDropdown(false)}
+                  />
+                </div>
+              )}
+            </div>
 
-              {/* Merge Fields Bar */}
-              <div className="qs-merge-bar" style={{ position: "relative" }}>
-                <span className="qs-merge-label">Add Custom Value:</span>
-                <button
-                  type="button"
-                  className="qs-merge-trigger"
-                  onClick={() => setShowMergeDropdown(!showMergeDropdown)}
-                >
-                  <ChevronDown size={14} />
-                  Choose Value
-                </button>
-              </div>
+            {/* Merge Fields Bar */}
+            <div className="qs-merge-bar" style={{ position: "relative" }}>
+              <span className="qs-merge-label">Add Custom Value:</span>
+              <button
+                type="button"
+                className="qs-merge-trigger"
+                onClick={() => setShowMergeDropdown(!showMergeDropdown)}
+              >
+                <ChevronDown size={14} />
+                Choose Value
+              </button>
             </div>
 
             {/* Save Button */}
@@ -595,16 +593,28 @@ export default function QuickSendPage() {
             </div>
           </div>
 
-          {/* ── Phone Preview ── */}
-          <div className="qs-phone-preview">
+          {/* ── Phone Preview Column ── */}
+          <div className="qs-phone-col">
             <div className="qs-phone-frame">
-              <div className="qs-phone-notch" />
+              <div className="qs-phone-island" />
+              <div className="qs-phone-btn qs-phone-btn--mute" />
+              <div className="qs-phone-btn qs-phone-btn--vol-up" />
+              <div className="qs-phone-btn qs-phone-btn--vol-down" />
+              <div className="qs-phone-btn qs-phone-btn--power" />
               <div className="qs-phone-screen">
+                <div className="qs-phone-statusbar">
+                  <span>9:41</span>
+                  <div className="qs-phone-statusbar-icons">
+                    <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="6" width="2.5" height="5" rx="0.5" fill="currentColor"/><rect x="4.5" y="4" width="2.5" height="7" rx="0.5" fill="currentColor"/><rect x="9" y="2" width="2.5" height="9" rx="0.5" fill="currentColor"/><rect x="13.5" y="0" width="2.5" height="11" rx="0.5" fill="currentColor" opacity="0.4"/></svg>
+                    <svg width="20" height="11" viewBox="0 0 20 11" fill="none"><rect x="0.5" y="0.5" width="17" height="10" rx="2.5" stroke="currentColor"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="currentColor"/><rect x="18.5" y="3.5" width="1.5" height="4" rx="0.75" fill="currentColor"/></svg>
+                  </div>
+                </div>
                 <div
                   className={`qs-phone-bubble ${!message.trim() ? "qs-phone-bubble--empty" : ""}`}
                 >
                   {message.trim() || "Your message preview will appear here..."}
                 </div>
+                <div className="qs-phone-home-indicator" />
               </div>
             </div>
           </div>
