@@ -138,7 +138,6 @@ async function getRequestSchedulingFieldIds(locationId: string): Promise<{
 // ─── Custom Quote Data Schema (same as Reactivation page) ────────────
 const customQuoteDataSchema = z.object({
   businessLogo:       z.string().optional(),
-  businessName:       z.string().optional(),
   businessOwnerName:  z.string().optional(),
   quoteTitle:         z.string().optional(),
   bioText:            z.string().optional(),
@@ -389,7 +388,6 @@ const CV = {
           const exactUpdates: Record<string, string> = {
             // Business Information
             "homeflow_business_logo":                           businessLogoUrl,
-            "homeflow_business_name":                           d.businessName ?? "",
             "homeflow_business_owner_name":                     d.businessOwnerName ?? "",
             "quote_title":                                      d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service",
             "company_description":                              d.bioText ?? "",

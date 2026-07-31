@@ -36,7 +36,6 @@ interface QuoteOffer {
 }
 
 interface QuoteFormData {
-  companyName: string;
   companyLogo: string | null;
   teamPhoto: string | null;
   bioTitle: string;
@@ -76,13 +75,13 @@ const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
 
 const DEFAULT_SCOOPING_LOGO = "/scooping-r-us-logo.png";
 const DEFAULT_AVATAR = "/default-avatar.jpg";
+const DEFAULT_DOG_PHOTO = "/dog-photo.webp";
 
 // ─── Default prefilled content ───────────────────────────────────────
 
 const DEFAULT_FORM: QuoteFormData = {
-  companyName: "[Your Company Name]",
   companyLogo: DEFAULT_SCOOPING_LOGO,
-  teamPhoto: DEFAULT_SCOOPING_LOGO,
+  teamPhoto: DEFAULT_DOG_PHOTO,
   bioTitle: "[service area]'s Highest Rated Pooper Scooper Service",
   bioDescription:
     "Serving dog owners across the city, our team keeps your yard clean, fresh, and hassle-free. We provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, [company name] is here to make life easier—one yard at a time.",
@@ -105,12 +104,12 @@ const DEFAULT_FORM: QuoteFormData = {
   price1: "$XX.XX",
   price2: "$XX.XX",
   galleryImages: [
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
-    DEFAULT_SCOOPING_LOGO,
+    DEFAULT_DOG_PHOTO,
+    DEFAULT_DOG_PHOTO,
+    DEFAULT_DOG_PHOTO,
+    DEFAULT_DOG_PHOTO,
+    DEFAULT_DOG_PHOTO,
+    DEFAULT_DOG_PHOTO,
   ],
   testimonialHeadshots: [
     DEFAULT_AVATAR,
@@ -168,14 +167,6 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
             No Logo Uploaded
           </div>
         )}
-      </div>
-
-      {/* ── Company Name ── */}
-      <div className="px-2">
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Name</label>
-        <p className="text-sm font-bold text-slate-800">
-          {formData.companyName || "Your Company Name"}
-        </p>
       </div>
 
       {/* ── Company Photo ── */}
@@ -459,17 +450,6 @@ function QuoteFormFields({
             onChange={(e) => handleImageUpload(e.target.files?.[0], "companyLogo")}
           />
         </div>
-      </div>
-
-      {/* ── Company Name ── */}
-      <div className="px-2">
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Name</label>
-        <Input
-          value={formData.companyName}
-          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-          className="mt-1 text-xs h-8"
-          placeholder="Company name"
-        />
       </div>
 
       {/* ── Company Photo ── */}
@@ -877,7 +857,6 @@ export default function CustomQuoteLinkPopup({
         followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
         customQuoteData: {
           businessLogo: formData.companyLogo ?? undefined,
-          businessName: formData.companyName || undefined,
           quoteTitle: formData.bioTitle || undefined,
           bioText: formData.bioDescription || undefined,
           companyImage: formData.teamPhoto ?? undefined,
