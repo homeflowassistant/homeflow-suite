@@ -358,17 +358,17 @@ export async function uploadToGhlMedia(
   const mimeType = matches[1];
   const buffer = Buffer.from(matches[2], "base64");
 
+  // Use the v3 medias/upload-file endpoint with multipart form-data
   const formData = new FormData();
   formData.append("file", new Blob([buffer], { type: mimeType }), fileName);
-  formData.append("hosted", "true");
 
   const response = await fetch(
-    `https://services.leadconnectorhq.com/medias/files?companyId=${locationId}`,
+    "https://services.leadconnectorhq.com/medias/upload-file",
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Version: "2021-07-28",
+        Version: "v3",
       },
       body: formData as any,
     }
@@ -381,7 +381,8 @@ export async function uploadToGhlMedia(
   }
 
   const data = (await response.json()) as Record<string, any>;
-  return data.fileId || data.url || base64Data;
+  // Return the hosted GCS URL — this is what should be stored in the Custom Value
+  return data.url || data.fileId || base64Data;
 }
 
 export async function updateExistingCustomValuesOnly(
@@ -397,11 +398,22 @@ export async function updateExistingCustomValuesOnly(
     return;
   }
 
-  // Step 2: Build a map of key → id from existing custom values (checking fieldKey, key, and name)
-  const existingMap = new Map<string, string>();
+  // Step 2: Build a map of key → { id, displayName } from existing custom values
+  // (checking fieldKey, key, and name fields)
+  const existingMap = new Map<string, { id: string; displayName: string }>();
   for (const cv of cvs) {
     const id = (cv.id || cv._id) as string | undefined;
     if (!id) continue;
+
+    // Find the display name — prefer 'name', then 'fieldKey', then 'key'
+    const displayName =
+      typeof cv.name === "string" && cv.name
+        ? cv.name
+        : typeof cv.fieldKey === "string" && cv.fieldKey
+          ? cv.fieldKey
+          : typeof cv.key === "string" && cv.key
+            ? cv.key
+            : ""; // fallback — will use the requested key as name in the PUT body
 
     const keys = [
       typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
@@ -410,34 +422,36 @@ export async function updateExistingCustomValuesOnly(
     ].filter(Boolean) as string[];
 
     for (const k of keys) {
-      existingMap.set(k, id);
-      existingMap.set(normalizeKey(k), id);
+      existingMap.set(k, { id, displayName });
+      existingMap.set(normalizeKey(k), { id, displayName });
     }
   }
 
   // Step 3: For each requested update, PUT only if the key already exists
+  // IMPORTANT: Preserve the original display name (GHL API requires the display name
+  // in the PUT body — passing the key would silently rename the custom value)
   const promises = Object.entries(updates).map(async ([key, value]) => {
-    const id = existingMap.get(key) || existingMap.get(normalizeKey(key));
-    if (!id) {
+    const entry = existingMap.get(key) || existingMap.get(normalizeKey(key));
+    if (!entry) {
       console.warn(`[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`);
       return;
     }
 
-    const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(id)}`;
+    const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(entry.id)}`;
     const resp = await fetch(url, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
-        Version: "2021-07-28",
+        Version: GHL_API_VERSION,
       },
-      body: JSON.stringify({ name: key, value }),
+      body: JSON.stringify({ name: entry.displayName || key, value }),
     });
 
     if (!resp.ok) {
       const errBody = await resp.text();
-      console.error(`[GHL] PUT failed for custom value '${key}': ${resp.status} ${errBody}`);
+      console.error(`[GHL] PUT failed for custom value '${key}' (display name: '${entry.displayName}'): ${resp.status} ${errBody}`);
     }
   });
 

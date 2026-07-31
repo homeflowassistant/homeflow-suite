@@ -206,6 +206,8 @@ const CV = {
   sendQuoteAutomatically: "send_quote_automatically",
   tosLink:           "tos_link",
   showCardSection:   "show_card_section",
+  offerDescription:  "offer_description",
+  offerImage:        "offer_image",
 } as const;
 
   export const requestSchedulingRouter = router({
@@ -345,11 +347,12 @@ const CV = {
             return val;
           };
 
-          // Upload all images concurrently
+          // Upload all images concurrently (including gallery image 6 and offer image)
           const [
             businessLogoUrl,
             companyImageUrl,
-            img1, img2, img3, img4, img5,
+            img1, img2, img3, img4, img5, img6,
+            offerImageUrl,
             rev1Photo, rev2Photo, rev3Photo, rev4Photo,
           ] = await Promise.all([
             handleImg(d.businessLogo,    "business_logo"),
@@ -359,6 +362,8 @@ const CV = {
             handleImg(d.image3,          "gallery_3"),
             handleImg(d.image4,          "gallery_4"),
             handleImg(d.image5,          "gallery_5"),
+            handleImg(d.image6,          "gallery_6"),
+            handleImg(d.offerImage,      "offer_image"),
             handleImg(d.review1Photo,    "review_1_photo"),
             handleImg(d.review2Photo,    "review_2_photo"),
             handleImg(d.review3Photo,    "review_3_photo"),
@@ -366,22 +371,35 @@ const CV = {
           ]);
 
           // Exact custom value keys — strictly update existing, never create new
+          // Maps every popup field to its corresponding GHL Custom Value key
           const exactUpdates: Record<string, string> = {
+            // Business Information
             "homeflow_business_logo":                           businessLogoUrl,
             "homeflow_business_name":                           d.businessName ?? "",
             "homeflow_business_owner_name":                     d.businessOwnerName ?? "",
             "quote_title":                                      d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service",
             "company_description":                              d.bioText ?? "",
             "company_image":                                    companyImageUrl,
+
+            // Offers & Page Settings
             "discountfree_offer_for_reengagement_campaigns":    d.discountOffer ?? "",
             "send_quote_automatically":                         d.sendQuoteAutomatically ? "true" : "false",
             "tos_link":                                         d.tosLink ?? "",
             "show_card_section":                                d.showCardSection ? "true" : "false",
+
+            // Offer details (description + image, uploaded to Media Library)
+            "offer_description":                                d.offerDescription ?? "",
+            "offer_image":                                      offerImageUrl,
+
+            // Gallery Images (uploaded to GHL Media Library → hosted URL stored)
             "image_1":                                          img1,
             "image_2":                                          img2,
             "image_3":                                          img3,
             "image_4":                                          img4,
             "image_5":                                          img5,
+            "image_6":                                          img6,
+
+            // Testimonials
             "review_1":                                         d.review1 ?? "",
             "review_1_name":                                    d.review1Name ?? "",
             "review_1_photo":                                   rev1Photo,
