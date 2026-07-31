@@ -2,11 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link2, Save, Loader2, ChevronDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import "./QuickSendPage.css";
 
 // ─── Merge Fields ────────────────────────────────────────────────────
@@ -219,175 +214,185 @@ function ContactSelectionModal({
   const selectedCount = selectedIds.size;
   const isConfirmDisabled = selectedCount === 0 && !selectAll;
 
+  // Handle close with Esc key
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[520px]" style={{ maxHeight: "70vh" }}>
-        <div className="qs-modal-content">
-          {/* Header */}
-          <div className="qs-modal-header">
-            <DialogTitle className="qs-modal-title">Select Contacts</DialogTitle>
-            <p className="qs-modal-subtitle">
-              Choose which contacts should receive this message. They will be tagged with "quick-send".
-            </p>
+    <div className="qs-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="qs-modal-content" role="dialog" aria-modal="true">
+        {/* Header */}
+        <div className="qs-modal-header">
+          <h3 className="qs-modal-title">Select Contacts</h3>
+          <p className="qs-modal-subtitle">
+            Choose which contacts should receive this message. They will be tagged with "quick-send".
+          </p>
+        </div>
+
+        {/* Body */}
+        <div className="qs-modal-body">
+          {/* All Contacts Toggle */}
+          <div
+            className={`qs-all-contacts ${selectAll ? "qs-all-contacts--active" : ""}`}
+            onClick={toggleSelectAll}
+          >
+            <div
+              className="qs-contact-check"
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                border: `2px solid ${selectAll ? "#38bdf8" : "#94a3b8"}`,
+                background: selectAll ? "#38bdf8" : "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {selectAll && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <span className="qs-all-contacts-label">All Contacts</span>
+            <span className="qs-all-contacts-count">
+              {contactsQuery.data?.total ?? allContacts.length} contacts
+            </span>
           </div>
 
-          {/* Body */}
-          <div className="qs-modal-body">
-            {/* All Contacts Toggle */}
-            <div
-              className={`qs-all-contacts ${selectAll ? "qs-all-contacts--active" : ""}`}
-              onClick={toggleSelectAll}
-            >
-              <div
-                className="qs-contact-check"
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 6,
-                  border: "2px solid #2563eb",
-                  background: selectAll ? "#2563eb" : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {selectAll && (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <span className="qs-all-contacts-label">All Contacts</span>
-              <span className="qs-all-contacts-count">
-                {contactsQuery.data?.total ?? allContacts.length} contacts
-              </span>
+          {/* Search */}
+          <div className="qs-contact-search">
+            <Search className="qs-search-icon" size={16} />
+            <input
+              className="qs-contact-search-input"
+              type="text"
+              placeholder="Search contacts by name, email, or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <Loader2 className="qs-spinner" size={24} style={{ color: "#38bdf8", margin: "0 auto" }} />
             </div>
+          )}
 
-            {/* Search */}
-            <div className="qs-contact-search">
-              <Search className="qs-search-icon" size={16} />
-              <input
-                className="qs-contact-search-input"
-                type="text"
-                placeholder="Search contacts by name, email, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Loading */}
-            {loading && (
-              <div style={{ textAlign: "center", padding: "24px 0" }}>
-                <Loader2 className="qs-spinner" size={24} style={{ color: "#00c2e0", margin: "0 auto" }} />
-              </div>
-            )}
-
-            {/* Contact List */}
-            {!loading && (
-              <div className="qs-contact-list">
-                {filteredContacts.length === 0 && (
-                  <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>
-                    {contactsQuery.isError ? "Failed to load contacts" : "No contacts found"}
-                  </div>
-                )}
-                {filteredContacts.map((contact) => {
-                  const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.name || "Unknown";
-                  const isSelected = selectedIds.has(contact.id);
-                  return (
-                    <div
-                      key={contact.id}
-                      className={`qs-contact-item ${isSelected ? "qs-contact-item--selected" : ""}`}
-                      onClick={() => toggleContact(contact.id)}
-                    >
-                      <div className="qs-contact-avatar">
-                        {getInitials(fullName)}
-                      </div>
-                      <div className="qs-contact-info">
-                        <div className="qs-contact-name">{fullName}</div>
-                        <div className="qs-contact-detail">
-                          {[contact.email, contact.phone].filter(Boolean).join(" • ") || "No details"}
-                        </div>
-                      </div>
-                      <div
-                        className="qs-contact-check"
-                        style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 6,
-                          border: `2px solid ${isSelected ? "#00c2e0" : "#cbd5e1"}`,
-                          background: isSelected ? "#00c2e0" : "transparent",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {isSelected && (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
+          {/* Contact List */}
+          {!loading && (
+            <div className="qs-contact-list">
+              {filteredContacts.length === 0 && (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>
+                  {contactsQuery.isError ? "Failed to load contacts" : "No contacts found"}
+                </div>
+              )}
+              {filteredContacts.map((contact) => {
+                const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.name || "Unknown";
+                const isSelected = selectedIds.has(contact.id);
+                return (
+                  <div
+                    key={contact.id}
+                    className={`qs-contact-item ${isSelected ? "qs-contact-item--selected" : ""}`}
+                    onClick={() => toggleContact(contact.id)}
+                  >
+                    <div className="qs-contact-avatar">
+                      {getInitials(fullName)}
+                    </div>
+                    <div className="qs-contact-info">
+                      <div className="qs-contact-name">{fullName}</div>
+                      <div className="qs-contact-detail">
+                        {[contact.email, contact.phone].filter(Boolean).join(" · ") || "No details"}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="qs-modal-footer">
-            <span className="qs-selected-count">
-              {selectAll
-                ? `${contactsQuery.data?.total ?? allContacts.length} contacts selected`
-                : `${selectedCount} contact${selectedCount !== 1 ? "s" : ""} selected`}
-            </span>
-            <div className="qs-modal-footer-actions">
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: 10,
-                  border: "1.5px solid #cbd5e1",
-                  background: "transparent",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#475569",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-sans)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isConfirmDisabled}
-                onClick={() => {
-                  onConfirm(selectAll ? "all" : Array.from(selectedIds));
-                }}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: isConfirmDisabled ? "#94a3b8" : "#00c2e0",
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "#ffffff",
-                  cursor: isConfirmDisabled ? "not-allowed" : "pointer",
-                  fontFamily: "var(--font-sans)",
-                  boxShadow: isConfirmDisabled ? "none" : "0 2px 8px rgba(0,194,224,0.3)",
-                  transition: "all 0.15s",
-                }}
-              >
-                Confirm
-              </button>
+                    <div
+                      className="qs-contact-check"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 5,
+                        border: `2px solid ${isSelected ? "#38bdf8" : "#cbd5e1"}`,
+                        background: isSelected ? "#38bdf8" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isSelected && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="qs-modal-footer">
+          <span className="qs-selected-count">
+            {selectAll
+              ? `${contactsQuery.data?.total ?? allContacts.length} contacts selected`
+              : `${selectedCount} contact${selectedCount !== 1 ? "s" : ""} selected`}
+          </span>
+          <div className="qs-modal-footer-actions">
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: "10px 22px",
+                borderRadius: 999,
+                border: "1.5px solid #cbd5e1",
+                background: "transparent",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#475569",
+                cursor: "pointer",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isConfirmDisabled}
+              onClick={() => {
+                onConfirm(selectAll ? "all" : Array.from(selectedIds));
+              }}
+              style={{
+                padding: "10px 22px",
+                borderRadius: 999,
+                border: "none",
+                background: isConfirmDisabled ? "#94a3b8" : "#334155",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#ffffff",
+                cursor: isConfirmDisabled ? "not-allowed" : "pointer",
+                fontFamily: "var(--font-sans)",
+                boxShadow: isConfirmDisabled ? "none" : "0 2px 8px rgba(51,65,85,0.25)",
+                transition: "all 0.15s",
+              }}
+            >
+              Confirm
+            </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
@@ -438,7 +443,6 @@ export default function QuickSendPage() {
       const text = ta.value;
       const newText = text.substring(0, start) + tag + text.substring(end);
       setMessage(newText);
-      // Restore cursor after the inserted tag
       setTimeout(() => {
         ta.focus();
         ta.selectionStart = ta.selectionEnd = start + tag.length;
@@ -502,10 +506,6 @@ export default function QuickSendPage() {
     );
   }
 
-  // Character count (1600 char max)
-  const charCount = message.length;
-  const charClass = charCount > 1400 ? "qs-char-count--danger" : charCount > 1200 ? "qs-char-count--warning" : "";
-
   return (
     <div className="qs-main">
       <div className="qs-shell">
@@ -523,7 +523,7 @@ export default function QuickSendPage() {
           </div>
         </header>
 
-        {/* ── Content ── */}
+        {/* ── Content: Card + Phone ── */}
         <div className="qs-content">
           {/* ── Message Panel ── */}
           <div className="qs-message-panel">
@@ -563,11 +563,6 @@ export default function QuickSendPage() {
                   <ChevronDown size={14} />
                   Choose Field
                 </button>
-              </div>
-
-              {/* Character Count */}
-              <div className={`qs-char-count ${charClass}`}>
-                {charCount} / 1600 characters
               </div>
             </div>
 
