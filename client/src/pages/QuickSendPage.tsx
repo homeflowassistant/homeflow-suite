@@ -554,14 +554,14 @@ export default function QuickSendPage() {
 
               {/* Merge Fields Bar */}
               <div className="qs-merge-bar" style={{ position: "relative" }}>
-                <span className="qs-merge-label">Insert Merge Field:</span>
+                <span className="qs-merge-label">Add Custom Value:</span>
                 <button
                   type="button"
                   className="qs-merge-trigger"
                   onClick={() => setShowMergeDropdown(!showMergeDropdown)}
                 >
                   <ChevronDown size={14} />
-                  Choose Field
+                  Choose Value
                 </button>
               </div>
             </div>
