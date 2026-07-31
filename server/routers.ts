@@ -6,6 +6,7 @@ import { ghlRouter } from "./routers/ghl";
 import { requestSchedulingRouter } from "./routers/requestScheduling";
 import { reactivationRouter } from "./routers/reactivation";
 import { addOnCampaignRouter } from "./routers/addOnCampaign";
+import { quickSendRouter } from "./routers/quickSend";
 
 export const appRouter = router({
   system: systemRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   requestScheduling: requestSchedulingRouter,
   reactivation: reactivationRouter,
   addOnCampaign: addOnCampaignRouter,
+  quickSend: quickSendRouter,
 });
 
 export type AppRouter = typeof appRouter;

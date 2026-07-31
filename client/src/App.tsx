@@ -7,6 +7,7 @@ import AddContactsPage from "./pages/AddContactsPage";
 import RequestScheduling from "./pages/RequestScheduling";
 import ReactivationPage from "./pages/ReactivationPage";
 import AddOnCampaignPage from "./pages/AddOnCampaignPage";
+import QuickSendPage from "./pages/QuickSendPage";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path={"/reactivation"} component={ReactivationPage} />
       <Route path={"/add-on-campaign"} component={AddOnCampaignPage} />
       <Route path={"/add-contacts"} component={AddContactsPage} />
+      <Route path={"/quick-send"} component={QuickSendPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />
       </Route>
