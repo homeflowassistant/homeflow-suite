@@ -258,7 +258,7 @@ function ContactSelectionModal({
               onClick={() => setTab("csv")}
             >
               <Upload size={16} />
-              Upload CSV
+              Upload and Send
             </button>
           </div>
         </div>
