@@ -91,14 +91,14 @@ const DEFAULT_FORM: QuoteFormData = {
       price: "$XX.XX",
       description:
         "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. 🐾",
-      image: DEFAULT_SCOOPING_LOGO,
+      image: DEFAULT_DOG_PHOTO,
     },
     {
       name: "2 Weeks FREE",
       price: "$XX.XX",
       description:
         "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. 🐾",
-      image: DEFAULT_SCOOPING_LOGO,
+      image: DEFAULT_DOG_PHOTO,
     },
   ],
   price1: "$XX.XX",
@@ -334,7 +334,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Quote Approved
+          Approve Quote
         </button>
       </div>
     </div>
@@ -423,7 +423,7 @@ function QuoteFormFields({
 
       {/* ── Company Logo ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo (Default: Scooping R Us)</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
         <div className="mt-1 flex items-center gap-3">
           {formData.companyLogo ? (
             <div className="relative group inline-block">
@@ -596,7 +596,7 @@ function QuoteFormFields({
 
       {/* ── Offer 2 (Editable Free Offer Title) ── */}
       <div className="space-y-2">
-        <label className="text-[11px] text-slate-500 font-medium">Offer 2 (Editable Free Offer Title)</label>
+        <label className="text-[11px] text-slate-500 font-medium">Free Sign Up Offer</label>
         <div className="bg-slate-50 rounded-lg p-3 space-y-2">
           <div>
             <label className="text-[10px] text-slate-400">Offer Title</label>
