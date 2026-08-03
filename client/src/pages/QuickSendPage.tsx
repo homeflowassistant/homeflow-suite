@@ -179,7 +179,7 @@ function ContactSelectionModal({
       setSelectedIds(new Set());
       setSelectAll(false);
       setSearchQuery("");
-      setTab("contacts");
+      setTab("csv");
     }
   }, [open]);
 
