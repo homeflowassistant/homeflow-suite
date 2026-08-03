@@ -5,7 +5,7 @@
  * Cloned from CustomQuoteLinkPopup to maintain isolated Reactivation state & flow.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -217,7 +217,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Approve Quote 
+          Approve Quote
         </button>
       </div>
 
