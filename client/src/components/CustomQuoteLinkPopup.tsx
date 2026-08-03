@@ -512,7 +512,7 @@ function QuoteFormFields({
       </div>
 
       {/* ── Company Logo ── */}
-      <div className="flex justify-center">
+      <div>
         <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
         <div className="mt-1 flex items-center gap-3">
           {formData.companyLogo ? (
@@ -622,12 +622,13 @@ function QuoteFormFields({
         />
       </div>
 
-      {/* ── Offer 1 ── */}
+      {/* ── Offer 1 (Auto-filled title, not editable) ── */}
       <div className="space-y-2">
         <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
         <div className="bg-slate-50 rounded-lg p-3 space-y-2">
           <div>
             <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[0]?.name}</span>
+            <span className="text-[9px] text-amber-600 italic">(Auto-filled — not editable)</span>
           </div>
           <div>
             <span className="text-[11px] text-slate-500">{formData.offers[0]?.price}</span>
@@ -969,18 +970,25 @@ export default function CustomQuoteLinkPopup({
           quoteTitle: formData.bioTitle || undefined,
           bioText: formData.bioDescription || undefined,
           companyImage: formData.teamPhoto ?? undefined,
-          discountOffer: formData.offers[1]?.name || formData.offers[0]?.name || undefined,
-          offerDescription: formData.offers[0]?.description || undefined,
-          offerImage: formData.offers[0]?.image ?? undefined,
+          // Offer 1 (Leads Line Item 1)
+          offer1Title: "[FREQUENCY] | Dog Waste Removal",
+          offer1Description: formData.offers[0]?.description || undefined,
+          offer1Image: formData.offers[0]?.image ?? undefined,
+          // Offer 2 (Leads Line Item 2)
+          offer2Title: formData.offers[1]?.name || "2 Weeks FREE",
+          offer2Description: formData.offers[1]?.description || undefined,
+          offer2Image: formData.offers[1]?.image ?? undefined,
           sendQuoteAutomatically: true,
           tosLink: formData.tosLink || "",
           showCardSection: true,
+          // Gallery Images
           image1: formData.galleryImages[0] ?? undefined,
           image2: formData.galleryImages[1] ?? undefined,
           image3: formData.galleryImages[2] ?? undefined,
           image4: formData.galleryImages[3] ?? undefined,
           image5: formData.galleryImages[4] ?? undefined,
           image6: formData.galleryImages[5] ?? undefined,
+          // Testimonials
           review1: formData.testimonialTexts[0] ?? undefined,
           review1Photo: formData.testimonialHeadshots[0] ?? undefined,
           review1Name: formData.testimonialNames[0] || undefined,

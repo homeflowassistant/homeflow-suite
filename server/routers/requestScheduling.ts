@@ -138,24 +138,28 @@ async function getRequestSchedulingFieldIds(locationId: string): Promise<{
 // ─── Custom Quote Data Schema (same as Reactivation page) ────────────
 const customQuoteDataSchema = z.object({
   businessLogo:       z.string().optional(),
-  businessOwnerName:  z.string().optional(),
   quoteTitle:         z.string().optional(),
   bioText:            z.string().optional(),
   companyImage:       z.string().optional(),
-  discountOffer:      z.string().optional(),
-  offerDescription:   z.string().optional(),
-  offerPricePerVisit: z.string().optional(),
-  offerTotal:         z.string().optional(),
-  offerImage:         z.string().optional(),
+  // Offer 1 (Leads Line Item 1)
+  offer1Title:        z.string().optional(),
+  offer1Description:  z.string().optional(),
+  offer1Image:        z.string().optional(),
+  // Offer 2 (Leads Line Item 2)
+  offer2Title:        z.string().optional(),
+  offer2Description:  z.string().optional(),
+  offer2Image:        z.string().optional(),
   sendQuoteAutomatically: z.boolean().default(true),
   tosLink:            z.string().optional(),
   showCardSection:    z.boolean().default(true),
+  // Gallery Images
   image1:             z.string().optional(),
   image2:             z.string().optional(),
   image3:             z.string().optional(),
   image4:             z.string().optional(),
   image5:             z.string().optional(),
   image6:             z.string().optional(),
+  // Testimonials
   review1:            z.string().optional(),
   review1Photo:       z.string().optional(),
   review1Name:        z.string().optional(),
@@ -172,41 +176,45 @@ const customQuoteDataSchema = z.object({
 
 export type CustomQuoteData = z.infer<typeof customQuoteDataSchema>;
 
-// ─── GHL Custom Value Key Names (matching Reactivation page) ─────────
+// ─── GHL Custom Value Key Names (Custom Quote popup) ────────────────
 const CV = {
-  leadFollowupOptions: "lead_followup_options",
-  businessLogo:      "homeflow_business_logo",
-  companyLogo:       "company_logo",
-  businessName:      "homeflow_business_name",
-  companyName:       "company_name",
-  businessOwnerName: "homeflow_business_owner_name",
-  companyDescription:"company_description",
-  companyImage:      "company_image",
-  quoteTitle:        "quote_title",
-  discountOffer:     "discountfree_offer_for_reengagement_campaigns",
-  image1:            "image_1",
-  image2:            "image_2",
-  image3:            "image_3",
-  image4:            "image_4",
-  image5:            "image_5",
-  image6:            "image_6",
-  review1:           "review_1",
-  review1Photo:      "review_1_photo",
-  review1Name:       "review_1_name",
-  review2:           "review_2",
-  review2Photo:      "review_2_photo",
-  review2Name:       "review_2_name",
-  review3:           "review_3",
-  review3Photo:      "review_3_photo",
-  review3Name:       "review_3_name",
-  review4:           "review_4",
-  review4Photo:      "review_4_photo",
-  review4Name:       "review_4_name",
+  leadFollowupOptions:   "lead_followup_options",
+  companyLogo:           "company_logo",
+  companyDescription:    "company_description",
+  companyImage:          "company_image",
+  quoteTitle:            "quote_title",
+  // Offer 1 (Leads Line Item 1)
+  offer1Title:           "leads_line_item_1",
+  offer1Description:     "leads_line_item_description_1",
+  offer1Image:           "leads_line_item_image_1",
+  // Offer 2 (Leads Line Item 2)
+  offer2Title:           "leads_line_item_2",
+  offer2Description:     "leads_line_item_description_2",
+  offer2Image:           "leads_line_item_image_2",
+  // Gallery Images
+  image1:                "image_1",
+  image2:                "image_2",
+  image3:                "image_3",
+  image4:                "image_4",
+  image5:                "image_5",
+  image6:                "image_6",
+  // Testimonials
+  review1:               "review_1",
+  review1Photo:          "review_1_photo",
+  review1Name:           "review_1_name",
+  review2:               "review_2",
+  review2Photo:          "review_2_photo",
+  review2Name:           "review_2_name",
+  review3:               "review_3",
+  review3Photo:          "review_3_photo",
+  review3Name:           "review_3_name",
+  review4:               "review_4",
+  review4Photo:          "review_4_photo",
+  review4Name:           "review_4_name",
+  // Page Settings
   sendQuoteAutomatically: "send_quote_automatically",
-  tosLink:           "tos_link",
-  showCardSection:   "show_card_section",
-  offerDescription:  "offer_description",
-  offerImage:        "offer_image",
+  tosLink:                "tos_link",
+  showCardSection:        "show_card_section",
 } as const;
 
   export const requestSchedulingRouter = router({
@@ -360,12 +368,12 @@ const CV = {
             return val;
           };
 
-          // Upload all images concurrently (including gallery image 6 and offer image)
+          // Upload all images concurrently
           const [
             businessLogoUrl,
             companyImageUrl,
             img1, img2, img3, img4, img5, img6,
-            offerImageUrl,
+            offer1ImageUrl, offer2ImageUrl,
             rev1Photo, rev2Photo, rev3Photo, rev4Photo,
           ] = await Promise.all([
             handleImg(d.businessLogo,    "business_logo"),
@@ -376,7 +384,8 @@ const CV = {
             handleImg(d.image4,          "gallery_4"),
             handleImg(d.image5,          "gallery_5"),
             handleImg(d.image6,          "gallery_6"),
-            handleImg(d.offerImage,      "offer_image"),
+            handleImg(d.offer1Image,     "offer_1_image"),
+            handleImg(d.offer2Image,     "offer_2_image"),
             handleImg(d.review1Photo,    "review_1_photo"),
             handleImg(d.review2Photo,    "review_2_photo"),
             handleImg(d.review3Photo,    "review_3_photo"),
@@ -387,43 +396,47 @@ const CV = {
           // Maps every popup field to its corresponding GHL Custom Value key
           const exactUpdates: Record<string, string> = {
             // Business Information
-            "homeflow_business_logo":                           businessLogoUrl,
-            "homeflow_business_owner_name":                     d.businessOwnerName ?? "",
-            "quote_title":                                      d.quoteTitle ?? "[service area]'s Highest Rated Pooper Scooper Service",
-            "company_description":                              d.bioText ?? "",
-            "company_image":                                    companyImageUrl,
+            [CV.companyLogo]:                                    businessLogoUrl,
+            "quote_title":                                       d.quoteTitle ?? "",
+            [CV.companyDescription]:                             d.bioText ?? "",
+            [CV.companyImage]:                                   companyImageUrl,
 
-            // Offers & Page Settings
-            "discountfree_offer_for_reengagement_campaigns":    d.discountOffer ?? "",
-            "send_quote_automatically":                         d.sendQuoteAutomatically ? "true" : "false",
-            "tos_link":                                         d.tosLink ?? "",
-            "show_card_section":                                d.showCardSection ? "true" : "false",
+            // Offer 1 (Leads Line Item 1)
+            [CV.offer1Title]:                                    d.offer1Title ?? "[FREQUENCY] | Dog Waste Removal",
+            [CV.offer1Description]:                              d.offer1Description ?? "",
+            [CV.offer1Image]:                                    offer1ImageUrl,
 
-            // Offer details (description + image, uploaded to Media Library)
-            "offer_description":                                d.offerDescription ?? "",
-            "offer_image":                                      offerImageUrl,
+            // Offer 2 (Leads Line Item 2)
+            [CV.offer2Title]:                                    d.offer2Title ?? "2 Weeks FREE",
+            [CV.offer2Description]:                              d.offer2Description ?? "",
+            [CV.offer2Image]:                                    offer2ImageUrl,
+
+            // Page Settings
+            [CV.sendQuoteAutomatically]:                         d.sendQuoteAutomatically ? "true" : "false",
+            [CV.tosLink]:                                        d.tosLink ?? "",
+            [CV.showCardSection]:                                d.showCardSection ? "true" : "false",
 
             // Gallery Images (uploaded to GHL Media Library → hosted URL stored)
-            "image_1":                                          img1,
-            "image_2":                                          img2,
-            "image_3":                                          img3,
-            "image_4":                                          img4,
-            "image_5":                                          img5,
-            "image_6":                                          img6,
+            [CV.image1]:                                         img1,
+            [CV.image2]:                                         img2,
+            [CV.image3]:                                         img3,
+            [CV.image4]:                                         img4,
+            [CV.image5]:                                         img5,
+            [CV.image6]:                                         img6,
 
             // Testimonials
-            "review_1":                                         d.review1 ?? "",
-            "review_1_name":                                    d.review1Name ?? "",
-            "review_1_photo":                                   rev1Photo,
-            "review_2":                                         d.review2 ?? "",
-            "review_2_name":                                    d.review2Name ?? "",
-            "review_2_photo":                                   rev2Photo,
-            "review_3":                                         d.review3 ?? "",
-            "review_3_name":                                    d.review3Name ?? "",
-            "review_3_photo":                                   rev3Photo,
-            "review_4":                                         d.review4 ?? "",
-            "review_4_name":                                    d.review4Name ?? "",
-            "review_4_photo":                                   rev4Photo,
+            [CV.review1]:                                        d.review1 ?? "",
+            [CV.review1Name]:                                    d.review1Name ?? "",
+            [CV.review1Photo]:                                   rev1Photo,
+            [CV.review2]:                                        d.review2 ?? "",
+            [CV.review2Name]:                                    d.review2Name ?? "",
+            [CV.review2Photo]:                                   rev2Photo,
+            [CV.review3]:                                        d.review3 ?? "",
+            [CV.review3Name]:                                    d.review3Name ?? "",
+            [CV.review3Photo]:                                   rev3Photo,
+            [CV.review4]:                                        d.review4 ?? "",
+            [CV.review4Name]:                                    d.review4Name ?? "",
+            [CV.review4Photo]:                                   rev4Photo,
           };
 
           await updateExistingCustomValuesOnly(locationId, exactUpdates);
