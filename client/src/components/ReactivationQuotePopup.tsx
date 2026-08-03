@@ -815,6 +815,57 @@ export default function ReactivationQuotePopup({
 
   const saveMutation = trpc.reactivation.saveCustomValuesSettings.useMutation();
 
+  const settingsQuery = trpc.reactivation.getSettings.useQuery(
+    { locationId },
+    { enabled: !!locationId && open }
+  );
+
+  useEffect(() => {
+    if (!settingsQuery.data?.customQuote) return;
+    const q = settingsQuery.data.customQuote;
+    setFormData((prev) => ({
+      ...prev,
+      companyLogo: q.businessLogo || prev.companyLogo,
+      teamPhoto: q.companyImage || prev.teamPhoto,
+      bioDescription: q.bioText || prev.bioDescription,
+      tosLink: q.tosLink || "",
+      offers: [
+        {
+          name: q.offer2Title || "2 Weeks FREE",
+          price: "$XX.XX",
+          description: q.offer2Description || prev.offers[0]?.description || "",
+          image: q.offer2Image || prev.offers[0]?.image || DEFAULT_DOG_PHOTO,
+        },
+      ],
+      galleryImages: [
+        q.image1 || prev.galleryImages[0],
+        q.image2 || prev.galleryImages[1],
+        q.image3 || prev.galleryImages[2],
+        q.image4 || prev.galleryImages[3],
+        q.image5 || prev.galleryImages[4],
+        (q as any).image6 || prev.galleryImages[5],
+      ],
+      testimonialHeadshots: [
+        q.review1Photo || prev.testimonialHeadshots[0],
+        q.review2Photo || prev.testimonialHeadshots[1],
+        q.review3Photo || prev.testimonialHeadshots[2],
+        q.review4Photo || prev.testimonialHeadshots[3],
+      ],
+      testimonialNames: [
+        q.review1Name || prev.testimonialNames[0],
+        q.review2Name || prev.testimonialNames[1],
+        q.review3Name || prev.testimonialNames[2],
+        q.review4Name || prev.testimonialNames[3],
+      ],
+      testimonialTexts: [
+        q.review1 || prev.testimonialTexts[0],
+        q.review2 || prev.testimonialTexts[1],
+        q.review3 || prev.testimonialTexts[2],
+        q.review4 || prev.testimonialTexts[3],
+      ],
+    }));
+  }, [settingsQuery.data, open]);
+
   const handleSave = useCallback(async () => {
     if (!formData.companyLogo) {
       toast.error("Company logo must be uploaded/replaced.");
