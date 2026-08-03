@@ -22,6 +22,8 @@ import {
   Star,
   Save,
   Loader2,
+  Link,
+  CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -40,6 +42,7 @@ interface QuoteFormData {
   teamPhoto: string | null;
   bioTitle: string;
   bioDescription: string;
+  tosLink: string;
   offers: QuoteOffer[];    // Two offers: paid + free
   price1: string;          // Subtotal ($XX.XX)
   price2: string;          // Total ($XX.XX)
@@ -85,6 +88,7 @@ const DEFAULT_FORM: QuoteFormData = {
   bioTitle: "[service area]'s Highest Rated Pooper Scooper Service",
   bioDescription:
     "Serving dog owners across the city, our team keeps your yard clean, fresh, and hassle-free. We provide reliable pet waste removal on a schedule that works for you. Our friendly scoopers handle the dirty work so you can enjoy a clean yard, more time with your pets, and peace of mind knowing everything is sanitary. Locally operated, affordable, and backed by great customer care, [company name] is here to make life easier—one yard at a time.",
+  tosLink: "",
   offers: [
     {
       name: "[FREQUENCY] | Dog Waste Removal",
@@ -142,7 +146,7 @@ function fileToBase64(file: File): Promise<string> {
 
 function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ── Centered Column Heading ── */}
       <div className="text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200 mb-3">
         <h3 className="text-sm font-extrabold text-blue-800 uppercase tracking-wider">
@@ -150,39 +154,37 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </h3>
       </div>
 
-      {/* ── Company Logo ── */}
-      <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
+      {/* ── Company Logo (centered, matching live page) ── */}
+      <div className="flex justify-center">
         {formData.companyLogo ? (
-          <div className="flex items-center justify-center py-3 bg-white/80 rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="flex items-center justify-center py-2 px-4 bg-white/80 rounded-lg">
             <img
               src={formData.companyLogo}
               alt="Company Logo"
-              className="h-28 sm:h-32 max-w-full object-contain"
+              className="h-16 sm:h-20 max-w-[260px] object-contain"
               crossOrigin="anonymous"
             />
           </div>
         ) : (
-          <div className="h-16 w-44 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-xs text-slate-400 font-medium">
+          <div className="h-12 w-40 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-xs text-slate-400 font-medium">
             No Logo Uploaded
           </div>
         )}
       </div>
 
-      {/* ── Company Photo ── */}
+      {/* ── Company Photo (full-width hero, matching live page) ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Photo</label>
         {formData.teamPhoto ? (
           <div className="relative">
             <img
               src={formData.teamPhoto}
               alt="Team Photo"
-              className="w-full h-40 object-cover rounded-lg"
+              className="w-full h-48 object-cover rounded-lg"
               crossOrigin="anonymous"
             />
           </div>
         ) : (
-          <div className="w-full h-40 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
+          <div className="w-full h-48 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
             <div className="text-center">
               <Image className="w-8 h-8 text-slate-300 mx-auto mb-1" />
               <span className="text-[11px] text-slate-400">No Photo Uploaded</span>
@@ -191,124 +193,207 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         )}
       </div>
 
-      {/* ── Bio / Quote Title & Description ── */}
+      {/* ── Quote Title (H2 heading, matching live page) ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Bio &amp; Quote Title</label>
-        <div className="bg-slate-50 rounded-lg p-3">
-          <h3 className="text-sm font-bold text-slate-800 mb-1">
-            {formData.bioTitle || "[service area]'s Highest Rated Pooper Scooper Service"}
-          </h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            {formData.bioDescription || "Your company description will appear here."}
+        <h2 className="text-base font-bold text-slate-800 mb-2">
+          {formData.bioTitle || "[service area]'s Highest Rated Pooper Scooper Service"}
+        </h2>
+      </div>
+
+      {/* ── Bio Description (paragraph text, matching live page) ── */}
+      <div>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          {formData.bioDescription || "Your company description will appear here."}
+        </p>
+      </div>
+
+      {/* ── Terms of Service Preview (checkbox + link, matching live page) ── */}
+      {formData.tosLink && formData.tosLink.trim() !== "" && (
+        <div className="flex items-center gap-2 py-1">
+          <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
+          <span className="text-[11px] text-slate-500">I agree to the</span>
+          <span className="text-[11px] text-blue-600 underline truncate max-w-[200px]">
+            Terms of Service
+          </span>
+        </div>
+      )}
+
+      {/* ── Divider line (matching live page horizontal rule) ── */}
+      <div className="border-t border-slate-300" />
+
+      {/* ── CTA Button (centered, matching live page) ── */}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
+          disabled
+        >
+          Quote Approved
+        </button>
+      </div>
+
+      {/* ── Offer 1 (matching live page: title, price, description + image) ── */}
+      <div className="space-y-2 pt-2">
+        <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">
+            {formData.offers[0]?.name}
+          </h2>
+          <p className="text-sm font-semibold text-slate-700 mt-0.5">
+            {formData.offers[0]?.price}
           </p>
         </div>
-      </div>
-
-      {/* ── Offer 1 ── */}
-      <div className="space-y-2">
-        <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
-        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
-          <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[0]?.name}</span>
-          <span className="text-[11px] text-slate-500 block">{formData.offers[0]?.price}</span>
-          <div className="flex gap-3 items-start">
-            <p className="text-[11px] text-slate-600 leading-relaxed flex-1">
-              {formData.offers[0]?.description || "Offer description here"}
-            </p>
-            <div className="w-20 h-16 flex-shrink-0">
-              {formData.offers[0]?.image ? (
-                <img
-                  src={formData.offers[0].image}
-                  alt="Offer 1"
-                  className="w-full h-full object-cover rounded-md"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-100 rounded-md flex items-center justify-center">
-                  <Image size={14} className="text-slate-300" />
-                </div>
-              )}
-            </div>
+        <div className="flex gap-3 items-start">
+          <p className="text-[11px] text-slate-600 leading-relaxed flex-1">
+            {formData.offers[0]?.description || "Offer description here"}
+          </p>
+          <div className="w-20 h-16 flex-shrink-0">
+            {formData.offers[0]?.image ? (
+              <img
+                src={formData.offers[0].image}
+                alt="Offer 1"
+                className="w-full h-full object-cover rounded-md"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <div className="w-full h-full bg-slate-100 rounded-md flex items-center justify-center">
+                <Image size={14} className="text-slate-300" />
+              </div>
+            )}
+          </div>
+        </div>
+        {/* ── Pricing Table (matching live page: QTY | PRICE PER VISIT | TOTAL) ── */}
+        <div className="mt-2">
+          <div className="flex justify-between text-[10px] text-slate-500 font-semibold uppercase px-1 pb-1 border-b border-slate-200">
+            <span>Qty.</span>
+            <span>Price per visit</span>
+            <span>Total</span>
+          </div>
+          <div className="flex justify-between text-xs text-slate-600 px-1 py-1.5">
+            <span>1</span>
+            <span>{formData.offers[0]?.price}</span>
+            <span>{formData.offers[0]?.price}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Offer 2 ── */}
-      <div className="space-y-2">
+      {/* ── Offer 2 (matching live page) ── */}
+      <div className="space-y-2 pt-2">
         <label className="text-[11px] text-slate-500 font-medium">Offer 2 (Free Offer)</label>
-        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
-          <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[1]?.name}</span>
-          <span className="text-[11px] text-slate-500 block">{formData.offers[1]?.price}</span>
-          <div className="flex gap-3 items-start">
-            <p className="text-[11px] text-slate-600 leading-relaxed flex-1">
-              {formData.offers[1]?.description || "Offer description here"}
-            </p>
-            <div className="w-20 h-16 flex-shrink-0">
-              {formData.offers[1]?.image ? (
-                <img
-                  src={formData.offers[1].image}
-                  alt="Offer 2"
-                  className="w-full h-full object-cover rounded-md"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-100 rounded-md flex items-center justify-center">
-                  <Image size={14} className="text-slate-300" />
-                </div>
-              )}
-            </div>
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">
+            {formData.offers[1]?.name}
+          </h2>
+          <p className="text-sm font-semibold text-slate-700 mt-0.5">
+            {formData.offers[1]?.price}
+          </p>
+        </div>
+        <div className="flex gap-3 items-start">
+          <p className="text-[11px] text-slate-600 leading-relaxed flex-1">
+            {formData.offers[1]?.description || "Offer description here"}
+          </p>
+          <div className="w-20 h-16 flex-shrink-0">
+            {formData.offers[1]?.image ? (
+              <img
+                src={formData.offers[1].image}
+                alt="Offer 2"
+                className="w-full h-full object-cover rounded-md"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <div className="w-full h-full bg-slate-100 rounded-md flex items-center justify-center">
+                <Image size={14} className="text-slate-300" />
+              </div>
+            )}
+          </div>
+        </div>
+        {/* ── Pricing Table ── */}
+        <div className="mt-2">
+          <div className="flex justify-between text-[10px] text-slate-500 font-semibold uppercase px-1 pb-1 border-b border-slate-200">
+            <span>Qty.</span>
+            <span>Price per visit</span>
+            <span>Total</span>
+          </div>
+          <div className="flex justify-between text-xs text-slate-600 px-1 py-1.5">
+            <span>1</span>
+            <span>{formData.offers[1]?.price}</span>
+            <span>{formData.offers[1]?.price}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Pricing: Subtotal + Total (Static $XX.XX) ── */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Subtotal</label>
-          <p className="text-sm font-medium text-slate-700 bg-slate-50 rounded px-2 py-1.5">$XX.XX</p>
+      {/* ── Subtotal / Total Summary (matching live page layout) ── */}
+      <div className="space-y-1 pt-2">
+        <div className="border-t border-slate-200 pt-2" />
+        <div className="flex justify-between items-center px-1 py-1">
+          <span className="text-xs text-slate-600">Subtotal</span>
+          <span className="text-xs text-slate-700">{formData.price1}</span>
         </div>
-        <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Total</label>
-          <p className="text-sm font-bold text-slate-800 bg-slate-50 rounded px-2 py-1.5">$XX.XX</p>
+        <div className="flex justify-between items-center px-1 py-1">
+          <span className="text-xs text-slate-700 font-semibold">Total</span>
+          <span className="text-xs text-slate-800 font-bold">{formData.price2}</span>
         </div>
+        <div className="border-t border-slate-200" />
       </div>
 
-      {/* ── Gallery Images ── */}
-      <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Gallery Images (max 6)</label>
-        <div className="grid grid-cols-6 gap-2 mt-1.5">
+      {/* ── TOS + CTA after pricing (matching live page) ── */}
+      {formData.tosLink && formData.tosLink.trim() !== "" && (
+        <div className="flex items-center gap-2 justify-center py-1">
+          <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
+          <span className="text-[11px] text-slate-500">I agree to the</span>
+          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+        </div>
+      )}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
+          disabled
+        >
+          Quote Approved
+        </button>
+      </div>
+
+      {/* ── Gallery Images (matching live page: 2 rows of 3) ── */}
+      <div className="pt-2">
+        <label className="text-[11px] text-slate-500 font-medium block mb-2">Images</label>
+        <div className="grid grid-cols-3 gap-3 mt-1.5">
           {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => (
             <div
               key={idx}
-              className={`border ${formData.galleryImages[idx] ? "border-slate-200" : "border-dashed border-slate-300"} rounded-lg p-2 flex flex-col items-center gap-1 bg-slate-50`}
+              className={`border ${formData.galleryImages[idx] ? "border-slate-200" : "border-dashed border-slate-300"} rounded-lg overflow-hidden bg-slate-50`}
             >
               {formData.galleryImages[idx] ? (
                 <img
                   src={formData.galleryImages[idx]}
                   alt={`Gallery ${idx + 1}`}
-                  className="w-8 h-8 object-cover rounded"
+                  className="w-full h-20 object-cover"
                   crossOrigin="anonymous"
                 />
               ) : (
-                <>
-                  <Image size={12} className="text-slate-300" />
+                <div className="w-full h-20 flex flex-col items-center justify-center gap-1">
+                  <Image size={14} className="text-slate-300" />
                   <span className="text-[8px] text-slate-400">Empty</span>
-                </>
+                </div>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Testimonials (4 required) ── */}
-      <div className="space-y-4">
-        <label className="text-[11px] text-slate-500 font-medium block">Testimonials (4 required)</label>
+      {/* ── Divider ── */}
+      <div className="border-t border-slate-300" />
+
+      {/* ── Testimonials (matching live page: avatar + name + stars + text) ── */}
+      <div className="space-y-4 pt-1">
+        <label className="text-[11px] text-slate-500 font-medium block">Reviews</label>
         {formData.testimonialNames.map((name, idx) => (
-          <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+          <div key={idx} className="space-y-2 pb-3 border-b border-slate-200 last:border-0">
             <div className="flex items-center gap-2">
               <img
                 src={formData.testimonialHeadshots[idx] || DEFAULT_AVATAR}
                 alt={name}
-                className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm"
+                className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm"
                 crossOrigin="anonymous"
               />
               <span className="text-sm font-medium text-slate-700">{name}</span>
@@ -318,23 +403,28 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
                 <Star key={star} size={14} className="fill-amber-400 text-amber-400" />
               ))}
             </div>
-            <div className="border border-dashed border-slate-300 rounded-lg p-3 bg-white">
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                {formData.testimonialTexts[idx] || "Default testimonial text will appear here."}
-              </p>
-            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              {formData.testimonialTexts[idx] || "Default testimonial text will appear here."}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* ── CTA Preview ── */}
-      <div className="border-t border-slate-200 pt-4">
+      {/* ── TOS + Final CTA (matching live page footer) ── */}
+      {formData.tosLink && formData.tosLink.trim() !== "" && (
+        <div className="flex items-center gap-2 justify-center py-2">
+          <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
+          <span className="text-[11px] text-slate-500">I agree to the</span>
+          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+        </div>
+      )}
+      <div className="flex justify-center pb-2">
         <button
           type="button"
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Approve Quote
+          Quote Approved
         </button>
       </div>
     </div>
@@ -804,6 +894,19 @@ function QuoteFormFields({
         ))}
       </div>
 
+      {/* ── Terms of Service Link Field (NEW - Bottom of form) ── */}
+      <div>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Require Terms of Service? (If Yes, add link below)
+        </label>
+        <Input
+          value={formData.tosLink}
+          onChange={(e) => setFormData({ ...formData, tosLink: e.target.value })}
+          className="mt-1 text-xs h-8"
+          placeholder="https://www.yourcompany.com/terms-of-service"
+        />
+      </div>
+
       {/* ── Save Settings Button ── */}
       <div className="border-t border-slate-200 pt-4">
         <button
@@ -870,7 +973,7 @@ export default function CustomQuoteLinkPopup({
           offerDescription: formData.offers[0]?.description || undefined,
           offerImage: formData.offers[0]?.image ?? undefined,
           sendQuoteAutomatically: true,
-          tosLink: "",
+          tosLink: formData.tosLink || "",
           showCardSection: true,
           image1: formData.galleryImages[0] ?? undefined,
           image2: formData.galleryImages[1] ?? undefined,
