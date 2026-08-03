@@ -836,6 +836,14 @@ export async function updateCustomValuesOnInstall(locationId: string): Promise<v
 
 // ─── GHL API Calls ───────────────────────────────────────────────────
 
+/**
+ * Normalize a phone number for comparison.
+ * Strips all non-digit characters so "(555) 123-4567" and "5551234567" match.
+ */
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
 export async function createContact(
   locationId: string,
   contact: GHLContactData
@@ -864,7 +872,95 @@ export async function createContact(
       .filter((field) => String(field.fieldValue ?? "").trim() !== ""),
   };
 
-  console.log("[GHL DEBUG] createContact payload:", JSON.stringify(ghlPayload, null, 2));
+  // ── Step 1: Search for an existing contact by email or phone ──
+  const query = (contact.email || contact.phone || "").trim();
+  let existingContactId: string | null = null;
+
+  if (query) {
+    try {
+      const searchResp = await fetch(`${GHL_BASE_URL}/contacts/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+        body: JSON.stringify({
+          locationId,
+          searchText: query,
+          page: 1,
+          limit: 1,
+        }),
+      });
+
+      if (searchResp.ok) {
+        const searchData = (await searchResp.json()) as Record<string, any>;
+        const contacts = searchData.contacts || [];
+
+        // Find an exact match by email or phone
+        const exactMatch = contacts.find((c: any) => {
+          const emailMatch = contact.email && c.email && c.email.toLowerCase() === contact.email.toLowerCase();
+          const phoneMatch = contact.phone && c.phone && normalizePhone(c.phone) === normalizePhone(contact.phone);
+          return emailMatch || phoneMatch;
+        });
+
+        if (exactMatch) {
+          existingContactId = exactMatch.id;
+          console.log(`[GHL DEBUG] Found existing contact by search: ${existingContactId} (${query})`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[GHL] Failed to search for existing contact: ${err}`);
+    }
+  }
+
+  // ── Step 2: If existing contact found, update it; otherwise create new ──
+  if (existingContactId) {
+    // Use PUT to update the existing contact
+    const updatePayload = {
+      ...ghlPayload,
+      tags: contact.tagName ? [contact.tagName] : undefined,
+    };
+
+    console.log("[GHL DEBUG] updateContact payload (existing):", JSON.stringify({ id: existingContactId, ...updatePayload }, null, 2));
+
+    const updateResp = await fetch(`${GHL_BASE_URL}/contacts/${existingContactId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!updateResp.ok) {
+      const errorBody = await updateResp.json().catch(() => ({}));
+      throw new Error(
+        (errorBody as Record<string, string>).message ||
+          `Failed to update contact: ${updateResp.status}`
+      );
+    }
+
+    const updateResult = (await updateResp.json()) as Record<string, any>;
+    const updatedContact = updateResult.contact || updateResult;
+    return {
+      contact: {
+        id: existingContactId,
+        firstName: updatedContact.firstName || contact.firstName,
+        lastName: updatedContact.lastName || contact.lastName,
+        email: updatedContact.email || contact.email || "",
+        phone: updatedContact.phone || contact.phone || "",
+        locationId,
+        dnd: contact.dnd || false,
+      },
+    };
+  }
+
+  // ── Step 3: No existing contact found — create new ──
+  console.log("[GHL DEBUG] createContact payload (new):", JSON.stringify(ghlPayload, null, 2));
 
   const response = await fetch(`${GHL_BASE_URL}/contacts/`, {
     method: "POST",
@@ -874,7 +970,7 @@ export async function createContact(
       Authorization: `Bearer ${accessToken}`,
       Version: GHL_API_VERSION,
     },
-      body: JSON.stringify(ghlPayload),
+    body: JSON.stringify(ghlPayload),
   });
 
   if (!response.ok) {
