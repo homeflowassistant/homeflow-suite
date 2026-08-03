@@ -228,7 +228,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Quote Approved
+          Approve Quote 
         </button>
       </div>
 
@@ -350,7 +350,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Quote Approved
+          Approve Quote
         </button>
       </div>
 
@@ -424,7 +424,7 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Quote Approved
+          Approve Quote
         </button>
       </div>
     </div>
