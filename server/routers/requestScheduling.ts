@@ -397,6 +397,7 @@ const CV = {
           const exactUpdates: Record<string, string> = {
             // Business Information
             [CV.companyLogo]:                                    businessLogoUrl,
+            "homeflow_business_logo":                            businessLogoUrl,
             "quote_title":                                       d.quoteTitle ?? "",
             [CV.companyDescription]:                             d.bioText ?? "",
             [CV.companyImage]:                                   companyImageUrl,
@@ -406,10 +407,11 @@ const CV = {
             [CV.offer1Description]:                              d.offer1Description ?? "",
             [CV.offer1Image]:                                    offer1ImageUrl,
 
-            // Offer 2 (Leads Line Item 2)
+            // Offer 2 (Leads Line Item 2 & Freebie Offer)
             [CV.offer2Title]:                                    d.offer2Title ?? "2 Weeks FREE",
             [CV.offer2Description]:                              d.offer2Description ?? "",
             [CV.offer2Image]:                                    offer2ImageUrl,
+            "discountfree_offer_for_reengagement_campaigns":     d.offer2Title ?? "2 Weeks FREE",
 
             // Page Settings
             [CV.sendQuoteAutomatically]:                         d.sendQuoteAutomatically ? "true" : "false",

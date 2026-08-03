@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getLocationCustomValueMap, upsertGhlCustomValue, updateExistingCustomValuesOnly } from "../ghl-service.js";
+import { getLocationCustomValueMap, upsertGhlCustomValue, updateExistingCustomValuesOnly, uploadToGhlMedia } from "../ghl-service.js";
 
 // ─── Reactivation campaign option values ─────────────────────────────
 // "Lite"              → saved as "Lite"         to lead_followup_options
@@ -309,5 +309,109 @@ export const reactivationRouter = router({
           message: "Failed to save reactivation settings. Please try again.",
         });
       }
+    }),
+
+  saveCustomValuesSettings: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        reactivationOption: z.enum(REACTIVATION_OPTIONS),
+        onetimeTiming: z.enum(ONETIME_TIMING_LABELS),
+        customQuoteData: customQuoteDataSchema.optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      if (!locationId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
+      }
+
+      await updateExistingCustomValuesOnly(locationId, {
+        [CV.leadFollowupOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
+        [CV.onetimeServiceScheduling]: input.onetimeTiming,
+      });
+
+      if (input.reactivationOption === "Custom Quote & Link" && input.customQuoteData) {
+        const d = input.customQuoteData;
+
+        const MIME_TO_EXT: Record<string, string> = {
+          "image/png": ".png",
+          "image/jpeg": ".jpg",
+          "image/jpg": ".jpg",
+          "image/webp": ".webp",
+          "image/gif": ".gif",
+          "image/svg+xml": ".svg",
+        };
+
+        const handleImg = async (val: string | undefined, name: string): Promise<string> => {
+          if (!val) return "";
+          if (val.startsWith("data:image")) {
+            const mimeMatch = val.match(/^data:([A-Za-z-+\/]+);/);
+            const ext = mimeMatch ? (MIME_TO_EXT[mimeMatch[1]] || ".png") : ".png";
+            const fileName = `${name}_${Date.now()}${ext}`;
+            return await uploadToGhlMedia(locationId, val, fileName);
+          }
+          return val;
+        };
+
+        const [
+          businessLogoUrl,
+          companyImageUrl,
+          img1, img2, img3, img4, img5, img6,
+          offer2ImageUrl,
+          rev1Photo, rev2Photo, rev3Photo, rev4Photo,
+        ] = await Promise.all([
+          handleImg(d.businessLogo, "business_logo"),
+          handleImg(d.companyImage, "company_image"),
+          handleImg(d.image1, "gallery_1"),
+          handleImg(d.image2, "gallery_2"),
+          handleImg(d.image3, "gallery_3"),
+          handleImg(d.image4, "gallery_4"),
+          handleImg(d.image5, "gallery_5"),
+          handleImg(d.image6, "gallery_6"),
+          handleImg(d.offer2Image, "offer_2_image"),
+          handleImg(d.review1Photo, "review_1_photo"),
+          handleImg(d.review2Photo, "review_2_photo"),
+          handleImg(d.review3Photo, "review_3_photo"),
+          handleImg(d.review4Photo, "review_4_photo"),
+        ]);
+
+        const exactUpdates: Record<string, string> = {
+          [CV.companyLogo]: businessLogoUrl,
+          "homeflow_business_logo": businessLogoUrl,
+          "quote_title": d.quoteTitle ?? "",
+          [CV.companyDescription]: d.bioText ?? "",
+          [CV.companyImage]: companyImageUrl,
+          "leads_line_item_2": d.offer2Title ?? "2 Weeks FREE",
+          "leads_line_item_description_2": d.offer2Description ?? "",
+          "leads_line_item_image_2": offer2ImageUrl,
+          "discountfree_offer_for_reengagement_campaigns": d.offer2Title ?? "2 Weeks FREE",
+          [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically ? "true" : "false",
+          [CV.tosLink]: d.tosLink ?? "",
+          [CV.showCardSection]: d.showCardSection ? "true" : "false",
+          [CV.image1]: img1,
+          [CV.image2]: img2,
+          [CV.image3]: img3,
+          [CV.image4]: img4,
+          [CV.image5]: img5,
+          "image_6": img6,
+          [CV.review1]: d.review1 ?? "",
+          [CV.review1Name]: d.review1Name ?? "",
+          [CV.review1Photo]: rev1Photo,
+          [CV.review2]: d.review2 ?? "",
+          [CV.review2Name]: d.review2Name ?? "",
+          [CV.review2Photo]: rev2Photo,
+          [CV.review3]: d.review3 ?? "",
+          [CV.review3Name]: d.review3Name ?? "",
+          [CV.review3Photo]: rev3Photo,
+          [CV.review4]: d.review4 ?? "",
+          [CV.review4Name]: d.review4Name ?? "",
+          [CV.review4Photo]: rev4Photo,
+        };
+
+        await updateExistingCustomValuesOnly(locationId, exactUpdates);
+      }
+
+      return { success: true };
     }),
 });
