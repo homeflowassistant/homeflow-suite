@@ -25,6 +25,8 @@ interface ReviewConfirmProps {
         | "quick-send";
   /** If set, the tag picker is hidden and the tag is locked */
   fixedTag?: boolean;
+  /** Indicates the flow context. "quick-add" surfaces Quick Add–specific messaging. */
+  flowContext?: "quick-add";
   onBack: () => void;
   onComplete: () => void;
 }
@@ -35,9 +37,11 @@ export default function ReviewConfirm({
   locationId,
   tagName,
   fixedTag = false,
+  flowContext,
   onBack,
   onComplete,
 }: ReviewConfirmProps) {
+  const isQuickAdd = flowContext === "quick-add";
   const [dnd, setDnd] = useState(false);
   const [consent, setConsent] = useState(false);
   const [selectedTag, setSelectedTag] = useState(tagName);
@@ -150,11 +154,17 @@ export default function ReviewConfirm({
     <div className="space-y-6">
       <div>
         <h3 className="text-base font-semibold text-foreground">
-          Review & Confirm
+          {isQuickAdd ? "Upload and Send" : "Review & Confirm"}
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Review your settings before uploading
-        </p>
+        {isQuickAdd ? (
+          <p className="text-sm text-muted-foreground mt-1">
+            The contacts in your uploaded file will receive the SMS campaign once the upload is completed.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-1">
+            Review your settings before uploading
+          </p>
+        )}
       </div>
 
       {/* Summary Card */}

@@ -378,6 +378,7 @@ function ContactSelectionModal({
               <CSVUploadFlow
                 locationId={locationId}
                 fixedTag="quick-send"
+                flowContext="quick-add"
               />
             </div>
           )}
