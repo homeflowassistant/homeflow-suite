@@ -607,7 +607,7 @@ export default function QuickSendPage() {
                 ) : (
                   <>
                     <Save size={18} />
-                    Save and Send
+                    Save and Send to...
                   </>
                 )}
               </button>
