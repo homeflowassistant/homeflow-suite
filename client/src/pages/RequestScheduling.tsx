@@ -350,24 +350,36 @@ export default function RequestScheduling() {
           <div className="rs-timeline-redesigned">
             {/* First row: Day 1 → Day 3 → Day 5 → Day 8 → Day 12 → Day 26 */}
             <div className="rs-timeline-row">
-              {FIRST_ROW.map((step) => (
+              {FIRST_ROW.map((step, idx) => (
                 <div key={step.day} className="rs-timeline-row-inner">
                   <div className="rs-timeline-step">
                     <span className="rs-timeline-step-day">{step.day}</span>
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
+                  {idx < FIRST_ROW.length - 1 && (
+                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    </svg>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Second row: Day 60 → Day 90 → Day 180 → Day 270 → Day 360 */}
-            <div className="rs-timeline-row">
-              {SECOND_ROW.map((step) => (
+            <div className="rs-timeline-row" style={{ marginTop: 12 }}>
+              {SECOND_ROW.map((step, idx) => (
                 <div key={step.day} className="rs-timeline-row-inner">
                   <div className="rs-timeline-step">
                     <span className="rs-timeline-step-day">{step.day}</span>
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
+                  {idx < SECOND_ROW.length - 1 && (
+                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    </svg>
+                  )}
                 </div>
               ))}
             </div>

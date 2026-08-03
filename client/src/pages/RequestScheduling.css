@@ -385,11 +385,9 @@
 .rs-timeline-row-inner {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
 }
-
-/* Note: .rs-timeline-dashed-arrow and .rs-timeline-curve-connector removed — no longer used */
 
 .rs-timeline-step {
   display: flex;
@@ -410,14 +408,23 @@
 }
 
 .rs-timeline-step-label {
-  font-size: 9px;
-  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
   text-align: center;
-  white-space: pre-line;
+  background: #ffffff;
+  border: 1.5px solid #1e3a8a;
+  border-radius: 8px;
+  padding: 6px 12px;
   line-height: 1.3;
 }
 
-/* .rs-timeline-dashed-arrow and .rs-timeline-curve-connector styles removed */
+/* ─── Dashed Arrow (long tail) ─── */
+.rs-dashed-arrow {
+  width: 120px;
+  height: 20px;
+  flex-shrink: 0;
+}
 
 /* ─── Templates Section ─── */
 .rs-templates-section {
