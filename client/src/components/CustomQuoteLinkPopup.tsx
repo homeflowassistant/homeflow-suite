@@ -512,7 +512,7 @@ function QuoteFormFields({
       </div>
 
       {/* ── Company Logo ── */}
-      <div>
+      <div className="flex justify-center">
         <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
         <div className="mt-1 flex items-center gap-3">
           {formData.companyLogo ? (
