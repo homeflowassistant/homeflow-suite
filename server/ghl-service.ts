@@ -850,28 +850,6 @@ export async function createContact(
 ): Promise<GHLCreateContactResponse> {
   const accessToken = await getValidAccessToken(locationId);
 
-  const ghlPayload = {
-    firstName: contact.firstName,
-    lastName: contact.lastName,
-    name: `${contact.firstName} ${contact.lastName}`.trim(),
-    email: contact.email || undefined,
-    phone: contact.phone || undefined,
-    address1: contact.address1 || undefined,
-    city: contact.city || undefined,
-    state: contact.state || undefined,
-    postalCode: contact.postalCode || undefined,
-    locationId,
-    dnd: contact.dnd || false,
-    source: "Royal Review - Add Contacts",
-    tags: contact.tagName ? [contact.tagName] : undefined,
-    customFields: contact.customFields
-      ?.map((field) => ({
-        key: field.fieldKey,
-        fieldValue: field.fieldValue,
-      }))
-      .filter((field) => String(field.fieldValue ?? "").trim() !== ""),
-  };
-
   // ── Step 1: Search for an existing contact by email or phone ──
   const query = (contact.email || contact.phone || "").trim();
   let existingContactId: string | null = null;
@@ -915,73 +893,209 @@ export async function createContact(
     }
   }
 
-  // ── Step 2: If existing contact found, update it; otherwise create new ──
+  // ── Step 2: If existing contact found, use v3 upsert endpoint; otherwise create new ──
   if (existingContactId) {
-    // Use PUT to update the existing contact
-    const updatePayload = {
-      ...ghlPayload,
-      tags: contact.tagName ? [contact.tagName] : undefined,
+    const upsertPayload = {
+      locationId,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email || undefined,
+      phone: contact.phone || undefined,
+      address1: contact.address1 || undefined,
+      city: contact.city || undefined,
+      state: contact.state || undefined,
+      postalCode: contact.postalCode || undefined,
+      dnd: contact.dnd || false,
+      source: "Royal Review - Add Contacts",
+      customFields: contact.customFields
+        ?.map((field) => ({
+          id: field.fieldKey,
+          field_value: field.fieldValue,
+        }))
+        .filter((field) => String(field.field_value ?? "").trim() !== ""),
     };
 
-    console.log("[GHL DEBUG] updateContact payload (existing):", JSON.stringify({ id: existingContactId, ...updatePayload }, null, 2));
+    console.log("[GHL DEBUG] Upserting existing contact:", JSON.stringify({ contactId: existingContactId, ...upsertPayload }, null, 2));
 
-    const updateResp = await fetch(`${GHL_BASE_URL}/contacts/${existingContactId}`, {
-      method: "PUT",
+    // Use v3 upsert endpoint — requires Version: v3
+    const upsertResp = await fetch(`${GHL_BASE_URL}/contacts/upsert`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
-        Version: GHL_API_VERSION,
+        Version: "v3",
       },
-      body: JSON.stringify(updatePayload),
+      body: JSON.stringify(upsertPayload),
     });
 
-    if (!updateResp.ok) {
-      const errorBody = await updateResp.json().catch(() => ({}));
-      throw new Error(
-        (errorBody as Record<string, string>).message ||
-          `Failed to update contact: ${updateResp.status}`
-      );
+    if (!upsertResp.ok) {
+      const errorBody = await upsertResp.json().catch(() => ({}));
+      const msg = (errorBody as Record<string, string>).message || `Failed to upsert contact: ${upsertResp.status}`;
+      console.error(`[GHL DEBUG] Upsert failed: ${msg}`);
+
+      // Fallback: try PUT on the specific contact ID if upsert fails
+      console.log("[GHL DEBUG] Falling back to PUT /contacts/{id}");
+      const fallbackPayload = {
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        name: `${contact.firstName} ${contact.lastName}`.trim(),
+        email: contact.email || undefined,
+        phone: contact.phone || undefined,
+        address1: contact.address1 || undefined,
+        city: contact.city || undefined,
+        state: contact.state || undefined,
+        postalCode: contact.postalCode || undefined,
+        dnd: contact.dnd || false,
+      };
+
+      const putResp = await fetch(`${GHL_BASE_URL}/contacts/${existingContactId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+        body: JSON.stringify(fallbackPayload),
+      });
+
+      if (!putResp.ok) {
+        const putErrorBody = await putResp.json().catch(() => ({}));
+        throw new Error(
+          (putErrorBody as Record<string, string>).message ||
+            `Failed to update contact: ${putResp.status}`
+        );
+      }
+
+      const putResult = (await putResp.json()) as Record<string, any>;
+      const updatedContact = putResult.contact || putResult;
+      return {
+        contact: {
+          id: existingContactId,
+          firstName: updatedContact.firstName || contact.firstName,
+          lastName: updatedContact.lastName || contact.lastName,
+          email: updatedContact.email || contact.email || "",
+          phone: updatedContact.phone || contact.phone || "",
+          locationId,
+          dnd: contact.dnd || false,
+        },
+      };
     }
 
-    const updateResult = (await updateResp.json()) as Record<string, any>;
-    const updatedContact = updateResult.contact || updateResult;
+    const upsertResult = (await upsertResp.json()) as Record<string, any>;
+    const upsertedContact = upsertResult.contact || upsertResult;
     return {
       contact: {
         id: existingContactId,
-        firstName: updatedContact.firstName || contact.firstName,
-        lastName: updatedContact.lastName || contact.lastName,
-        email: updatedContact.email || contact.email || "",
-        phone: updatedContact.phone || contact.phone || "",
+        firstName: upsertedContact.firstName || contact.firstName,
+        lastName: upsertedContact.lastName || contact.lastName,
+        email: upsertedContact.email || contact.email || "",
+        phone: upsertedContact.phone || contact.phone || "",
         locationId,
         dnd: contact.dnd || false,
       },
     };
   }
 
-  // ── Step 3: No existing contact found — create new ──
-  console.log("[GHL DEBUG] createContact payload (new):", JSON.stringify(ghlPayload, null, 2));
+  // ── Step 3: No existing contact found — create new via v3 upsert (also handles dedup) ──
+  const createPayload = {
+    locationId,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    email: contact.email || undefined,
+    phone: contact.phone || undefined,
+    address1: contact.address1 || undefined,
+    city: contact.city || undefined,
+    state: contact.state || undefined,
+    postalCode: contact.postalCode || undefined,
+    dnd: contact.dnd || false,
+    source: "Royal Review - Add Contacts",
+    customFields: contact.customFields
+      ?.map((field) => ({
+        id: field.fieldKey,
+        field_value: field.fieldValue,
+      }))
+      .filter((field) => String(field.field_value ?? "").trim() !== ""),
+  };
 
-  const response = await fetch(`${GHL_BASE_URL}/contacts/`, {
+  console.log("[GHL DEBUG] Creating new contact via upsert:", JSON.stringify(createPayload, null, 2));
+
+  // Use v3 upsert endpoint for both create and update — it handles dedup automatically
+  const response = await fetch(`${GHL_BASE_URL}/contacts/upsert`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
-      Version: GHL_API_VERSION,
+      Version: "v3",
     },
-    body: JSON.stringify(ghlPayload),
+    body: JSON.stringify(createPayload),
   });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorBody as Record<string, string>).message ||
-        `Failed to create contact: ${response.status}`
-    );
+    const msg = (errorBody as Record<string, string>).message || `Failed to create contact: ${response.status}`;
+    console.error(`[GHL DEBUG] Upsert create failed: ${msg}`);
+
+    // Fallback to v1 POST if v3 upsert fails
+    const v1Payload = {
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      name: `${contact.firstName} ${contact.lastName}`.trim(),
+      email: contact.email || undefined,
+      phone: contact.phone || undefined,
+      address1: contact.address1 || undefined,
+      city: contact.city || undefined,
+      state: contact.state || undefined,
+      postalCode: contact.postalCode || undefined,
+      locationId,
+      dnd: contact.dnd || false,
+      source: "Royal Review - Add Contacts",
+      tags: contact.tagName ? [contact.tagName] : undefined,
+      customFields: contact.customFields
+        ?.map((field) => ({
+          key: field.fieldKey,
+          fieldValue: field.fieldValue,
+        }))
+        .filter((field) => String(field.fieldValue ?? "").trim() !== ""),
+    };
+
+    const fallbackResp = await fetch(`${GHL_BASE_URL}/contacts/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify(v1Payload),
+    });
+
+    if (!fallbackResp.ok) {
+      const fallbackErrorBody = await fallbackResp.json().catch(() => ({}));
+      throw new Error(
+        (fallbackErrorBody as Record<string, string>).message ||
+          `Failed to create contact: ${fallbackResp.status}`
+      );
+    }
+
+    return fallbackResp.json() as Promise<GHLCreateContactResponse>;
   }
 
-  return response.json() as Promise<GHLCreateContactResponse>;
+  const createResult = (await response.json()) as Record<string, any>;
+  const createdContact = createResult.contact || createResult;
+  return {
+    contact: {
+      id: createdContact.id || "",
+      firstName: createdContact.firstName || contact.firstName,
+      lastName: createdContact.lastName || contact.lastName,
+      email: createdContact.email || contact.email || "",
+      phone: createdContact.phone || contact.phone || "",
+      locationId,
+      dnd: contact.dnd || false,
+    },
+  };
 }
 
 export async function addTagToContact(
