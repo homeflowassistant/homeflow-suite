@@ -42,11 +42,13 @@ interface CSVUploadFlowProps {
   locationId: string;
   /** If set, the tag is locked to this value and the tag picker is hidden */
   fixedTag?: "new lead (via homeflow)" | "homeflow: inactive customer" | "add-on-campaign" | "quick-send";
+  /** Optional callback invoked when the entire upload flow completes (dialog closed) */
+  onFlowComplete?: () => void;
   /** Indicates the flow context (e.g. "quick-add" for the Quick Add page) */
   flowContext?: "quick-add";
 }
 
-export default function CSVUploadFlow({ locationId, fixedTag, flowContext }: CSVUploadFlowProps) {
+export default function CSVUploadFlow({ locationId, fixedTag, flowContext, onFlowComplete }: CSVUploadFlowProps) {
   const [step, setStep] = useState<FlowStep>("upload");
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
@@ -78,6 +80,7 @@ export default function CSVUploadFlow({ locationId, fixedTag, flowContext }: CSV
     setParsedCSV(null);
     setMapping(null);
     setDialogOpen(false);
+    if (onFlowComplete) onFlowComplete();
   };
 
   const handleDialogClose = (open: boolean) => {

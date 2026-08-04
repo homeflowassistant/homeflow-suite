@@ -379,6 +379,7 @@ function ContactSelectionModal({
                 locationId={locationId}
                 fixedTag="quick-send"
                 flowContext="quick-add"
+                onFlowComplete={() => onClose()}
               />
             </div>
           )}
