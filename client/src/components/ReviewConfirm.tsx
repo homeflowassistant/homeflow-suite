@@ -280,7 +280,7 @@ export default function ReviewConfirm({
           className="gap-2"
         >
           <Upload className="h-4 w-4" />
-          {isUploading ? `Uploading... ${progress}%` : "Upload Contacts"}
+          {isUploading ? `Uploading... ${progress}%` : "Upload And Send"}
         </Button>
       </div>
     </div>

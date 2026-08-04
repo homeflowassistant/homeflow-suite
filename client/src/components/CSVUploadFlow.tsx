@@ -89,7 +89,7 @@ export default function CSVUploadFlow({ locationId, fixedTag, flowContext }: CSV
     setDialogOpen(open);
   };
 
-  const stepTitle = "Add Contacts to Review Harvest via CSV upload";
+  const stepTitle = "Add Contacts to HomeFlow Suite via CSV upload";
 
   return (
     <>
