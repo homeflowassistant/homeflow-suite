@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Clock3, Link2 } from "lucide-react";
+import { Clock3, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import ReactivationQuotePopup from "@/components/ReactivationQuotePopup";
@@ -129,6 +129,23 @@ export default function ReactivationPage() {
   const handleQuoteSaveSuccess = () => {
     setSelectedOption("Custom Quote & Link");
     settingsQuery.refetch();
+  };
+
+  // Redirect handlers for Email / SMS template buttons
+  const handleGoToEmailTemplates = () => {
+    window.open(
+      `https://app.royalreview.io/v2/location/${locationId}/marketing/emails/all?pageNumber=1`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
+  const handleGoToSmsTemplates = () => {
+    window.open(
+      `https://app.royalreview.io/v2/location/${locationId}/conversations/templates?tab=folders&page=1&size=20`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   // ── Missing locationId guard ─────────────────────────────────────────
@@ -261,7 +278,7 @@ export default function ReactivationPage() {
           </div>
         </section>
 
-        {/* ── Redesigned Timeline (matching Follow-Up page) ── */}
+        {/* ─── Timeline with two rows ─── */}
         <section className="rs-card rs-timeline-section reac-card">
           <h2 className="rs-title">Timeline</h2>
           <div className="rs-timeline-redesigned">
@@ -274,27 +291,17 @@ export default function ReactivationPage() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < FIRST_ROW.length - 1 && (
-                    <ArrowRight className="rs-timeline-dashed-arrow" />
+                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    </svg>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Curved connector from Day 26 (end of row 1) to Day 60 (start of row 2) */}
-            <div className="rs-timeline-curve-connector">
-              <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="rs-timeline-curve-svg">
-                <path
-                  d="M 0 0 C 30 0, 70 60, 100 60"
-                  fill="none"
-                  stroke="var(--primary)"
-                  strokeWidth="2"
-                  strokeDasharray="6 4"
-                />
-              </svg>
-            </div>
-
             {/* Second row: Day 60 → Day 90 → Day 180 → Day 270 → Day 360 */}
-            <div className="rs-timeline-row">
+            <div className="rs-timeline-row" style={{ marginTop: 12 }}>
               {SECOND_ROW.map((step, idx) => (
                 <div key={step.day} className="rs-timeline-row-inner">
                   <div className="rs-timeline-step">
@@ -302,10 +309,39 @@ export default function ReactivationPage() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < SECOND_ROW.length - 1 && (
-                    <ArrowRight className="rs-timeline-dashed-arrow" />
+                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
+                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    </svg>
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Workflow Templates Block ─── */}
+        <section className="rs-card rs-templates-section reac-card">
+          <div className="rs-templates-content">
+            <p className="rs-templates-text">
+              Would you like to view your workflow templates?<br />
+              You will be redirected to a new page. Please save any changes on this page before continuing.
+            </p>
+            <div className="rs-templates-buttons">
+              <button
+                type="button"
+                className="rs-templates-btn rs-templates-btn-email"
+                onClick={handleGoToEmailTemplates}
+              >
+                Email Templates
+              </button>
+              <button
+                type="button"
+                className="rs-templates-btn rs-templates-btn-sms"
+                onClick={handleGoToSmsTemplates}
+              >
+                SMS Templates
+              </button>
             </div>
           </div>
         </section>

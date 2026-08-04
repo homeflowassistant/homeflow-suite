@@ -102,6 +102,7 @@ const customQuoteDataSchema = z.object({
   businessName: z.string().optional(),
   businessOwnerName: z.string().optional(),
   // Bio text is saved to BOTH quote_title and company_description
+  quoteTitle: z.string().optional(),
   bioText: z.string().optional(),
   companyImage: z.string().optional(),
   discountOffer: z.string().optional(),
@@ -121,6 +122,7 @@ const customQuoteDataSchema = z.object({
   image3: z.string().optional(),
   image4: z.string().optional(),
   image5: z.string().optional(),
+  image6: z.string().optional(),
   review1: z.string().optional(),
   review1Photo: z.string().optional(),
   review1Name: z.string().optional(),
