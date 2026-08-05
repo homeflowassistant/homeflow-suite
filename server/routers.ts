@@ -7,6 +7,7 @@ import { requestSchedulingRouter } from "./routers/requestScheduling";
 import { reactivationRouter } from "./routers/reactivation";
 import { addOnCampaignRouter } from "./routers/addOnCampaign";
 import { quickSendRouter } from "./routers/quickSend";
+import { contactsRouter } from "./routers/contacts";
 
 export const appRouter = router({
   system: systemRouter,
@@ -27,6 +28,7 @@ export const appRouter = router({
   reactivation: reactivationRouter,
   addOnCampaign: addOnCampaignRouter,
   quickSend: quickSendRouter,
+  contacts: contactsRouter,
 });
 
 export type AppRouter = typeof appRouter;
