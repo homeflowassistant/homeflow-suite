@@ -1,13 +1,11 @@
-import { useMemo, useState, useCallback } from "react";
-import { Search } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { Search, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import ContactTable from "@/components/ContactTable";
 import Pagination from "@/components/Pagination";
-import type { ContactWithStatus } from "../../../server/routers/contacts";
 import "./ContactsPage.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -23,19 +21,28 @@ const PAGE_SIZE = 50;
 
 export default function ContactsPage() {
   const locationId = useLocationId();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Debounce search input
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
-    const timer = setTimeout(() => {
-      setDebouncedSearch(value.trim());
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      const trimmed = value.trim();
+      setDebouncedSearch(trimmed);
       setPage(1); // Reset to first page on new search
     }, 400);
-    return () => clearTimeout(timer);
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
   }, []);
 
   // tRPC query for fetching contacts
@@ -54,36 +61,15 @@ export default function ContactsPage() {
     }
   );
 
-  // Optimistic update: replace a single contact in the query cache
-  const handleContactUpdated = useCallback(
-    (updated: ContactWithStatus) => {
-      queryClient.setQueryData(
-        ["contacts", "getContacts", {
-          locationId,
-          search: debouncedSearch || undefined,
-          page,
-          pageSize: PAGE_SIZE,
-        }],
-        (prev: any) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            contacts: prev.contacts.map((c: ContactWithStatus) =>
-              c.id === updated.id ? updated : c
-            ),
-          };
-        }
-      );
-    },
-    [queryClient, locationId, debouncedSearch, page]
-  );
-
-  // Full refresh: invalidate the query and refetch all data
-  const handleFullRefresh = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: ["contacts", "getContacts"],
-    });
-  }, [queryClient]);
+  // Full refresh: directly refetch the query (established pattern in this codebase)
+  const handleFullRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await contactsQuery.refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [contactsQuery]);
 
   const contacts = contactsQuery.data?.contacts || [];
   const totalItems = contactsQuery.data?.total || 0;
@@ -115,7 +101,19 @@ export default function ContactsPage() {
     <div className="ghl-page">
       <div className="ghl-inner contacts-page-inner">
         {/* Page title */}
-        <h1 className="contacts-page-title">All Contacts</h1>
+        <div className="flex items-center justify-between mb-5">
+          <h1 className="contacts-page-title">All Contacts</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleFullRefresh}
+            disabled={isRefreshing || contactsQuery.isLoading}
+            className="gap-1.5 text-sm"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
 
         {/* Main card containing the table */}
         <Card className="contacts-table-card">
@@ -125,7 +123,7 @@ export default function ContactsPage() {
               <Search className="h-4 w-4 text-slate-400 shrink-0" />
               <Input
                 type="text"
-                placeholder="Search contacts by email..."
+                placeholder="Search contacts by email, name, or phone..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="h-9 pl-2 pr-3 text-sm border-slate-200 focus-visible:ring-cyan-400"
@@ -144,7 +142,6 @@ export default function ContactsPage() {
                   : null
               }
               locationId={locationId}
-              onContactUpdated={handleContactUpdated}
               onFullRefresh={handleFullRefresh}
             />
           </div>

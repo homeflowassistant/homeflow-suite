@@ -7,7 +7,6 @@ interface ContactTableProps {
   loading: boolean;
   error: string | null;
   locationId: string;
-  onContactUpdated: (updated: ContactWithStatus) => void;
   onFullRefresh: () => void;
 }
 
@@ -16,7 +15,6 @@ export default function ContactTable({
   loading,
   error,
   locationId,
-  onContactUpdated,
   onFullRefresh,
 }: ContactTableProps) {
   // Error state
@@ -95,7 +93,6 @@ export default function ContactTable({
               contact={contact}
               index={index}
               locationId={locationId}
-              onContactUpdated={onContactUpdated}
               onFullRefresh={onFullRefresh}
             />
           ))}

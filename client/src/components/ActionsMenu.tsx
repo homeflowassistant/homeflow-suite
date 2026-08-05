@@ -14,7 +14,6 @@ interface ActionsMenuProps {
   locationId: string;
   isDnd: boolean;
   className?: string;
-  onContactUpdated: (updated: ContactWithStatus) => void;
   onFullRefresh: () => void;
 }
 
@@ -27,7 +26,6 @@ export default function ActionsMenu({
   locationId,
   isDnd,
   className,
-  onContactUpdated,
   onFullRefresh,
 }: ActionsMenuProps) {
   const [open, setOpen] = useState(false);
@@ -50,10 +48,10 @@ export default function ActionsMenu({
 
   // Toggle DND mutation
   const toggleDndMutation = trpc.contacts.toggleDnd.useMutation({
-    onSuccess: (data) => {
-      const status = data.dndEnabled ? "enabled" : "disabled";
+    onSuccess: () => {
+      const newDnd = !isDnd;
+      const status = newDnd ? "enabled" : "disabled";
       toast.success(`DND ${status} for ${contactName}`);
-      onContactUpdated(data.contact);
       onFullRefresh();
     },
     onError: (err) => {
@@ -179,11 +177,8 @@ export default function ActionsMenu({
           onClose={() => setActiveAction(null)}
           contact={contact}
           locationId={locationId}
-          onUpdated={(updated) => {
-            onContactUpdated(updated);
-            onFullRefresh();
-            setActiveAction(null);
-          }}
+          onUpdated={() => setActiveAction(null)}
+          onFullRefresh={onFullRefresh}
         />
       )}
 
@@ -194,9 +189,7 @@ export default function ActionsMenu({
           onClose={() => setActiveAction(null)}
           contact={contact}
           locationId={locationId}
-          onUpdated={(updated) => {
-            onContactUpdated(updated);
-          }}
+          onUpdated={() => {}}
           onFullRefresh={onFullRefresh}
         />
       )}

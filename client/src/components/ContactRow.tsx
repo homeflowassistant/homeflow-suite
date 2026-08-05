@@ -7,7 +7,6 @@ interface ContactRowProps {
   contact: ContactWithStatus;
   index: number;
   locationId: string;
-  onContactUpdated: (updated: ContactWithStatus) => void;
   onFullRefresh: () => void;
 }
 
@@ -35,7 +34,6 @@ export default function ContactRow({
   contact,
   index,
   locationId,
-  onContactUpdated,
   onFullRefresh,
 }: ContactRowProps) {
   return (
@@ -88,7 +86,6 @@ export default function ContactRow({
           contact={contact}
           locationId={locationId}
           isDnd={contact.dnd}
-          onContactUpdated={onContactUpdated}
           onFullRefresh={onFullRefresh}
         />
       </td>

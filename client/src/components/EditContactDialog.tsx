@@ -20,6 +20,7 @@ interface EditContactDialogProps {
   contact: ContactWithStatus;
   locationId: string;
   onUpdated: (updated: ContactWithStatus) => void;
+  onFullRefresh: () => void;
 }
 
 export default function EditContactDialog({
@@ -28,6 +29,7 @@ export default function EditContactDialog({
   contact,
   locationId,
   onUpdated,
+  onFullRefresh,
 }: EditContactDialogProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -49,6 +51,7 @@ export default function EditContactDialog({
     onSuccess: (data) => {
       toast.success("Contact updated successfully");
       onUpdated(data.contact);
+      onFullRefresh();
       onClose();
     },
     onError: (err) => {

@@ -78,6 +78,7 @@ export default function ManageTagsDialog({
       toast.success("Tag added successfully");
       setContactTags(data.contact.tags);
       onUpdated(data.contact);
+      onFullRefresh();
       setIsAdding(null);
     },
     onError: (err) => {
@@ -91,6 +92,7 @@ export default function ManageTagsDialog({
       toast.success("Tag removed successfully");
       setContactTags(data.contact.tags);
       onUpdated(data.contact);
+      onFullRefresh();
       setIsRemoving(null);
     },
     onError: (err) => {

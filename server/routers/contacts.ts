@@ -194,14 +194,26 @@ async function searchContacts(
   page: number,
   pageSize: number
 ): Promise<{ contacts: GHLContact[]; total: number; page: number; pageSize: number }> {
+  // GHL search endpoint supports multiple fields. We search by query across
+  // all searchable fields. The API supports case-insensitive matching.
   const url = `${GHL_BASE_URL}/contacts/search`;
 
   const resp = await fetch(url, {
     method: "POST",
     headers: ghlHeaders(accessToken),
     body: JSON.stringify({
-      locationId,
-      searchText: query,
+      query: { locationId },
+      type: "contact",
+      filters: [
+        { group: "OR", filters: [
+          { field: "email", operator: "contains", value: query },
+          { field: "name", operator: "contains", value: query },
+          { field: "phone", operator: "contains", value: query },
+          { field: "firstName", operator: "contains", value: query },
+          { field: "lastName", operator: "contains", value: query },
+        ]},
+      ],
+      sort: [{ field: "dateAdded", direction: "desc" }],
       page,
       limit: pageSize,
     }),
@@ -216,11 +228,12 @@ async function searchContacts(
   }
 
   const data = (await resp.json()) as any;
-  const contacts = (data.contacts || []).map(normalizeContact);
+  const contacts = (data.contacts || data.data?.contacts || []).map(normalizeContact);
+  const total = data.totalCount || data.data?.totalCount || contacts.length;
 
   return {
     contacts,
-    total: data.totalCount || contacts.length,
+    total,
     page,
     pageSize,
   };
@@ -564,11 +577,9 @@ export const contactsRouter = router({
       const locationId = input.locationId.trim();
       const accessToken = await getValidAccessToken(locationId);
 
-      // Try multiple endpoint patterns for fetching tags
-      const endpoints = [
-        `${GHL_BASE_URL}/tags?locationId=${encodeURIComponent(locationId)}`,
-        `${GHL_BASE_URL}/tags/?locationId=${encodeURIComponent(locationId)}`,
-      ];
+      // Correct GHL endpoint: GET /locations/:locationId/tags
+      const url = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/tags`;
+      const endpoints = [url];
 
       let lastError = "";
       for (const url of endpoints) {
