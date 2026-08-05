@@ -549,4 +549,98 @@ export const contactsRouter = router({
         contact: await fetchContactById(locationId, accessToken, contactId),
       };
     }),
+
+  /**
+   * Fetch all tags available in the GHL account/location.
+   * Used to populate the tag selection dropdown in the Manage Tags dialog.
+   */
+  getAccountTags: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+      })
+    )
+    .query(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+
+      // Try multiple endpoint patterns for fetching tags
+      const endpoints = [
+        `${GHL_BASE_URL}/tags?locationId=${encodeURIComponent(locationId)}`,
+        `${GHL_BASE_URL}/tags/?locationId=${encodeURIComponent(locationId)}`,
+      ];
+
+      let lastError = "";
+      for (const url of endpoints) {
+        try {
+          const resp = await fetch(url, {
+            method: "GET",
+            headers: ghlHeaders(accessToken),
+          });
+
+          if (resp.ok) {
+            const data = (await resp.json()) as any;
+            const tags: string[] = [];
+
+            // Handle different response shapes
+            if (Array.isArray(data)) {
+              data.forEach((t: any) => {
+                const name = typeof t === "string" ? t : t?.name || t?.tagName || "";
+                if (name) tags.push(name);
+              });
+            } else if (Array.isArray(data.tags)) {
+              data.tags.forEach((t: any) => {
+                const name = typeof t === "string" ? t : t?.name || t?.tagName || "";
+                if (name) tags.push(name);
+              });
+            }
+
+            // Deduplicate and sort alphabetically
+            return {
+              tags: Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b)),
+            };
+          }
+
+          const body = await resp.text();
+          lastError = `${resp.status} ${body} (${url})`;
+        } catch (err: any) {
+          lastError = String(err?.message ?? err);
+        }
+      }
+
+      // If all endpoints fail, return empty array with a warning
+      console.warn(`Failed to fetch account tags: ${lastError}`);
+      return { tags: [] };
+    }),
+
+  /**
+   * Delete a contact from GHL.
+   */
+  deleteContact: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+      const contactId = input.contactId.trim();
+
+      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
+        method: "DELETE",
+        headers: ghlHeaders(accessToken),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to delete contact: ${resp.status} ${body}`,
+        });
+      }
+
+      return { success: true };
+    }),
 });

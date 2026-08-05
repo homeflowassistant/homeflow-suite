@@ -8,6 +8,7 @@ interface ContactTableProps {
   error: string | null;
   locationId: string;
   onContactUpdated: (updated: ContactWithStatus) => void;
+  onFullRefresh: () => void;
 }
 
 export default function ContactTable({
@@ -16,6 +17,7 @@ export default function ContactTable({
   error,
   locationId,
   onContactUpdated,
+  onFullRefresh,
 }: ContactTableProps) {
   // Error state
   if (error) {
@@ -94,6 +96,7 @@ export default function ContactTable({
               index={index}
               locationId={locationId}
               onContactUpdated={onContactUpdated}
+              onFullRefresh={onFullRefresh}
             />
           ))}
         </tbody>

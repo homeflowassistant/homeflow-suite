@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Pencil, Ban, Tags } from "lucide-react";
+import { MoreVertical, Pencil, Ban, Tags, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -15,9 +15,10 @@ interface ActionsMenuProps {
   isDnd: boolean;
   className?: string;
   onContactUpdated: (updated: ContactWithStatus) => void;
+  onFullRefresh: () => void;
 }
 
-type ActionType = "edit" | "tags" | null;
+type ActionType = "edit" | "tags" | "delete" | null;
 
 export default function ActionsMenu({
   contactId,
@@ -27,9 +28,11 @@ export default function ActionsMenu({
   isDnd,
   className,
   onContactUpdated,
+  onFullRefresh,
 }: ActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<ActionType>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -51,9 +54,23 @@ export default function ActionsMenu({
       const status = data.dndEnabled ? "enabled" : "disabled";
       toast.success(`DND ${status} for ${contactName}`);
       onContactUpdated(data.contact);
+      onFullRefresh();
     },
     onError: (err) => {
       toast.error(err.message || "Failed to toggle DND");
+    },
+  });
+
+  // Delete contact mutation
+  const deleteContactMutation = trpc.contacts.deleteContact.useMutation({
+    onSuccess: () => {
+      toast.success(`Contact "${contactName}" deleted successfully`);
+      onFullRefresh();
+      setShowDeleteConfirm(false);
+      setActiveAction(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete contact");
     },
   });
 
@@ -73,6 +90,18 @@ export default function ActionsMenu({
   const handleTags = () => {
     setOpen(false);
     setActiveAction("tags");
+  };
+
+  const handleDeleteClick = () => {
+    setOpen(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteContactMutation.mutate({
+      locationId,
+      contactId,
+    });
   };
 
   return (
@@ -127,6 +156,18 @@ export default function ActionsMenu({
               )}
               {isDnd ? "Disable DND" : "Enable DND"}
             </button>
+
+            {/* Separator */}
+            <div className="my-1 border-t border-slate-100" />
+
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove
+            </button>
           </div>
         )}
       </div>
@@ -140,6 +181,7 @@ export default function ActionsMenu({
           locationId={locationId}
           onUpdated={(updated) => {
             onContactUpdated(updated);
+            onFullRefresh();
             setActiveAction(null);
           }}
         />
@@ -154,9 +196,58 @@ export default function ActionsMenu({
           locationId={locationId}
           onUpdated={(updated) => {
             onContactUpdated(updated);
-            setActiveAction(null);
           }}
+          onFullRefresh={onFullRefresh}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
+              Delete Contact
+            </h3>
+            <p className="text-sm text-slate-600 text-center mb-6">
+              Are you sure you want to delete <strong>{contactName}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                disabled={deleteContactMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteContactMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleteContactMutation.isPending ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

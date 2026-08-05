@@ -8,6 +8,7 @@ interface ContactRowProps {
   index: number;
   locationId: string;
   onContactUpdated: (updated: ContactWithStatus) => void;
+  onFullRefresh: () => void;
 }
 
 function formatDisplayName(contact: ContactWithStatus): string {
@@ -35,6 +36,7 @@ export default function ContactRow({
   index,
   locationId,
   onContactUpdated,
+  onFullRefresh,
 }: ContactRowProps) {
   return (
     <tr
@@ -87,6 +89,7 @@ export default function ContactRow({
           locationId={locationId}
           isDnd={contact.dnd}
           onContactUpdated={onContactUpdated}
+          onFullRefresh={onFullRefresh}
         />
       </td>
     </tr>

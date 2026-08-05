@@ -54,7 +54,7 @@ export default function ContactsPage() {
     }
   );
 
-  // Optimistic update helper: replace a contact in the cached data
+  // Optimistic update: replace a single contact in the query cache
   const handleContactUpdated = useCallback(
     (updated: ContactWithStatus) => {
       queryClient.setQueryData(
@@ -77,6 +77,13 @@ export default function ContactsPage() {
     },
     [queryClient, locationId, debouncedSearch, page]
   );
+
+  // Full refresh: invalidate the query and refetch all data
+  const handleFullRefresh = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: ["contacts", "getContacts"],
+    });
+  }, [queryClient]);
 
   const contacts = contactsQuery.data?.contacts || [];
   const totalItems = contactsQuery.data?.total || 0;
@@ -138,6 +145,7 @@ export default function ContactsPage() {
               }
               locationId={locationId}
               onContactUpdated={handleContactUpdated}
+              onFullRefresh={handleFullRefresh}
             />
           </div>
 
