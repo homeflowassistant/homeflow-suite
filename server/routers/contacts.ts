@@ -3,7 +3,11 @@
  *
  * Provides:
  * - getContacts: Fetch contacts with full details (tags, DND, dateAdded) from GHL
- * - getContactTags: Fetch tags for specific contacts to determine workflow status
+ * - refreshContact: Fetch a single contact enriched with status columns
+ * - updateContact: Update contact fields (name, email, phone) via GHL PUT
+ * - toggleDnd: Enable or disable Do Not Disturb for a contact
+ * - addTag: Add a tag to a contact
+ * - removeTag: Remove a tag from a contact
  */
 
 import { TRPCError } from "@trpc/server";
@@ -15,7 +19,6 @@ const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 
 // ─── Tag names used by the application ─────────────────────────────────
-// These match the tags used in CSVUploadFlow.tsx
 export const CAMPAIGN_TAGS = {
   LEAD_FOLLOWUP_ACTIVE: "new lead (via homeflow)",
   LEAD_FOLLOWUP_COMPLETE: "new lead finished",
@@ -25,12 +28,12 @@ export const CAMPAIGN_TAGS = {
   ADDON_COMPLETE: "add-on-campaign finished",
 } as const;
 
-function ghlHeaders(accessToken: string) {
+function ghlHeaders(accessToken: string, contentType = "application/json") {
   return {
     Authorization: `Bearer ${accessToken}`,
     Version: GHL_API_VERSION,
     Accept: "application/json",
-    "Content-Type": "application/json",
+    "Content-Type": contentType,
   };
 }
 
@@ -65,10 +68,6 @@ export interface ContactWithStatus extends GHLContact {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
-
 function hasTag(tags: string[], targetTag: string): boolean {
   return tags.some(
     (tag) => tag.toLowerCase().trim() === targetTag.toLowerCase().trim()
@@ -91,7 +90,57 @@ function determineStatus(
   return null;
 }
 
+/**
+ * Enrich a normalized contact with status columns.
+ */
+function enrichWithStatus(contact: GHLContact): ContactWithStatus {
+  return {
+    ...contact,
+    leadFollowUpStatus: determineStatus(
+      contact.tags,
+      contact.dnd,
+      CAMPAIGN_TAGS.LEAD_FOLLOWUP_ACTIVE,
+      CAMPAIGN_TAGS.LEAD_FOLLOWUP_COMPLETE
+    ),
+    reactivationStatus: determineStatus(
+      contact.tags,
+      contact.dnd,
+      CAMPAIGN_TAGS.REACTIVATION_ACTIVE,
+      CAMPAIGN_TAGS.REACTIVATION_COMPLETE
+    ),
+    addOnStatus: determineStatus(
+      contact.tags,
+      contact.dnd,
+      CAMPAIGN_TAGS.ADDON_ACTIVE,
+      CAMPAIGN_TAGS.ADDON_COMPLETE
+    ),
+  };
+}
+
 // ─── GHL API Helpers ──────────────────────────────────────────────────
+
+async function fetchContactById(
+  locationId: string,
+  accessToken: string,
+  contactId: string
+): Promise<ContactWithStatus> {
+  const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
+    method: "GET",
+    headers: ghlHeaders(accessToken),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Failed to fetch contact: ${resp.status} ${body}`,
+    });
+  }
+
+  const data = (await resp.json()) as any;
+  const rawContact = data.contact || data;
+  return enrichWithStatus(normalizeContact(rawContact));
+}
 
 async function fetchContacts(
   locationId: string,
@@ -210,8 +259,6 @@ function normalizeContact(c: any): GHLContact {
 export const contactsRouter = router({
   /**
    * Fetch contacts with workflow status information.
-   * Returns contacts enriched with status columns for Lead Follow-Up,
-   * Reactivation, and Add-On based on their GHL tags and DND state.
    */
   getContacts: publicProcedure
     .input(
@@ -234,28 +281,7 @@ export const contactsRouter = router({
         input.search
       );
 
-      // Enrich each contact with status columns
-      const contactsWithStatus: ContactWithStatus[] = result.contacts.map((contact) => ({
-        ...contact,
-        leadFollowUpStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.LEAD_FOLLOWUP_ACTIVE,
-          CAMPAIGN_TAGS.LEAD_FOLLOWUP_COMPLETE
-        ),
-        reactivationStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.REACTIVATION_ACTIVE,
-          CAMPAIGN_TAGS.REACTIVATION_COMPLETE
-        ),
-        addOnStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.ADDON_ACTIVE,
-          CAMPAIGN_TAGS.ADDON_COMPLETE
-        ),
-      }));
+      const contactsWithStatus: ContactWithStatus[] = result.contacts.map(enrichWithStatus);
 
       return {
         contacts: contactsWithStatus,
@@ -267,7 +293,6 @@ export const contactsRouter = router({
 
   /**
    * Refresh a single contact's data by fetching it directly from GHL.
-   * Useful for updating status after tag changes.
    */
   refreshContact: publicProcedure
     .input(
@@ -279,44 +304,249 @@ export const contactsRouter = router({
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
       const accessToken = await getValidAccessToken(locationId);
+      return fetchContactById(locationId, accessToken, input.contactId);
+    }),
 
-      const resp = await fetch(`${GHL_BASE_URL}/contacts/${input.contactId}`, {
-        method: "GET",
+  /**
+   * Update a contact's basic fields (name, email, phone) in GHL.
+   * Uses PUT /contacts/{id} to preserve existing data.
+   */
+  updateContact: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().optional().default(""),
+        email: z.string().optional().default(""),
+        phone: z.string().optional().default(""),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+      const contactId = input.contactId.trim();
+
+      const payload = {
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim() || undefined,
+        name: `${input.firstName.trim()} ${input.lastName.trim()}`.trim() || undefined,
+        email: input.email.trim() || undefined,
+        phone: input.phone.trim() || undefined,
+      };
+
+      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
+        method: "PUT",
         headers: ghlHeaders(accessToken),
+        body: JSON.stringify(payload),
       });
 
       if (!resp.ok) {
         const body = await resp.text();
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch contact: ${resp.status} ${body}`,
+          code: "BAD_REQUEST",
+          message: `Failed to update contact: ${resp.status} ${body}`,
         });
       }
 
       const data = (await resp.json()) as any;
-      const rawContact = data.contact || data;
-      const contact = normalizeContact(rawContact);
+      const updated = data.contact || data;
+      return { success: true, contact: enrichWithStatus(normalizeContact(updated)) };
+    }),
+
+  /**
+   * Toggle Do Not Disturb (DND) status for a contact.
+   */
+  toggleDnd: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+      const contactId = input.contactId.trim();
+
+      // First, fetch the contact to check current DND status
+      const getResp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
+        method: "GET",
+        headers: ghlHeaders(accessToken),
+      });
+
+      if (!getResp.ok) {
+        const body = await getResp.text();
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch contact: ${getResp.status} ${body}`,
+        });
+      }
+
+      const getData = (await getResp.json()) as any;
+      const existingContact = getData.contact || getData;
+      const currentDnd = !!existingContact.dnd;
+      const newDnd = !currentDnd;
+
+      // Update the contact with the toggled DND value
+      const putPayload = {
+        firstName: existingContact.firstName,
+        lastName: existingContact.lastName,
+        name: existingContact.name || `${existingContact.firstName || ""} ${existingContact.lastName || ""}`.trim(),
+        email: existingContact.email || undefined,
+        phone: existingContact.phone || undefined,
+        dnd: newDnd,
+      };
+
+      const putResp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
+        method: "PUT",
+        headers: ghlHeaders(accessToken),
+        body: JSON.stringify(putPayload),
+      });
+
+      if (!putResp.ok) {
+        const body = await putResp.text();
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to toggle DND: ${putResp.status} ${body}`,
+        });
+      }
+
+      const putData = (await putResp.json()) as any;
+      const updatedContact = putData.contact || putData;
+      return {
+        success: true,
+        dndEnabled: newDnd,
+        contact: enrichWithStatus(normalizeContact(updatedContact)),
+      };
+    }),
+
+  /**
+   * Add a tag to a contact.
+   */
+  addTag: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+        tagName: z.string().min(1, "Tag name is required"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+      const contactId = input.contactId.trim();
+
+      // Attempt multiple endpoint patterns for adding tags
+      const endpoints = [
+        {
+          url: `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags`,
+          method: "POST",
+          body: { tags: [input.tagName] },
+        },
+        {
+          url: `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tag`,
+          method: "POST",
+          body: { tag: input.tagName },
+        },
+      ];
+
+      let lastError = "";
+      for (const endpoint of endpoints) {
+        try {
+          const resp = await fetch(endpoint.url, {
+            method: endpoint.method,
+            headers: ghlHeaders(accessToken),
+            body: JSON.stringify(endpoint.body),
+          });
+
+          if (resp.ok) {
+            // Tag added successfully — fetch updated contact
+            return {
+              success: true,
+              contact: await fetchContactById(locationId, accessToken, contactId),
+            };
+          }
+
+          const body = await resp.text();
+          lastError = `${resp.status} ${body} (${endpoint.url})`;
+          if (resp.status !== 404 && resp.status !== 405) break;
+        } catch (err: any) {
+          lastError = String(err?.message ?? err);
+        }
+      }
+
+      // Fallback: create the tag first, then attach by ID
+      try {
+        const createResp = await fetch(`${GHL_BASE_URL}/tags`, {
+          method: "POST",
+          headers: ghlHeaders(accessToken),
+          body: JSON.stringify({ name: input.tagName, locationId }),
+        });
+
+        if (createResp.ok) {
+          const created = (await createResp.json()) as any;
+          const tagId = created.id || created.tagId;
+          if (tagId) {
+            const attachResp = await fetch(
+              `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags/${encodeURIComponent(tagId)}`,
+              {
+                method: "POST",
+                headers: ghlHeaders(accessToken),
+              }
+            );
+
+            if (attachResp.ok) {
+              return {
+                success: true,
+                contact: await fetchContactById(locationId, accessToken, contactId),
+              };
+            }
+          }
+        }
+      } catch {
+        // Fallback also failed
+      }
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to add tag "${input.tagName}" to contact: ${lastError || "All attempts failed"}`,
+      });
+    }),
+
+  /**
+   * Remove a tag from a contact.
+   */
+  removeTag: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        contactId: z.string().min(1),
+        tagName: z.string().min(1, "Tag name is required"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      const accessToken = await getValidAccessToken(locationId);
+      const contactId = input.contactId.trim();
+
+      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags`, {
+        method: "DELETE",
+        headers: ghlHeaders(accessToken),
+        body: JSON.stringify({ tags: [input.tagName] }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to remove tag "${input.tagName}": ${resp.status} ${body}`,
+        });
+      }
 
       return {
-        ...contact,
-        leadFollowUpStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.LEAD_FOLLOWUP_ACTIVE,
-          CAMPAIGN_TAGS.LEAD_FOLLOWUP_COMPLETE
-        ),
-        reactivationStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.REACTIVATION_ACTIVE,
-          CAMPAIGN_TAGS.REACTIVATION_COMPLETE
-        ),
-        addOnStatus: determineStatus(
-          contact.tags,
-          contact.dnd,
-          CAMPAIGN_TAGS.ADDON_ACTIVE,
-          CAMPAIGN_TAGS.ADDON_COMPLETE
-        ),
+        success: true,
+        contact: await fetchContactById(locationId, accessToken, contactId),
       };
     }),
 });

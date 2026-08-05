@@ -62,21 +62,28 @@
   vertical-align: middle;
 }
 
-/* ── Search input area ── */
+/* ── Search input area (positioned at top of card) ── */
 .contacts-search-container {
-  padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
 }
 
 .contacts-search-input {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8fafc;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0 12px;
-  max-width: 400px;
+  max-width: 420px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.contacts-search-input:focus-within {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
 }
 
 .contacts-search-input input {
@@ -97,12 +104,6 @@
   outline: none;
 }
 
-/* ── Footer ── */
-.contacts-footer {
-  display: flex;
-  flex-direction: column;
-}
-
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .contacts-page-title {
@@ -110,9 +111,12 @@
     margin-bottom: 12px;
   }
 
-  .contacts-footer {
-    flex-direction: column;
-    align-items: stretch;
+  .contacts-search-container {
+    padding: 10px 12px;
+  }
+
+  .contacts-search-input {
+    max-width: 100%;
   }
 }
 

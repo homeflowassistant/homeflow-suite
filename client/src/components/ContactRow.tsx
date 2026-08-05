@@ -6,6 +6,8 @@ import type { ContactWithStatus } from "../../../server/routers/contacts";
 interface ContactRowProps {
   contact: ContactWithStatus;
   index: number;
+  locationId: string;
+  onContactUpdated: (updated: ContactWithStatus) => void;
 }
 
 function formatDisplayName(contact: ContactWithStatus): string {
@@ -28,7 +30,12 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-export default function ContactRow({ contact, index }: ContactRowProps) {
+export default function ContactRow({
+  contact,
+  index,
+  locationId,
+  onContactUpdated,
+}: ContactRowProps) {
   return (
     <tr
       className={index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}
@@ -76,7 +83,10 @@ export default function ContactRow({ contact, index }: ContactRowProps) {
         <ActionsMenu
           contactId={contact.id}
           contactName={formatDisplayName(contact)}
+          contact={contact}
+          locationId={locationId}
           isDnd={contact.dnd}
+          onContactUpdated={onContactUpdated}
         />
       </td>
     </tr>

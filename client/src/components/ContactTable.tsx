@@ -6,9 +6,17 @@ interface ContactTableProps {
   contacts: ContactWithStatus[];
   loading: boolean;
   error: string | null;
+  locationId: string;
+  onContactUpdated: (updated: ContactWithStatus) => void;
 }
 
-export default function ContactTable({ contacts, loading, error }: ContactTableProps) {
+export default function ContactTable({
+  contacts,
+  loading,
+  error,
+  locationId,
+  onContactUpdated,
+}: ContactTableProps) {
   // Error state
   if (error) {
     return (
@@ -80,7 +88,13 @@ export default function ContactTable({ contacts, loading, error }: ContactTableP
         </thead>
         <tbody>
           {contacts.map((contact, index) => (
-            <ContactRow key={contact.id} contact={contact} index={index} />
+            <ContactRow
+              key={contact.id}
+              contact={contact}
+              index={index}
+              locationId={locationId}
+              onContactUpdated={onContactUpdated}
+            />
           ))}
         </tbody>
       </table>

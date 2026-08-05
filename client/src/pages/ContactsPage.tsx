@@ -1,11 +1,13 @@
 import { useMemo, useState, useCallback } from "react";
 import { Search } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import ContactTable from "@/components/ContactTable";
 import Pagination from "@/components/Pagination";
+import type { ContactWithStatus } from "../../../server/routers/contacts";
 import "./ContactsPage.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -21,6 +23,7 @@ const PAGE_SIZE = 50;
 
 export default function ContactsPage() {
   const locationId = useLocationId();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -49,6 +52,30 @@ export default function ContactsPage() {
       staleTime: 30_000,
       refetchOnMount: true,
     }
+  );
+
+  // Optimistic update helper: replace a contact in the cached data
+  const handleContactUpdated = useCallback(
+    (updated: ContactWithStatus) => {
+      queryClient.setQueryData(
+        ["contacts", "getContacts", {
+          locationId,
+          search: debouncedSearch || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+        }],
+        (prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            contacts: prev.contacts.map((c: ContactWithStatus) =>
+              c.id === updated.id ? updated : c
+            ),
+          };
+        }
+      );
+    },
+    [queryClient, locationId, debouncedSearch, page]
   );
 
   const contacts = contactsQuery.data?.contacts || [];
@@ -85,38 +112,43 @@ export default function ContactsPage() {
 
         {/* Main card containing the table */}
         <Card className="contacts-table-card">
+          {/* Search bar at the top */}
+          <div className="contacts-search-container">
+            <div className="contacts-search-input">
+              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+              <Input
+                type="text"
+                placeholder="Search contacts by email..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="h-9 pl-2 pr-3 text-sm border-slate-200 focus-visible:ring-cyan-400"
+              />
+            </div>
+          </div>
+
           {/* Table wrapper */}
           <div className="contacts-table-wrapper">
             <ContactTable
               contacts={contacts}
               loading={contactsQuery.isLoading}
-              error={contactsQuery.error ? "Failed to load contacts from GoHighLevel. Please check your connection and try again." : null}
+              error={
+                contactsQuery.error
+                  ? "Failed to load contacts from GoHighLevel. Please check your connection and try again."
+                  : null
+              }
+              locationId={locationId}
+              onContactUpdated={handleContactUpdated}
             />
           </div>
 
-          {/* Search bar and pagination */}
-          <div className="contacts-footer">
-            <div className="contacts-search-container">
-              <div className="contacts-search-input">
-                <Search className="h-4 w-4 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search contacts by name, email, or phone..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="h-9 pl-3 pr-3 text-sm border-slate-200 focus-visible:ring-cyan-400"
-                />
-              </div>
-            </div>
-
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              pageSize={PAGE_SIZE}
-              onPageChange={setPage}
-            />
-          </div>
+          {/* Pagination at the bottom */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </Card>
       </div>
     </div>
