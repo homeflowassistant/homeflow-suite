@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { useContactsAutoRefresh } from "@/hooks/useContactsAutoRefresh";
 import ContactTable from "@/components/ContactTable";
 import Pagination from "@/components/Pagination";
 import "./ContactsPage.css";
@@ -25,6 +26,9 @@ export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-refresh hook: invalidates the contacts query after mutations
+  const invalidateContacts = useContactsAutoRefresh(locationId);
 
   // Debounce search input
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,6 +74,12 @@ export default function ContactsPage() {
       setIsRefreshing(false);
     }
   }, [contactsQuery]);
+
+  // Auto-refresh wrapper: invalidates query and lets React Query handle refetch
+  // This is used by mutations to trigger a refresh without requiring a manual button.
+  const handleAutoRefresh = useCallback(() => {
+    invalidateContacts();
+  }, [invalidateContacts]);
 
   const contacts = contactsQuery.data?.contacts || [];
   const totalItems = contactsQuery.data?.total || 0;
@@ -142,7 +152,7 @@ export default function ContactsPage() {
                   : null
               }
               locationId={locationId}
-              onFullRefresh={handleFullRefresh}
+              onFullRefresh={handleAutoRefresh}
             />
           </div>
 

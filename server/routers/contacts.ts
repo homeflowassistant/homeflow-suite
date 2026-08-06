@@ -58,7 +58,7 @@ export interface GHLContact {
 }
 
 // ─── Status Type ──────────────────────────────────────────────────────
-export type WorkflowStatus = "Active" | "Complete" | "DND" | null;
+export type WorkflowStatus = "Active" | "Completed" | "DND" | null;
 
 export interface ContactWithStatus extends GHLContact {
   leadFollowUpStatus: WorkflowStatus;
@@ -76,7 +76,7 @@ function hasTag(tags: string[], targetTag: string): boolean {
 
 /**
  * Determine workflow status for a given campaign type.
- * Priority: DND > Active (active tag) > Complete (finished tag) > null
+ * Priority: DND > Active (active tag) > Completed (finished tag) > null
  */
 function determineStatus(
   tags: string[],
@@ -86,7 +86,7 @@ function determineStatus(
 ): WorkflowStatus {
   if (isDnd) return "DND";
   if (hasTag(tags, activeTag)) return "Active";
-  if (hasTag(tags, completeTag)) return "Complete";
+  if (hasTag(tags, completeTag)) return "Completed";
   return null;
 }
 
