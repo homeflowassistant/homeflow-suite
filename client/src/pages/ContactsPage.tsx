@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { useContactsAutoRefresh } from "@/hooks/useContactsAutoRefresh";
 import ContactTable from "@/components/ContactTable";
 import Pagination from "@/components/Pagination";
 import "./ContactsPage.css";
@@ -26,9 +25,6 @@ export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Auto-refresh hook: forces an immediate refetch of the contacts query
-  const invalidateContacts = useContactsAutoRefresh(locationId);
 
   // Debounce search input
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,7 +62,7 @@ export default function ContactsPage() {
     }
   );
 
-  // Full refresh: directly refetch the query (manual button still works)
+  // Full refresh: directly refetch the query (used by manual button and all mutations)
   const handleFullRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -75,12 +71,6 @@ export default function ContactsPage() {
       setIsRefreshing(false);
     }
   }, [contactsQuery]);
-
-  // Auto-refresh wrapper: forces a fresh network refetch via the query client
-  // This is called after every mutation so the UI always shows latest data.
-  const handleAutoRefresh = useCallback(() => {
-    invalidateContacts();
-  }, [invalidateContacts]);
 
   const contacts = contactsQuery.data?.contacts || [];
   const totalItems = contactsQuery.data?.total || 0;
@@ -153,7 +143,7 @@ export default function ContactsPage() {
                   : null
               }
               locationId={locationId}
-              onFullRefresh={handleAutoRefresh}
+              onFullRefresh={handleFullRefresh}
             />
           </div>
 

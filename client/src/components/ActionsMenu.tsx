@@ -46,12 +46,13 @@ export default function ActionsMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  // Toggle DND mutation
+  // Toggle DND mutation — refresh on success
   const toggleDndMutation = trpc.contacts.toggleDnd.useMutation({
     onSuccess: () => {
       const newDnd = !isDnd;
       const status = newDnd ? "enabled" : "disabled";
       toast.success(`DND ${status} for ${contactName}`);
+      // Refresh immediately after the mutation succeeds
       onFullRefresh();
     },
     onError: (err) => {
@@ -59,10 +60,11 @@ export default function ActionsMenu({
     },
   });
 
-  // Delete contact mutation
+  // Delete contact mutation — refresh on success
   const deleteContactMutation = trpc.contacts.deleteContact.useMutation({
     onSuccess: () => {
       toast.success(`Contact "${contactName}" deleted successfully`);
+      // Refresh immediately after the mutation succeeds
       onFullRefresh();
       setShowDeleteConfirm(false);
       setActiveAction(null);
@@ -100,6 +102,20 @@ export default function ActionsMenu({
       locationId,
       contactId,
     });
+  };
+
+  // When the Edit dialog closes (via onClose), trigger a refresh.
+  // This ensures the table shows fresh data even if the mutation callback
+  // ran before the UI had time to update.
+  const handleEditClose = () => {
+    onFullRefresh();
+    setActiveAction(null);
+  };
+
+  // When the Tags dialog closes (via onClose), trigger a refresh.
+  const handleTagsClose = () => {
+    onFullRefresh();
+    setActiveAction(null);
   };
 
   return (
@@ -170,23 +186,23 @@ export default function ActionsMenu({
         )}
       </div>
 
-      {/* Edit Contact Dialog */}
+      {/* Edit Contact Dialog — refresh when it closes */}
       {activeAction === "edit" && (
         <EditContactDialog
           open={true}
-          onClose={() => setActiveAction(null)}
+          onClose={handleEditClose}
           contact={contact}
           locationId={locationId}
-          onUpdated={() => setActiveAction(null)}
+          onUpdated={() => {}}
           onFullRefresh={onFullRefresh}
         />
       )}
 
-      {/* Manage Tags Dialog */}
+      {/* Manage Tags Dialog — refresh when it closes */}
       {activeAction === "tags" && (
         <ManageTagsDialog
           open={true}
-          onClose={() => setActiveAction(null)}
+          onClose={handleTagsClose}
           contact={contact}
           locationId={locationId}
           onUpdated={() => {}}
