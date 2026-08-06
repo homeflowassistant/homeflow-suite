@@ -76,7 +76,10 @@ function hasTag(tags: string[], targetTag: string): boolean {
 
 /**
  * Determine workflow status for a given campaign type.
- * Priority: DND > Active (active tag) > Completed (finished tag) > null
+ * Priority: DND > Completed (finished tag) > Active (active tag) > null
+ *
+ * If a contact has both a completed tag and an active tag, Completed wins.
+ * If a contact is DND, DND always wins regardless of tags.
  */
 function determineStatus(
   tags: string[],
@@ -85,8 +88,8 @@ function determineStatus(
   completeTag: string
 ): WorkflowStatus {
   if (isDnd) return "DND";
-  if (hasTag(tags, activeTag)) return "Active";
   if (hasTag(tags, completeTag)) return "Completed";
+  if (hasTag(tags, activeTag)) return "Active";
   return null;
 }
 
