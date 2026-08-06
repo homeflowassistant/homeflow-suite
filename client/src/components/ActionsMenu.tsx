@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Pencil, Ban, Tags, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Ban, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import EditContactDialog from "./EditContactDialog";
-import ManageTagsDialog from "./ManageTagsDialog";
 import type { ContactWithStatus } from "../../../server/routers/contacts";
 
 interface ActionsMenuProps {
@@ -17,7 +16,7 @@ interface ActionsMenuProps {
   onFullRefresh: () => void;
 }
 
-type ActionType = "edit" | "tags" | "delete" | null;
+type ActionType = "edit" | "delete" | null;
 
 export default function ActionsMenu({
   contactId,
@@ -87,11 +86,6 @@ export default function ActionsMenu({
     setActiveAction("edit");
   };
 
-  const handleTags = () => {
-    setOpen(false);
-    setActiveAction("tags");
-  };
-
   const handleDeleteClick = () => {
     setOpen(false);
     setShowDeleteConfirm(true);
@@ -108,12 +102,6 @@ export default function ActionsMenu({
   // This ensures the table shows fresh data even if the mutation callback
   // ran before the UI had time to update.
   const handleEditClose = () => {
-    onFullRefresh();
-    setActiveAction(null);
-  };
-
-  // When the Tags dialog closes (via onClose), trigger a refresh.
-  const handleTagsClose = () => {
     onFullRefresh();
     setActiveAction(null);
   };
@@ -140,15 +128,6 @@ export default function ActionsMenu({
             >
               <Pencil className="h-3.5 w-3.5" />
               Edit Contact
-            </button>
-
-            <button
-              type="button"
-              onClick={handleTags}
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
-            >
-              <Tags className="h-3.5 w-3.5" />
-              Manage Tags
             </button>
 
             <button
@@ -191,18 +170,6 @@ export default function ActionsMenu({
         <EditContactDialog
           open={true}
           onClose={handleEditClose}
-          contact={contact}
-          locationId={locationId}
-          onUpdated={() => {}}
-          onFullRefresh={onFullRefresh}
-        />
-      )}
-
-      {/* Manage Tags Dialog — refresh when it closes */}
-      {activeAction === "tags" && (
-        <ManageTagsDialog
-          open={true}
-          onClose={handleTagsClose}
           contact={contact}
           locationId={locationId}
           onUpdated={() => {}}
