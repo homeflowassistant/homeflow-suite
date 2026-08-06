@@ -1114,7 +1114,10 @@ export async function removeTagFromContact(
   tagName: string
 ): Promise<{ success: boolean }> {
   const accessToken = await getValidAccessToken(locationId);
-  const response = await fetch(`${GHL_BASE_URL}/contacts/${contactId}/tags`, {
+
+  const encodedContactId = encodeURIComponent(contactId);
+  console.log(`[GHL DEBUG] removeTagFromContact removing tag "${tagName}" from contact ${contactId}`);
+  const deleteResp = await fetch(`${GHL_BASE_URL}/contacts/${encodedContactId}/tags`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -1125,12 +1128,82 @@ export async function removeTagFromContact(
     body: JSON.stringify({ tags: [tagName] }),
   });
 
-  if (response.ok) {
+  if (deleteResp.ok) {
+    console.log(`[GHL DEBUG] removeTagFromContact succeeded for tag "${tagName}" on contact ${contactId}`);
     return { success: true };
   }
 
-  const body = await response.text().catch(() => "");
-  throw new Error(`Failed to remove tag ${tagName} from contact ${contactId}: ${response.status} ${body}`);
+  const deleteBody = await deleteResp.text().catch(() => "");
+  console.warn(
+    `[GHL DEBUG] removeTagFromContact DELETE /contacts/${encodedContactId}/tags failed: ${deleteResp.status} ${deleteBody}`
+  );
+
+  // Fallback: fetch the contact, remove the tag locally, then update the contact with the remaining tag list.
+  const getResp = await fetch(`${GHL_BASE_URL}/contacts/${encodedContactId}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+  });
+
+  if (!getResp.ok) {
+    const body = await getResp.text().catch(() => "");
+    throw new Error(`Failed to fetch contact ${contactId} for tag removal: ${getResp.status} ${body}`);
+  }
+
+  const contactData = (await getResp.json()) as Record<string, any>;
+  const rawContact = contactData.contact || contactData;
+  const currentTags: string[] = Array.isArray(rawContact.tags)
+    ? rawContact.tags.map((t: any) => (typeof t === "string" ? t : t?.name || t?.tagName || ""))
+    : [];
+
+  const normalizedTag = tagName.toLowerCase().trim();
+  const remainingTags = currentTags.filter(
+    (tag) => tag.toLowerCase().trim() !== normalizedTag
+  );
+
+  if (remainingTags.length === currentTags.length) {
+    // Tag was not present, so treat as successful removal.
+    console.log(
+      `[GHL DEBUG] removeTagFromContact tag "${tagName}" was not present on contact ${contactId}, no update needed.`
+    );
+    return { success: true };
+  }
+
+  console.log(
+    `[GHL DEBUG] removeTagFromContact falling back to PUT /contacts/${encodedContactId} to remove tag "${tagName}" from contact ${contactId}`
+  );
+
+  const updatePayload: Record<string, unknown> = {
+    firstName: rawContact.firstName || undefined,
+    lastName: rawContact.lastName || undefined,
+    name: rawContact.name || `${rawContact.firstName || ""} ${rawContact.lastName || ""}`.trim() || undefined,
+    email: rawContact.email || undefined,
+    phone: rawContact.phone || undefined,
+    tags: remainingTags,
+  };
+
+  const updateResp = await fetch(`${GHL_BASE_URL}/contacts/${encodedContactId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+    body: JSON.stringify(updatePayload),
+  });
+
+  if (updateResp.ok) {
+    return { success: true };
+  }
+
+  const updateBody = await updateResp.text().catch(() => "");
+  throw new Error(
+    `Failed to remove tag ${tagName} from contact ${contactId}: ${updateResp.status} ${updateBody}`
+  );
 }
 
 export async function addTagToContact(
