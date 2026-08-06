@@ -18,6 +18,16 @@ const GHL_API_VERSION = "2021-07-28";
 // Refresh tokens 10 minutes before they expire
 const TOKEN_REFRESH_BUFFER_MS = 10 * 60 * 1000;
 
+export const ACTIVE_TO_COMPLETED_TAGS: Record<string, string> = {
+  "new lead (via homeflow)": "new lead finished",
+  "homeflow: inactive customer": "homeflow: inactive customer finished",
+  "add-on-campaign": "add-on-campaign finished",
+};
+
+export function getCompletedTagForActive(tagName: string): string | undefined {
+  return ACTIVE_TO_COMPLETED_TAGS[tagName];
+}
+
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface GHLTokenResponse {
@@ -1098,6 +1108,31 @@ export async function createContact(
   };
 }
 
+export async function removeTagFromContact(
+  locationId: string,
+  contactId: string,
+  tagName: string
+): Promise<{ success: boolean }> {
+  const accessToken = await getValidAccessToken(locationId);
+  const response = await fetch(`${GHL_BASE_URL}/contacts/${contactId}/tags`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+    body: JSON.stringify({ tags: [tagName] }),
+  });
+
+  if (response.ok) {
+    return { success: true };
+  }
+
+  const body = await response.text().catch(() => "");
+  throw new Error(`Failed to remove tag ${tagName} from contact ${contactId}: ${response.status} ${body}`);
+}
+
 export async function addTagToContact(
   locationId: string,
   contactId: string,
@@ -1194,6 +1229,18 @@ export async function processContact(
 
   if (!contact.dnd) {
     if (contact.tagName) {
+      const completedTag = getCompletedTagForActive(contact.tagName);
+      if (completedTag) {
+        try {
+          await removeTagFromContact(locationId, contactId, completedTag);
+        } catch (error) {
+          console.warn(
+            `[GHL] Failed to remove completed tag ${completedTag} before adding ${contact.tagName} for contact ${contactId}:`,
+            error
+          );
+        }
+      }
+
       try {
         await addTagToContact(locationId, contactId, contact.tagName);
       } catch (error) {
