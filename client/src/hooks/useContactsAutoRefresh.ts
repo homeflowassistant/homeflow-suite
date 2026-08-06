@@ -1,48 +1,37 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
+import { trpc } from "@/lib/trpc";
 
 /**
  * Hook that provides an auto-refresh function for the Contacts page.
  *
  * After any contact mutation (create, update, delete, tag change, DND toggle),
- * the Contacts page must immediately show the latest data from the server.
+ * this hook completely resets the contacts query cache and forces a fresh
+ * network refetch so the UI always shows the latest data.
  *
- * ROOT CAUSE OF THE ORIGINAL BUG:
- * The previous implementation used `refetchQueries` with `type: "active"`,
- * which only refetches queries that are currently mounted AND have active
- * observers. This fails when:
- *   - The dialog opens a modal overlay (the Contacts page table is still
- *     mounted but React Query may not consider it "active" during the
- *     mutation callback execution).
- *   - The predicate-based matching was fragile for tRPC's nested query keys.
- *
- * FIX: Use `invalidateQueries` + `queryClient.resetQueries` pattern.
- * `invalidateQueries` marks the query as stale, and when combined with
- * `staleTime: 0` on the query itself, React Query will immediately refetch
- * when the component re-renders. Additionally, we use `queryClient.refetch`
- * directly on the matched queries to force a network request.
- *
- * We match by checking the first two elements of the query key
- * (["contacts", "getContacts"]) rather than trying to parse the input object,
- * which avoids serialization/matching issues with tRPC's superjson encoding.
+ * APPROACH:
+ * We use tRPC's built-in getQueryKey helper to get the EXACT query key
+ * that tRPC uses internally. This avoids any guesswork about the key format.
+ * Then we reset the query (clears cached data entirely) and refetch it
+ * immediately so the table always shows fresh data from the server.
  */
 export function useContactsAutoRefresh(locationId: string) {
   const queryClient = useQueryClient();
 
-  const invalidateContacts = useCallback(() => {
+  // Get the exact query key that tRPC uses for getContacts
+  const queryKey = getQueryKey(trpc.contacts.getContacts, undefined, "query");
+
+  const refreshContacts = useCallback(() => {
     if (!locationId) return;
 
-    // Strategy: use queryClient.refetch with a simple prefix match
-    // This is more reliable than predicate-based matching for tRPC query keys
-    // because tRPC internally wraps the input in a structured format.
-    //
-    // We match any query whose key starts with ["contacts", "getContacts"]
-    // which covers all pagination/search variants for this location.
-    queryClient.refetchQueries({
-      queryKey: ["contacts", "getContacts"],
-      type: "all",
-    });
-  }, [queryClient]);
+    // Step 1: Remove all cached data for this query so it cannot serve stale results
+    queryClient.removeQueries({ queryKey });
 
-  return invalidateContacts;
+    // Step 2: Reset the query state so it will automatically refetch
+    // when the component re-renders (driven by staleTime: 0)
+    queryClient.resetQueries({ queryKey });
+  }, [queryClient, queryKey]);
+
+  return refreshContacts;
 }
