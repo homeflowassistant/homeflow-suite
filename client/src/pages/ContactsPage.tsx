@@ -27,7 +27,7 @@ export default function ContactsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Auto-refresh hook: invalidates the contacts query after mutations
+  // Auto-refresh hook: forces an immediate refetch of the contacts query
   const invalidateContacts = useContactsAutoRefresh(locationId);
 
   // Debounce search input
@@ -50,6 +50,7 @@ export default function ContactsPage() {
   }, []);
 
   // tRPC query for fetching contacts
+  // staleTime: 0 — data is always considered stale so refetches always hit the network
   const contactsQuery = trpc.contacts.getContacts.useQuery(
     {
       locationId,
@@ -60,12 +61,12 @@ export default function ContactsPage() {
     {
       enabled: !!locationId,
       refetchOnWindowFocus: false,
-      staleTime: 30_000,
+      staleTime: 0,
       refetchOnMount: true,
     }
   );
 
-  // Full refresh: directly refetch the query (established pattern in this codebase)
+  // Full refresh: directly refetch the query (manual button still works)
   const handleFullRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -75,8 +76,8 @@ export default function ContactsPage() {
     }
   }, [contactsQuery]);
 
-  // Auto-refresh wrapper: invalidates query and lets React Query handle refetch
-  // This is used by mutations to trigger a refresh without requiring a manual button.
+  // Auto-refresh wrapper: forces a fresh network refetch via the query client
+  // This is called after every mutation so the UI always shows latest data.
   const handleAutoRefresh = useCallback(() => {
     invalidateContacts();
   }, [invalidateContacts]);
