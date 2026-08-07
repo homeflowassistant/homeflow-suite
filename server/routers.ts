@@ -8,6 +8,7 @@ import { reactivationRouter } from "./routers/reactivation";
 import { addOnCampaignRouter } from "./routers/addOnCampaign";
 import { quickSendRouter } from "./routers/quickSend";
 import { contactsRouter } from "./routers/contacts";
+import { alertsNotificationsRouter } from "./routers/alertsNotifications";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   addOnCampaign: addOnCampaignRouter,
   quickSend: quickSendRouter,
   contacts: contactsRouter,
+  alertsNotifications: alertsNotificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;
