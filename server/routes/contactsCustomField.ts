@@ -122,15 +122,19 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
 
   // Step 2 — Fetch ALL custom fields from GHL and match by name.
   // This ensures we always have the latest data and avoids stale cache issues.
-  const fieldsResponse = await fetch(`${GHL_BASE_URL}/custom-fields`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      Version: GHL_API_VERSION,
-    },
-  });
+  // GET /locations/:locationId/customFields?model=contact — the official GHL
+  // endpoint for listing a sub-account's contact custom fields.
+  const fieldsResponse = await fetch(
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+    }
+  );
 
   if (!fieldsResponse.ok) {
     const detail = await fieldsResponse.text();
