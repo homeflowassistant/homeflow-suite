@@ -218,9 +218,11 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
   const previousValue = prevField ? String(prevField.field_value) : "";
 
   // Step 4 — Update the custom field.
-  // GHL's contact PUT endpoint resolves custom fields by their `key`, which is
-  // the fieldKey (e.g. "contact.quote_slug") — not the internal numeric id.
-  // We send the fieldKey as the key since that is what GHL uses for lookups.
+  // GHL's Update Contact (PUT) endpoint expects customFields entries in this
+  // exact shape (per official v3 docs):
+  //   { "id": "<internal_field_id>", "key": "<fieldKey>", "fieldValue": "<value>" }
+  // Sending `field_value` (snake_case) or omitting `id` causes GHL to return 200
+  // but silently ignore the update.
   const updateKey = matchedField.fieldKey || payload.customFieldName;
   const updateResponse = await fetch(`${GHL_BASE_URL}/contacts/${contact.id}`, {
     method: "PUT",
@@ -231,7 +233,13 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
       Version: GHL_API_VERSION,
     },
     body: JSON.stringify({
-      customFields: [{ key: updateKey, field_value: payload.value }],
+      customFields: [
+        {
+          id: customFieldId,
+          key: updateKey,
+          fieldValue: payload.value,
+        },
+      ],
     }),
   });
 
