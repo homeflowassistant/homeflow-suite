@@ -152,8 +152,11 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
     }>;
   };
 
+  // Match by fieldKey first (e.g. "contact.quote_slug"), then fall back to field name.
   const matchedField = fieldsData.customFields?.find(
-    (f) => f.name.toLowerCase() === payload.customFieldName.toLowerCase()
+    (f) =>
+      f.fieldKey?.toLowerCase() === payload.customFieldName.toLowerCase() ||
+      f.name.toLowerCase() === payload.customFieldName.toLowerCase()
   );
 
   if (!matchedField) {
