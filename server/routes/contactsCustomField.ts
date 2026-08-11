@@ -16,7 +16,7 @@
  *     sub-account can never be reached through another location's token.
  *
  * All GHL operations reuse the existing primitives in server/ghl-service.ts
- * (getValidAccessToken, getCustomFieldIdByName, clearCustomFieldCache).
+ * (getValidAccessToken, getInstallation).
  */
 
 import type { Express, Request, Response } from "express";
@@ -24,8 +24,6 @@ import { ENV } from "../_core/env";
 import {
   getValidAccessToken,
   getInstallation,
-  getCustomFieldIdByName,
-  clearCustomFieldCache,
 } from "../ghl-service";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
@@ -100,8 +98,7 @@ async function resolveLocation(locationId: string): Promise<string> {
  *
  * Steps:
  *  1. Resolve the location via ghl_installations (location scoping).
- *  2. Look up the custom field ID for customFieldName (with cache refresh on
- *     first miss, matching the semantics of ghl-service.getCustomFieldIdByName).
+ *  2. Fetch ALL custom fields from GHL and match by name to get the field ID.
  *  3. Find the contact by exact email match via GHL POST /contacts/search.
  *  4. PUT /contacts/{contactId} with customFields: [{ key, field_value }] —
  *     the standard GHL v1 contact update endpoint.
@@ -123,15 +120,39 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
   const locationId = await resolveLocation(payload.locationId);
   const accessToken = await getValidAccessToken(locationId);
 
-  // Step 2 — custom field ID lookup (name -> ID)
-  let customFieldId = await getCustomFieldIdByName(locationId, payload.customFieldName);
-  if (!customFieldId) {
-    // First miss: the in-memory cache may be stale (fields added in GHL after
-    // boot). Clear it for this location and retry once.
-    clearCustomFieldCache(locationId);
-    customFieldId = await getCustomFieldIdByName(locationId, payload.customFieldName);
+  // Step 2 — Fetch ALL custom fields from GHL and match by name.
+  // This ensures we always have the latest data and avoids stale cache issues.
+  const fieldsResponse = await fetch(`${GHL_BASE_URL}/custom-fields`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+  });
+
+  if (!fieldsResponse.ok) {
+    const detail = await fieldsResponse.text();
+    throw Object.assign(new Error(`GHL custom-fields GET failed: ${fieldsResponse.status} ${detail}`), {
+      code: "CUSTOM_FIELD_LOOKUP_FAILED",
+    });
   }
-  if (!customFieldId) {
+
+  const fieldsData = (await fieldsResponse.json()) as {
+    customFields?: Array<{
+      id: string;
+      name: string;
+      fieldKey?: string;
+      fieldType: string;
+    }>;
+  };
+
+  const matchedField = fieldsData.customFields?.find(
+    (f) => f.name.toLowerCase() === payload.customFieldName.toLowerCase()
+  );
+
+  if (!matchedField) {
     throw Object.assign(
       new Error(
         `Custom field "${payload.customFieldName}" does not exist in location ${locationId}. ` +
@@ -140,6 +161,8 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
       { code: "CUSTOM_FIELD_NOT_FOUND" }
     );
   }
+
+  const customFieldId = matchedField.id;
 
   // Step 3 — contact lookup by exact email match.
   const searchResponse = await fetch(`${GHL_BASE_URL}/contacts/search`, {
@@ -181,10 +204,8 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
   }
 
   // Capture previous value if available (for the response)
-  // GHL search returns customFields with fieldKey matching the custom field key,
-  // so match by key (customFieldName) as well as ID to be robust.
   const prevField = contact.customFields?.find(
-    (f) => f.fieldKey === customFieldId || f.fieldKey === payload.customFieldName
+    (f) => f.fieldKey === customFieldId || f.fieldKey === matchedField.fieldKey
   );
   const previousValue = prevField ? String(prevField.field_value) : "";
 
@@ -215,7 +236,7 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
     contactName: `${contact.firstName || ""} ${contact.lastName || ""}`.trim(),
     email: payload.email,
     customFieldName: payload.customFieldName,
-    customFieldKey: customFieldId,
+    customFieldKey: matchedField.fieldKey || matchedField.name,
     customFieldId: customFieldId,
     previousValue,
     updatedValue: payload.value,
@@ -231,7 +252,7 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
    * POST /api/contacts/update-custom-field
    *
    * Updates a single custom-field value on a CRM contact. Locates the contact
-   * by exact email match, resolves the custom field ID from the field name,
+   * by exact email match, fetches all custom fields from GHL to find the ID,
    * and returns the contact ID, field ID, and updated value.
    *
    * Headers: Authorization: Internal-Key <key>
@@ -292,7 +313,8 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
         case "CONTACT_NOT_FOUND":
           return res.status(404).json({ success: false, error: "Contact not found", code, detail: message, email: payload.email, locationId: payload.locationId });
         case "CUSTOM_FIELD_NOT_FOUND":
-          return res.status(404).json({ success: false, error: "Custom field not found", code, detail: message, customFieldName: payload.customFieldName, locationId: payload.locationId });
+        case "CUSTOM_FIELD_LOOKUP_FAILED":
+          return res.status(404).json({ success: false, error: "Custom field not found or lookup failed", code, detail: message, customFieldName: payload.customFieldName, locationId: payload.locationId });
         case "CONTACT_SEARCH_FAILED":
         case "CUSTOM_FIELD_UPDATE_FAILED":
         default:
