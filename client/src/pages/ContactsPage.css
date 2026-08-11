@@ -1,0 +1,137 @@
+/* ── Contacts Page Styles ── */
+/* Matches the blue-themed table mockup with status badges */
+
+/* ── Page layout ── */
+.contacts-page-inner {
+  padding-bottom: 48px;
+}
+
+.contacts-page-title {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 800;
+  color: #1e3a5f; /* Deep navy blue */
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+/* ── Table card ── */
+.contacts-table-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.contacts-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Table header styling (blue) ── */
+.contacts-table-wrapper thead {
+  background: #1d4ed8; /* Blue-700 matching mockup */
+}
+
+.contacts-table-wrapper thead th {
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #1e40af; /* Blue-800 */
+}
+
+.contacts-table-wrapper thead tr {
+  background: #1d4ed8;
+}
+
+/* ── Table rows ── */
+.contacts-table-wrapper tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.contacts-table-wrapper tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+
+.contacts-table-wrapper tbody td {
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+/* ── Search input area (positioned at top of card) ── */
+.contacts-search-container {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
+}
+
+.contacts-search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 12px;
+  max-width: 420px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.contacts-search-input:focus-within {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+.contacts-search-input input {
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.875rem;
+  color: #334155;
+  padding: 8px 0;
+}
+
+.contacts-search-input input::placeholder {
+  color: #94a3b8;
+}
+
+.contacts-search-input input:focus {
+  outline: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .contacts-page-title {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+  }
+
+  .contacts-search-container {
+    padding: 10px 12px;
+  }
+
+  .contacts-search-input {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .contacts-table-wrapper {
+    font-size: 0.8rem;
+  }
+
+  .contacts-table-wrapper thead th {
+    font-size: 0.65rem;
+    padding: 8px 6px;
+  }
+
+  .contacts-table-wrapper tbody td {
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+}
