@@ -179,6 +179,7 @@ async function updateContactCustomField(payload: ValidatedPayload): Promise<{
     },
     body: JSON.stringify({
       locationId,
+      pageLimit: 1,
       filters: [{ field: "email", operator: "eq", value: payload.email }],
     }),
   });
