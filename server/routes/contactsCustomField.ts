@@ -73,6 +73,267 @@ function validatePayload(body: any): {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Multi-field (batch) support — additive, legacy path untouched above.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * One entry of a batch multi-field update request.
+ */
+interface BatchFieldInput {
+  customFieldName: string;
+  value: string | number | boolean;
+}
+
+/**
+ * Per-field result included in a batch response.
+ */
+interface BatchFieldResult {
+  customFieldName: string;
+  customFieldKey: string;
+  customFieldId: string;
+  previousValue: string;
+  updatedValue: string;
+  success: boolean;
+  code?: string;
+  detail?: string;
+}
+
+/**
+ * Batch payload validation.
+ *
+ * Requires the same locationId + email rules as the legacy endpoint, plus a
+ * non-empty `customFields` array where every entry has a non-empty string
+ * `customFieldName` and a present, non-empty `value` — mirroring the legacy
+ * single-field value rule per entry.
+ */
+function validateBatchPayload(body: any): {
+  payload: { locationId: string; email: string; contactName?: string } | null;
+  fieldErrors: Array<{ index: number; customFieldName: string; message: string }>;
+  errors: Array<{ field: string; message: string }>;
+} {
+  const errors: Array<{ field: string; message: string }> = [];
+  const fieldErrors: Array<{ index: number; customFieldName: string; message: string }> = [];
+
+  if (!body.locationId || typeof body.locationId !== "string") {
+    errors.push({ field: "locationId", message: "Required string" });
+  }
+  if (!body.email || typeof body.email !== "string" || !body.email.includes("@")) {
+    errors.push({ field: "email", message: "Required valid email string" });
+  }
+  if (!Array.isArray(body.customFields) || body.customFields.length === 0) {
+    errors.push({ field: "customFields", message: "Required non-empty array" });
+  }
+
+  if (errors.length > 0) return { payload: null, fieldErrors: [], errors };
+
+  for (let i = 0; i < body.customFields.length; i++) {
+    const entry = body.customFields[i];
+    if (!entry || typeof entry !== "object") {
+      fieldErrors.push({ index: i, customFieldName: String(entry), message: "Entry must be an object" });
+      continue;
+    }
+    if (!entry.customFieldName || typeof entry.customFieldName !== "string") {
+      fieldErrors.push({ index: i, customFieldName: String(entry.customFieldName ?? ""), message: "customFieldName is required" });
+      continue;
+    }
+    if (entry.value === undefined || entry.value === null || entry.value === "") {
+      fieldErrors.push({ index: i, customFieldName: entry.customFieldName, message: "value is required (string, number, or boolean)" });
+    }
+  }
+
+  if (fieldErrors.length > 0) return { payload: null, fieldErrors, errors: [] };
+
+  return {
+    payload: {
+      locationId: body.locationId,
+      email: body.email,
+      contactName: body.contactName ? String(body.contactName) : undefined,
+    },
+    fieldErrors: [],
+    errors: [],
+  };
+}
+
+/**
+ * Batch contact custom-field update logic.
+ *
+ * Same primitives as the single-field path, but issued once for the whole
+ * batch — GHL's PUT /contacts/{id} natively accepts a `customFields` array,
+ * so this sends ONE combined CRM request instead of N.
+ *
+ *  1. Resolve the location via ghl_installations (location scoping).
+ *  2. Fetch ALL custom fields from GHL once; resolve every requested name.
+ *     Fields that cannot be resolved are collected into `failingFields` —
+ *     the valid fields still proceed, so one bad name never fails the rest.
+ *  3. Find the contact by exact email match via GHL POST /contacts/search.
+ *  4. PUT /contacts/{contactId} with customFields: [{ id, key, fieldValue }]
+ *     for every resolvable field — one combined API request.
+ *  5. Return per-field results (previous/updated values per field).
+ */
+async function updateContactCustomFieldsBatch(
+  payload: { locationId: string; email: string },
+  fields: BatchFieldInput[]
+): Promise<{
+  success: boolean;
+  contactId: string;
+  contactName: string;
+  email: string;
+  locationId: string;
+  updatedFields: BatchFieldResult[];
+  failingFields: Array<{ customFieldName: string; code: string; detail: string }>;
+}> {
+  // Step 1 — location scoping (identical to the single-field path).
+  const locationId = await resolveLocation(payload.locationId);
+  const accessToken = await getValidAccessToken(locationId);
+
+  // Step 2 — fetch the custom-field list ONCE and resolve every requested
+  // name. Unresolvable names go straight into failingFields (CUSTOM_FIELD_NOT_FOUND)
+  // without failing the remaining fields.
+  const fieldsResponse = await fetch(
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+    }
+  );
+
+  if (!fieldsResponse.ok) {
+    const detail = await fieldsResponse.text();
+    throw Object.assign(new Error(`GHL custom-fields GET failed: ${fieldsResponse.status} ${detail}`), {
+      code: "CUSTOM_FIELD_LOOKUP_FAILED",
+    });
+  }
+
+  const fieldsData = (await fieldsResponse.json()) as {
+    customFields?: Array<{ id: string; name: string; fieldKey?: string; fieldType: string }>;
+  };
+
+  const failingFields: Array<{ customFieldName: string; code: string; detail: string }> = [];
+  const resolved: Array<{
+    input: BatchFieldInput;
+    matchedField: { id: string; name: string; fieldKey?: string };
+  }> = [];
+
+  for (const input of fields) {
+    const matchedField = fieldsData.customFields?.find(
+      (f) =>
+        f.fieldKey?.toLowerCase() === input.customFieldName.toLowerCase() ||
+        f.name.toLowerCase() === input.customFieldName.toLowerCase()
+    );
+    if (!matchedField) {
+      failingFields.push({
+        customFieldName: input.customFieldName,
+        code: "CUSTOM_FIELD_NOT_FOUND",
+        detail:
+          `Custom field "${input.customFieldName}" does not exist in location ${locationId}. ` +
+          "Create it in GHL under Settings > Custom Fields (Contacts).",
+      });
+    } else {
+      resolved.push({ input, matchedField });
+    }
+  }
+
+  // Step 3 — contact lookup by exact email match (once, for the whole batch).
+  const searchResponse = await fetch(`${GHL_BASE_URL}/contacts/search`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
+    body: JSON.stringify({
+      locationId,
+      pageLimit: 1,
+      filters: [{ field: "email", operator: "eq", value: payload.email }],
+    }),
+  });
+
+  if (!searchResponse.ok) {
+    const detail = await searchResponse.text();
+    throw Object.assign(new Error(`GHL contacts/search failed: ${searchResponse.status} ${detail}`), {
+      code: "CONTACT_SEARCH_FAILED",
+    });
+  }
+
+  const searchData = (await searchResponse.json()) as {
+    contacts?: Array<{
+      id: string;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      customFields?: Array<{ fieldKey: string; field_value: any }>;
+    }>;
+  };
+
+  const contact = searchData.contacts?.[0];
+  if (!contact) {
+    throw Object.assign(new Error(`No contact found for email "${payload.email}" in location ${locationId}`), {
+      code: "CONTACT_NOT_FOUND",
+    });
+  }
+
+  // Step 4 — if there is at least one resolvable field, issue ONE combined
+  // PUT with the full customFields array (GHL natively supports this shape).
+  const updatedFields: BatchFieldResult[] = [];
+  if (resolved.length > 0) {
+    const updateResponse = await fetch(`${GHL_BASE_URL}/contacts/${contact.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify({
+        customFields: resolved.map(({ input, matchedField }) => ({
+          id: matchedField.id,
+          key: matchedField.fieldKey || input.customFieldName,
+          fieldValue: String(input.value),
+        })),
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      const detail = await updateResponse.text();
+      throw Object.assign(new Error(`GHL contacts PUT failed: ${updateResponse.status} ${detail}`), {
+        code: "CUSTOM_FIELD_UPDATE_FAILED",
+      });
+    }
+  }
+
+  // Step 5 — build per-field results using the same search snapshot as the
+  // single-field endpoint (previousValue comes from the contact snapshot).
+  for (const { input, matchedField } of resolved) {
+    const prevField = contact.customFields?.find(
+      (f) => f.fieldKey === matchedField.id || f.fieldKey === matchedField.fieldKey
+    );
+    updatedFields.push({
+      customFieldName: input.customFieldName,
+      customFieldKey: matchedField.fieldKey || matchedField.name,
+      customFieldId: matchedField.id,
+      previousValue: prevField ? String(prevField.field_value) : "",
+      updatedValue: String(input.value),
+      success: true,
+    });
+  }
+
+  return {
+    success: failingFields.length === 0,
+    contactId: contact.id,
+    contactName: `${contact.firstName || ""} ${contact.lastName || ""}`.trim(),
+    email: payload.email,
+    locationId,
+    updatedFields,
+    failingFields,
+  };
+}
+
 /**
  * Location resolution (Location Scoping)
  *
@@ -301,6 +562,62 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
       });
     }
 
+    // ── Multi-field (batch) path ─────────────────────────────────────
+    // Entered ONLY when no top-level customFieldName/value are present and a
+    // non-empty customFields array is provided. The legacy branch below is
+    // reached for everything else, so existing payloads are unchanged.
+    const hasLegacy = req.body.customFieldName !== undefined || req.body.value !== undefined;
+    const hasBatch = Array.isArray(req.body.customFields) && req.body.customFields.length > 0;
+
+    if (!hasLegacy && hasBatch) {
+      const batchValidation = validateBatchPayload(req.body);
+      if (!batchValidation.payload) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid payload",
+          code: "INVALID_PAYLOAD",
+          details: batchValidation.errors.length > 0 ? batchValidation.errors : batchValidation.fieldErrors,
+        });
+      }
+
+      try {
+        const result = await updateContactCustomFieldsBatch(batchValidation.payload, req.body.customFields);
+        console.log(
+          `[contacts-custom-field] Batch updated ${result.updatedFields.length} field(s) ` +
+            (result.failingFields.length > 0 ? `with ${result.failingFields.length} failing ` : "") +
+            `on contact ${result.contactId} (${req.body.email}) in location ${req.body.locationId}`
+        );
+        if (result.success) {
+          return res.status(200).json(result);
+        }
+        return res.status(200).json({
+          ...result,
+          error: "Some custom fields failed to update",
+          code: "PARTIAL_UPDATE_FAILED",
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const code = (err as { code?: string })?.code ?? "GHL_OPERATION_FAILED";
+
+        console.error(`[contacts-custom-field] Failed to batch-update custom fields: ${message}`);
+
+        switch (code) {
+          case "LOCATION_NOT_FOUND":
+            return res.status(404).json({ success: false, error: "Location not found", code, detail: message, locationId: req.body.locationId });
+          case "CONTACT_NOT_FOUND":
+            return res.status(404).json({ success: false, error: "Contact not found", code, detail: message, email: req.body.email, locationId: req.body.locationId });
+          case "CUSTOM_FIELD_NOT_FOUND":
+          case "CUSTOM_FIELD_LOOKUP_FAILED":
+            return res.status(404).json({ success: false, error: "Custom field not found or lookup failed", code, detail: message, locationId: req.body.locationId });
+          case "CONTACT_SEARCH_FAILED":
+          case "CUSTOM_FIELD_UPDATE_FAILED":
+          default:
+            return res.status(422).json({ success: false, error: "GHL operation failed", code, detail: message, locationId: req.body.locationId });
+        }
+      }
+    }
+
+    // ── Legacy single-field path (unchanged) ─────────────────────────
     const validation = validatePayload(req.body);
     if (!validation.payload) {
       return res.status(400).json({
