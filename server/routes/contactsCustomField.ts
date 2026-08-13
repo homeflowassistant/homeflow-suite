@@ -738,3 +738,51 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
   });
 
 }
+
+
+// ------------------------------------------------------------------
+// {
+//   "locationId": "{{ $('Webhook - Create Quote Prices').item.json.body.customData.GHLLocationID }}",
+//   "email": "{{ $('Webhook - Create Quote Prices').item.json.body.customData.email.toLowerCase() }}",
+//   "customFields": [
+//     {
+//       "customFieldName": "contact.line_item_1_price",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.line_item_1_price }}"
+//     },
+//     {
+//       "customFieldName": "contact.line_item_2_price",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.line_item_2_price }}"
+//     },
+//     {
+//       "customFieldName": "contact.line_item_3_price",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.line_item_3_price }}"
+//     },
+//     {
+//       "customFieldName": "contact.line_item_4_price",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.line_item_4_price }}"
+//     },
+//     {
+//       "customFieldName": "contact.line_item_5_price",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.line_item_5_price }}"
+//     },
+//     {
+//       "customFieldName": "contact.subtotal",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials3').item.json.output[1].content[0].text.subtotal }}"
+//     },
+//     {
+//       "customFieldName": "contact.total_cost",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials3').item.json.output[1].content[0].text.total_cost }}"
+//     },
+//     {
+//       "customFieldName": "contact.number_of_dogs",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.number_of_dogs }}"
+//     },
+//     {
+//       "customFieldName": "contact.clean_up_frequency",
+//       "value": "{{ $('Message a model - Scooping for chosen frequency, ignores initials').item.json.output[0].content[0].text.frequency }}"
+//     }
+//   ]
+// }
+
+
+
