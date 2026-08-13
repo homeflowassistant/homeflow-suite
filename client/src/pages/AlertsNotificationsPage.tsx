@@ -382,7 +382,10 @@ export default function AlertsNotificationsPage() {
             <div className="alerts-card-box">
               <div className="alerts-item-block">
                 <div className="alerts-item-header">
-                  <h3 className="alerts-item-title">Custom Failed Payment Message</h3>
+                  <h3 className="alerts-item-title">
+                    Custom Failed Payment Message
+                    <span className="alerts-item-subtitle">(S&G Only)</span>
+                  </h3>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <div className="pt-2">
@@ -412,7 +415,10 @@ export default function AlertsNotificationsPage() {
             <div className="alerts-card-box">
               <div className="alerts-item-block">
                 <div className="alerts-item-header">
-                  <h3 className="alerts-item-title">Custom Skipped Job Message</h3>
+                  <h3 className="alerts-item-title">
+                    Custom Skipped Job Message
+                    <span className="alerts-item-subtitle">(S&G Only)</span>
+                  </h3>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <div className="pt-2">
@@ -449,6 +455,7 @@ export default function AlertsNotificationsPage() {
                 <div className="alerts-item-header">
                   <h3 className="alerts-item-title">
                     Custom Subscription Paused/Unpaused Message
+                    <span className="alerts-item-subtitle">(S&G Only)</span>
                   </h3>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
