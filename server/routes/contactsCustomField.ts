@@ -21,49 +21,38 @@
 
 import type { Express, Request, Response } from "express";
 import { ENV } from "../_core/env";
-
-/**
- * ═══════════════════════════════════════════════════════════════════════
- * Debug log — lets you inspect what data arrives at this endpoint and how
- * it was mapped onto the GHL contact (visible on Render via the debug GET
- * endpoint below). In-memory, capped, process-scoped: it resets on every
- * Render restart and never touches the database. Safe for production use
- * as long as n8n is the only caller, since the same Internal-Key gate
- * protects the debug endpoint.
- * ═══════════════════════════════════════════════════════════════════════
- */
-interface DebugLogEntry {
-  at: string; // ISO timestamp (UTC)
-  mode: "legacy" | "batch";
-  request: {
-    locationId: string;
-    email: string;
-    /** The incoming payload exactly as it arrived (legacy shape or batch entries). */
-    incomingFields: Array<{ customFieldName: string; value: any }>;
-  };
-  outcome: "success" | "partial" | "failed";
-  statusCode: number;
-  code: string;
-  /** The fields actually sent to GHL's PUT (id/key/fieldValue mappings). */
-  mappedToGhl?: Array<{ id: string; key: string; fieldValue: string }>;
-  detail?: string;
-}
-
-const DEBUG_LOG_CAPACITY = 100;
-const debugLog: DebugLogEntry[] = [];
-
-function recordDebugEntry(entry: DebugLogEntry): void {
-  debugLog.unshift(entry);
-  if (debugLog.length > DEBUG_LOG_CAPACITY) debugLog.length = DEBUG_LOG_CAPACITY;
-}
-
-function resetDebugLog(): void {
-  debugLog.length = 0;
-}
 import {
   getValidAccessToken,
   getInstallation,
 } from "../ghl-service";
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * Console debug logging — every request is logged to stdout/stderr so the
+ * full flow is visible in Render's live logs tab:
+ *  • what data arrived (locationId, email, incoming fields & values)
+ *  • how it was mapped onto the GHL contact (id / key / fieldValue sent)
+ *  • the outcome (success / partial / failed with the error code)
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+function logIncoming(mode: "legacy" | "batch", locationId: string, email: string, incomingFields: Array<{ customFieldName: string; value: any }>): void {
+  console.log(
+    `[contacts-custom-field][INCOMING] mode=${mode} locationId=${locationId} email=${email}`, //
+    `fields=${JSON.stringify(incomingFields)}`
+  );
+}
+
+function logMappedToGhl(mode: "legacy" | "batch", contactId: string, mapped: Array<{ id: string; key: string; fieldValue: string }>): void {
+  console.log(
+    `[contacts-custom-field][MAPPED-TO-GHL] mode=${mode} contactId=${contactId}`, //
+    `mapped=${JSON.stringify(mapped)}`
+  );
+}
+
+function logOutcome(mode: "legacy" | "batch", outcome: "success" | "partial" | "failed", statusCode: number, code: string, detail?: string): void {
+  const fn = outcome === "failed" ? console.error : console.log;
+  fn(`[contacts-custom-field][OUTCOME] mode=${mode} outcome=${outcome} status=${statusCode} code=${code}${detail ? ` detail=${detail}` : ""}`);
+}
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
@@ -619,6 +608,14 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
         });
       }
 
+      // Log what data arrived before any GHL call — visible in Render's logs.
+      logIncoming(
+        "batch",
+        req.body.locationId,
+        req.body.email,
+        req.body.customFields.map((e: BatchFieldInput) => ({ customFieldName: e.customFieldName, value: e.value }))
+      );
+
       try {
         const result = await updateContactCustomFieldsBatch(batchValidation.payload, req.body.customFields);
         console.log(
@@ -626,23 +623,21 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
             (result.failingFields.length > 0 ? `with ${result.failingFields.length} failing ` : "") +
             `on contact ${result.contactId} (${req.body.email}) in location ${req.body.locationId}`
         );
-        recordDebugEntry({
-          at: new Date().toISOString(),
-          mode: "batch",
-          request: {
-            locationId: req.body.locationId,
-            email: req.body.email,
-            incomingFields: req.body.customFields.map((e: BatchFieldInput) => ({ customFieldName: e.customFieldName, value: e.value })),
-          },
-          outcome: result.success ? "success" : "partial",
-          statusCode: 200,
-          code: result.success ? "OK" : "PARTIAL_UPDATE_FAILED",
-          mappedToGhl: result.updatedFields.map((f) => ({ id: f.customFieldId, key: f.customFieldKey, fieldValue: f.updatedValue })),
-          detail:
-            result.failingFields.length > 0
-              ? result.failingFields.map((f) => `${f.customFieldName} (${f.code})`).join("; ")
-              : undefined,
-        });
+        // Log the exact id/key/fieldValue mapping that was PUT to GHL.
+        logMappedToGhl(
+          "batch",
+          result.contactId,
+          result.updatedFields.map((f) => ({ id: f.customFieldId, key: f.customFieldKey, fieldValue: f.updatedValue }))
+        );
+        logOutcome(
+          "batch",
+          result.success ? "success" : "partial",
+          200,
+          result.success ? "OK" : "PARTIAL_UPDATE_FAILED",
+          result.failingFields.length > 0
+            ? result.failingFields.map((f) => `${f.customFieldName} (${f.code})`).join("; ")
+            : undefined
+        );
         if (result.success) {
           return res.status(200).json(result);
         }
@@ -657,21 +652,13 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
 
         console.error(`[contacts-custom-field] Failed to batch-update custom fields: ${message}`);
 
-        recordDebugEntry({
-          at: new Date().toISOString(),
-          mode: "batch",
-          request: {
-            locationId: req.body.locationId,
-            email: req.body.email,
-            incomingFields: Array.isArray(req.body.customFields)
-              ? req.body.customFields.map((e: BatchFieldInput) => ({ customFieldName: e.customFieldName ?? "", value: e.value }))
-              : [],
-          },
-          outcome: "failed",
-          statusCode: code === "LOCATION_NOT_FOUND" || code === "CONTACT_NOT_FOUND" || code === "CUSTOM_FIELD_NOT_FOUND" || code === "CUSTOM_FIELD_LOOKUP_FAILED" ? 404 : 422,
+        logOutcome(
+          "batch",
+          "failed",
+          code === "LOCATION_NOT_FOUND" || code === "CONTACT_NOT_FOUND" || code === "CUSTOM_FIELD_NOT_FOUND" || code === "CUSTOM_FIELD_LOOKUP_FAILED" ? 404 : 422,
           code,
-          detail: message,
-        });
+          message
+        );
 
         switch (code) {
           case "LOCATION_NOT_FOUND":
@@ -702,6 +689,11 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
 
     const { payload } = validation;
 
+    // Log what data arrived before any GHL call — visible in Render's logs.
+    logIncoming("legacy", payload.locationId, payload.email, [
+      { customFieldName: payload.customFieldName, value: payload.value },
+    ]);
+
     // 3. Operation
     try {
       const result = await updateContactCustomField(payload);
@@ -709,19 +701,11 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
         `[contacts-custom-field] Updated field "${payload.customFieldName}"=${payload.value} ` +
           `on contact ${result.contactId} (${payload.email}) in location ${payload.locationId}`
       );
-      recordDebugEntry({
-        at: new Date().toISOString(),
-        mode: "legacy",
-        request: {
-          locationId: payload.locationId,
-          email: payload.email,
-          incomingFields: [{ customFieldName: payload.customFieldName, value: payload.value }],
-        },
-        outcome: "success",
-        statusCode: 200,
-        code: "OK",
-        mappedToGhl: [{ id: result.customFieldId, key: result.customFieldKey, fieldValue: result.updatedValue }],
-      });
+      // Log the exact id/key/fieldValue mapping that was PUT to GHL.
+      logMappedToGhl("legacy", result.contactId, [
+        { id: result.customFieldId, key: result.customFieldKey, fieldValue: result.updatedValue },
+      ]);
+      logOutcome("legacy", "success", 200, "OK");
       return res.status(200).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -729,19 +713,13 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
 
       console.error(`[contacts-custom-field] Failed to update custom field: ${message}`);
 
-      recordDebugEntry({
-        at: new Date().toISOString(),
-        mode: "legacy",
-        request: {
-          locationId: payload.locationId,
-          email: payload.email,
-          incomingFields: [{ customFieldName: payload.customFieldName, value: payload.value }],
-        },
-        outcome: "failed",
-        statusCode: code === "LOCATION_NOT_FOUND" || code === "CONTACT_NOT_FOUND" || code === "CUSTOM_FIELD_NOT_FOUND" || code === "CUSTOM_FIELD_LOOKUP_FAILED" ? 404 : 422,
+      logOutcome(
+        "legacy",
+        "failed",
+        code === "LOCATION_NOT_FOUND" || code === "CONTACT_NOT_FOUND" || code === "CUSTOM_FIELD_NOT_FOUND" || code === "CUSTOM_FIELD_LOOKUP_FAILED" ? 404 : 422,
         code,
-        detail: message,
-      });
+        message
+      );
 
       switch (code) {
         case "LOCATION_NOT_FOUND":
@@ -759,59 +737,4 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
     }
   });
 
-  /**
-   * GET /api/contacts/update-custom-field/debug
-   *
-   * Inspects what data arrived at the update-custom-field endpoint and how it
-   * was mapped onto the GHL contact. Protected by the same Internal-Key gate
-   * as the POST endpoint, so only your own clients (n8n, your own tooling)
-   * can read it.
-   *
-   * The log is in-memory, capped at ${DEBUG_LOG_CAPACITY} entries, and resets
-   * on every Render restart — it is a debugging aid, not a persistence layer.
-   *
-   * Query params (optional):
-   *  ?limit=N      — number of recent entries to return (default 20, max 100)
-   *  ?mode=legacy|batch — filter by request mode
-   *  ?clear=true   — empty the log and return the (now empty) snapshot
-   */
-  app.get("/api/contacts/update-custom-field/debug", async (req, res) => {
-    const authHeader = req.headers.authorization || "";
-    const expectedKey = ENV.internalApiKey;
-
-    if (!authHeader || authHeader !== `Internal-Key ${expectedKey}`) {
-      return res.status(401).json({
-        success: false,
-        error: "Unauthorized",
-        code: "UNAUTHORIZED",
-        detail: "Invalid or missing Internal-Key",
-      });
-    }
-
-    if ((req.query.clear as string) === "true") {
-      resetDebugLog();
-      return res.status(200).json({
-        success: true,
-        entries: [],
-        total: 0,
-        note: "Debug log cleared. Log is in-memory and resets on every Render restart.",
-      });
-    }
-
-    const mode = req.query.mode;
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "20"), 10) || 20, 1), DEBUG_LOG_CAPACITY);
-
-    const filtered =
-      mode === "legacy" || mode === "batch"
-        ? debugLog.filter((e) => e.mode === mode)
-        : debugLog;
-
-    return res.status(200).json({
-      success: true,
-      total: filtered.length,
-      returned: Math.min(limit, filtered.length),
-      note: "In-memory log — oldest entries drop off, and the whole log resets on Render restart.",
-      entries: filtered.slice(0, limit),
-    });
-  });
 }
