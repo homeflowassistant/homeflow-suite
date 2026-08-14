@@ -779,6 +779,39 @@ export const requestSchedulingRouter = router({
     }),
 
   /**
+   * Load the latest GHL custom value for the S&G Link base onboarding link.
+   * Called every time the popup opens so the field is pre-filled with the
+   * freshest saved value for the current sub-account. An empty string means
+   * the value is missing/unavailable; the client then falls back to its
+   * existing/default value (default placeholder text).
+   */
+  getSgLinkSettings: publicProcedure
+    .input(z.object({ locationId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      try {
+        const customValues = await fetchAllCustomValues(
+          locationId,
+          await getLocationAccessToken(locationId)
+        );
+        // Unified lookup: unwraps GHL's `{{ custom_values.base_onboarding_link }}`
+        // syntax, then matches case-insensitive / normalized / fuzzy.
+        return {
+          baseOnboardingLink: resolveGhlCustomValue(
+            customValues,
+            "base_onboarding_link"
+          ),
+        };
+      } catch (err) {
+        console.warn(
+          "[GHL] Error fetching S&G link setting, returning default:",
+          err
+        );
+        return { baseOnboardingLink: "" };
+      }
+    }),
+
+  /**
    * Save S&G Link base onboarding link to GHL custom value.
    * Saves to: base_onboarding_link (accessible via {{custom_values.base_onboarding_link}})
    */
