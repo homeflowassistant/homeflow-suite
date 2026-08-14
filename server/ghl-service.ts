@@ -157,6 +157,16 @@ async function fetchJson<T>(
 
 const customFieldCache = new Map<string, Map<string, string>>();
 
+/**
+ * Extract the raw custom-value key from GHL's merge-field syntax.
+ * e.g. "{{ custom_values.lead_followup_options }}" -> "lead_followup_options"
+ * Returns the input unchanged if no merge-field wrapper is found.
+ */
+function extractCustomValueKey(fieldKey: string): string {
+  const m = fieldKey.match(/\{\{\s*custom_values\.([^}]+?)\s*\}\}/);
+  return m ? m[1].trim() : fieldKey;
+}
+
 function normalizeFieldName(name: string): string {
   return name
     .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
@@ -540,7 +550,16 @@ export async function updateExistingCustomValuesOnly(
             ? cv.key
             : ""; // fallback — will use the requested key as name in the PUT body
 
+    // GHL returns fieldKey wrapped in merge-field syntax, e.g.
+    // "{{ custom_values.lead_followup_options }}" — unwrap it so plain keys
+    // like "lead_followup_options" can be matched directly.
+    const unwrapped =
+      typeof cv.fieldKey === "string" && cv.fieldKey
+        ? extractCustomValueKey(cv.fieldKey)
+        : undefined;
+
     const keys = [
+      typeof unwrapped === "string" ? unwrapped : undefined,
       typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
       typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
@@ -556,7 +575,30 @@ export async function updateExistingCustomValuesOnly(
   // IMPORTANT: Preserve the original display name (GHL API requires the display name
   // in the PUT body — passing the key would silently rename the custom value)
   const promises = Object.entries(updates).map(async ([key, value]) => {
-    const entry = existingMap.get(key) || existingMap.get(normalizeKey(key));
+    let entry = existingMap.get(key) || existingMap.get(normalizeKey(key));
+
+    // Fallback: fuzzy search (exact / case-insensitive / normalized /
+    // substring) across all candidate name fields — catches cases where the
+    // display name differs from the config key, e.g. "Lead Follow-up Options
+    // (Lite, SG-Link, Custom-Link)" vs "lead_followup_options"
+    if (!entry) {
+      const fuzzyId = findCustomValueId(cvs, key);
+      if (fuzzyId) {
+        const matched = cvs.find(
+          c => (c.id || c._id) === fuzzyId
+        ) as Record<string, unknown> | undefined;
+        if (matched) {
+          const matchedName =
+            typeof matched.name === "string" && matched.name
+              ? matched.name
+              : typeof matched.fieldKey === "string" && matched.fieldKey
+                ? extractCustomValueKey(matched.fieldKey)
+                : key;
+          entry = { id: fuzzyId, displayName: matchedName };
+        }
+      }
+    }
+
     if (!entry) {
       console.warn(
         `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`
