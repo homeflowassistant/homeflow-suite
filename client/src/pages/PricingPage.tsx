@@ -364,11 +364,6 @@ export default function PricingPage() {
                   <h2 className="pricing-section-title required">
                     Recurring Service Pricing: Regular Zip Codes
                   </h2>
-                  <p className="pricing-section-instruction">
-                    If this service is provided, replace the X's with your
-                    service pricing. Please contact support if you need
-                    assistance.
-                  </p>
                   <input
                     type="text"
                     className="pricing-zip-input"
@@ -384,11 +379,6 @@ export default function PricingPage() {
                   <h2 className="pricing-section-title">
                     Recurring Service Pricing: Premium Zip Codes
                   </h2>
-                  <p className="pricing-section-instruction">
-                    If this service is provided, replace the X's with your
-                    service pricing. Please contact support if you need
-                    assistance.
-                  </p>
                   <input
                     type="text"
                     className="pricing-zip-input"
