@@ -1244,10 +1244,17 @@ export default function CustomQuoteLinkPopup({
     trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
   // ── Fetch latest saved values from GHL custom values on every open ──
+  // staleTime: 0 makes the data always stale, so tRPC re-fetches from GHL
+  // every time the popup opens (never serves a cached snapshot).
   const settingsQuery =
     trpc.requestScheduling.getQuoteSettings.useQuery(
       { locationId },
-      { enabled: !!locationId && open }
+      {
+        enabled: !!locationId && open,
+        staleTime: 0,
+        refetchOnMount: true,
+        retry: 1,
+      }
     );
 
   // ── Fetch the subaccount's available custom values for the picker ──
@@ -1261,59 +1268,50 @@ export default function CustomQuoteLinkPopup({
     if (!open) return;
     const ghl = settingsQuery.data;
     if (!ghl) return;
-    // Fill every field with its latest GHL custom value when present;
-    // fall back to the existing/default value when the GHL value is
-    // empty or unavailable.
-    setFormData(prev => ({
-      companyLogo: ghl.companyLogo || prev.companyLogo,
-      teamPhoto: ghl.companyImage || prev.teamPhoto,
-      bioTitle: ghl.quoteTitle || prev.bioTitle,
-      bioDescription: ghl.companyDescription || prev.bioDescription,
-      tosLink: ghl.tosLink ?? prev.tosLink,
-      price1: prev.price1,
-      price2: prev.price2,
+    // Priority on every popup open:
+    //   1. If a GHL custom value exists and is non-empty, use it.
+    //   2. Otherwise fall back to the popup's default value for that field.
+    // (The backend returns "" for missing/empty GHL values, and the form
+    //  is reset to DEFAULT_FORM on close, so defaults are guaranteed.)
+    setFormData({
+      companyLogo: ghl.companyLogo || DEFAULT_FORM.companyLogo,
+      teamPhoto: ghl.companyImage || DEFAULT_FORM.teamPhoto,
+      bioTitle: ghl.quoteTitle || DEFAULT_FORM.bioTitle,
+      bioDescription: ghl.companyDescription || DEFAULT_FORM.bioDescription,
+      tosLink: ghl.tosLink ?? DEFAULT_FORM.tosLink,
+      price1: DEFAULT_FORM.price1,
+      price2: DEFAULT_FORM.price2,
       offers: [
         {
-          name: ghl.offer1Title || prev.offers[0]?.name || DEFAULT_FORM.offers[0].name,
-          price: prev.offers[0]?.price ?? DEFAULT_FORM.offers[0].price,
-          description: ghl.offer1Description || prev.offers[0]?.description || "",
-          image: ghl.offer1Image || prev.offers[0]?.image || DEFAULT_FORM.offers[0].image,
+          name: ghl.offer1Title || DEFAULT_FORM.offers[0].name,
+          price: DEFAULT_FORM.offers[0].price,
+          description:
+            ghl.offer1Description || DEFAULT_FORM.offers[0].description,
+          image: ghl.offer1Image || DEFAULT_FORM.offers[0].image,
         },
         {
-          name: ghl.offer2Title || prev.offers[1]?.name || DEFAULT_FORM.offers[1].name,
-          price: prev.offers[1]?.price ?? DEFAULT_FORM.offers[1].price,
-          description: ghl.offer2Description || prev.offers[1]?.description || "",
-          image: ghl.offer2Image || prev.offers[1]?.image || DEFAULT_FORM.offers[1].image,
+          name: ghl.offer2Title || DEFAULT_FORM.offers[1].name,
+          price: DEFAULT_FORM.offers[1].price,
+          description:
+            ghl.offer2Description || DEFAULT_FORM.offers[1].description,
+          image: ghl.offer2Image || DEFAULT_FORM.offers[1].image,
         },
       ],
-      galleryImages: [
-        ghl.image1 || prev.galleryImages[0] || DEFAULT_FORM.galleryImages[0],
-        ghl.image2 || prev.galleryImages[1] || DEFAULT_FORM.galleryImages[1],
-        ghl.image3 || prev.galleryImages[2] || DEFAULT_FORM.galleryImages[2],
-        ghl.image4 || prev.galleryImages[3] || DEFAULT_FORM.galleryImages[3],
-        ghl.image5 || prev.galleryImages[4] || DEFAULT_FORM.galleryImages[4],
-        (ghl.image6 || prev.galleryImages[5] || DEFAULT_FORM.galleryImages[5]),
-      ],
-      testimonialHeadshots: [
-        ghl.review1Photo || prev.testimonialHeadshots[0],
-        ghl.review2Photo || prev.testimonialHeadshots[1],
-        ghl.review3Photo || prev.testimonialHeadshots[2],
-        ghl.review4Photo || prev.testimonialHeadshots[3],
-      ],
-      testimonialNames: [
-        ghl.review1Name || prev.testimonialNames[0],
-        ghl.review2Name || prev.testimonialNames[1],
-        ghl.review3Name || prev.testimonialNames[2],
-        ghl.review4Name || prev.testimonialNames[3],
-      ],
-      testimonialTexts: [
-        ghl.review1 || prev.testimonialTexts[0],
-        ghl.review2 || prev.testimonialTexts[1],
-        ghl.review3 || prev.testimonialTexts[2],
-        ghl.review4 || prev.testimonialTexts[3],
-      ],
-      testimonialScreenshots: prev.testimonialScreenshots,
-    }));
+      galleryImages: DEFAULT_FORM.galleryImages.map(
+        (def, i) =>
+          ghl[`image${i + 1}` as keyof typeof ghl] || def
+      ) as [string, string, string, string, string, string],
+      testimonialHeadshots: DEFAULT_FORM.testimonialHeadshots.map(
+        (def, i) => ghl[`review${i + 1}Photo` as keyof typeof ghl] || def
+      ) as [string | null, string | null, string | null, string | null],
+      testimonialNames: DEFAULT_FORM.testimonialNames.map(
+        (def, i) => ghl[`review${i + 1}Name` as keyof typeof ghl] || def
+      ) as [string, string, string, string],
+      testimonialTexts: DEFAULT_FORM.testimonialTexts.map(
+        (def, i) => ghl[`review${i + 1}` as keyof typeof ghl] || def
+      ) as [string, string, string, string],
+      testimonialScreenshots: DEFAULT_FORM.testimonialScreenshots,
+    });
   }, [settingsQuery.data, open]);
 
   const handleSave = useCallback(async () => {
@@ -1389,9 +1387,9 @@ export default function CustomQuoteLinkPopup({
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      // Reset to defaults so the next open re-fetches the latest
-      // GHL company_name value instead of reusing stale state.
-      setFormData(DEFAULT_FORM);
+    // Reset to defaults so the next open re-fetches the latest
+    // GHL values instead of reusing stale in-memory state.
+    setFormData(DEFAULT_FORM);
     }
     onOpenChange(open);
   };

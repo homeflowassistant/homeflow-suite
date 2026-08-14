@@ -162,9 +162,65 @@ const customFieldCache = new Map<string, Map<string, string>>();
  * e.g. "{{ custom_values.lead_followup_options }}" -> "lead_followup_options"
  * Returns the input unchanged if no merge-field wrapper is found.
  */
-function extractCustomValueKey(fieldKey: string): string {
+export function extractCustomValueKey(fieldKey: string): string {
   const m = fieldKey.match(/\{\{\s*custom_values\.([^}]+?)\s*\}\}/);
   return m ? m[1].trim() : fieldKey;
+}
+
+/**
+ * Resolve a custom-value key to its current value from a fetched
+ * custom-values list.
+ *
+ * Priority rules (used on every popup open):
+ * 1. Unwrap GHL's merge-field syntax — fieldKey `{{ custom_values.lead_followup_options }}`
+ *    is matched as plain `lead_followup_options`.
+ * 2. Case-insensitive exact match against unwrapped fieldKey, raw fieldKey, key, and name.
+ * 3. Normalized match (strips all non-alphanumeric chars).
+ * 4. Fuzzy substring match via findCustomValueId (catches display names like
+ *    "Lead Follow-up Options (Lite, SG-Link, Custom-Link)").
+ *
+ * Returns the stored value trimmed, or "" when the custom value does not
+ * exist or its value is empty/unavailable — the caller falls back to the
+ * default value in that case.
+ */
+export function resolveCustomValue(
+  customValues: Record<string, unknown>[],
+  key: string
+): string {
+  if (!key) return "";
+  const get = (name: string): string => {
+    const cv = customValues.find(c => {
+      const unwrapped =
+        typeof c.fieldKey === "string" && c.fieldKey
+          ? extractCustomValueKey(c.fieldKey)
+          : undefined;
+      const k = unwrapped ?? (typeof c.fieldKey === "string" ? c.fieldKey : "") ?? "";
+      const n = (typeof c.name === "string" && c.name) || (typeof c.key === "string" ? c.key : "") || "";
+      const loKey = key.toLowerCase();
+      return (
+        k.toLowerCase() === loKey ||
+        n.toLowerCase() === loKey ||
+        normalizeKey(k) === normalizeKey(key) ||
+        normalizeKey(n) === normalizeKey(key)
+      );
+    });
+    const raw = (cv as { value?: unknown } | undefined)?.value;
+    return raw !== null && raw !== undefined ? String(raw).trim() : "";
+  };
+
+  const exact = get(key);
+  if (exact !== "") return exact;
+
+  // Fuzzy fallback: key may exist but hold an empty value — resolve the ID
+  // so the caller can still distinguish "field exists, value empty" from
+  // "field does not exist".
+  const id = findCustomValueId(customValues, key);
+  if (id) {
+    const matched = customValues.find(c => (c.id || c._id) === id);
+    const raw = (matched as { value?: unknown } | undefined)?.value;
+    return raw !== null && raw !== undefined ? String(raw).trim() : "";
+  }
+  return "";
 }
 
 function normalizeFieldName(name: string): string {
@@ -553,7 +609,7 @@ export async function updateExistingCustomValuesOnly(
     // GHL returns fieldKey wrapped in merge-field syntax, e.g.
     // "{{ custom_values.lead_followup_options }}" — unwrap it so plain keys
     // like "lead_followup_options" can be matched directly.
-    const unwrapped =
+      const unwrapped =
       typeof cv.fieldKey === "string" && cv.fieldKey
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
@@ -572,6 +628,7 @@ export async function updateExistingCustomValuesOnly(
   }
 
   // Step 3: For each requested update, PUT only if the key already exists
+
   // IMPORTANT: Preserve the original display name (GHL API requires the display name
   // in the PUT body — passing the key would silently rename the custom value)
   const promises = Object.entries(updates).map(async ([key, value]) => {

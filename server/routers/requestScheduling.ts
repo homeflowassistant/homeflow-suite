@@ -9,6 +9,8 @@ import {
   updateExistingCustomValuesOnly,
   fetchAllCustomValues,
   findCustomValueId,
+  resolveCustomValue as resolveGhlCustomValue,
+  extractCustomValueKey,
 } from "../ghl-service.js";
 
 const FOLLOW_UP_CUSTOM_VALUE_NAME =
@@ -392,16 +394,13 @@ export const requestSchedulingRouter = router({
           await getLocationAccessToken(locationId)
         );
 
-        // Case-insensitive lookup across key / fieldKey / name
-        const get = (key: string): string => {
-          const cv = customValues.find(c => {
-            const k = (c.key || c.fieldKey || "").toString().toLowerCase();
-            const n = (c.name || "").toString().toLowerCase();
-            return k === key.toLowerCase() || n === key.toLowerCase();
-          });
-          const raw = (cv as { value?: unknown } | undefined)?.value;
-          return raw !== null && raw !== undefined ? String(raw).trim() : "";
-        };
+        // Unified lookup: unwraps GHL's `{{ custom_values.xxx }}` fieldKey
+        // syntax, then matches case-insensitive / normalized / fuzzy. An
+        // empty string means the field is missing or its stored value is
+        // empty — the client falls back to the default value for that
+        // field, so GHL custom values always take priority over defaults.
+        const get = (key: string): string =>
+          resolveGhlCustomValue(customValues, key);
 
         return {
           companyName: get(CV.companyName),
@@ -496,28 +495,34 @@ export const requestSchedulingRouter = router({
           locationId,
           await getLocationAccessToken(locationId)
         );
-        const custom = customValues.map(c => ({
-          name:
+        const custom = customValues.map(c => {
+          // Unwrap GHL's `{{ custom_values.xxx }}` fieldKey syntax so the
+          // raw key (e.g. "lead_followup_options") is what gets exposed to
+          // the client picker.
+          const unwrapped =
+            typeof c.fieldKey === "string" && c.fieldKey
+              ? extractCustomValueKey(c.fieldKey)
+              : undefined;
+          const rawKey = unwrapped;
+          const keyCandidate =
+            (typeof c.key === "string" && c.key) || rawKey;
+          const nameCandidate =
             (typeof c.name === "string" && c.name) ||
-            (typeof c.key === "string" && c.key) ||
+            rawKey ||
             (typeof c.fieldKey === "string" && c.fieldKey) ||
-            "unnamed",
-          key:
-            (typeof c.key === "string" && c.key) ||
-            (typeof c.fieldKey === "string" && c.fieldKey) ||
-            (typeof c.name === "string" && c.name) ||
-            "",
-          tag: `{{custom_values.${
-            ((typeof c.key === "string" && c.key) ||
-              (typeof c.fieldKey === "string" && c.fieldKey) ||
-              (typeof c.name === "string" && c.name) ||
-              "unnamed"
-          )
+            "unnamed";
+          const keyStr = keyCandidate || nameCandidate;
+          const tagKey = keyStr
             .trim()
             .toLowerCase()
             .replace(/[^a-z0-9_]+/g, "_")
-            .replace(/^_|_$/g, "")}}}`,
-        }));
+            .replace(/^_|_$/g, "");
+          return {
+            name: nameCandidate,
+            key: keyStr,
+            tag: `{{custom_values.${tagKey}}}`,
+          };
+        });
         return { tags: [...builtIn, ...custom] };
       } catch (err) {
         console.warn("[GHL] Error listing custom value tags:", err);
@@ -554,26 +559,10 @@ export const requestSchedulingRouter = router({
           locationId,
           await getLocationAccessToken(locationId)
         );
-        const cv = customValues.find(c => {
-          const k = (
-            (typeof c.key === "string" && c.key) ||
-            (typeof c.fieldKey === "string" && c.fieldKey) ||
-            ""
-          )
-            .toString()
-            .toLowerCase()
-            .replace(/[^a-z0-9_]+/g, "_")
-            .replace(/^_|_$/g, "");
-          const n = ((typeof c.name === "string" && c.name) || "")
-            .toString()
-            .toLowerCase()
-            .replace(/[^a-z0-9_]+/g, "_")
-            .replace(/^_|_$/g, "");
-          return k === normalized || n === normalized;
-        });
-        const raw = (cv as { value?: unknown } | undefined)?.value;
-        const resolved =
-          raw !== null && raw !== undefined ? String(raw).trim() : "";
+        // Unified lookup: unwraps `{{ custom_values.xxx }}` fieldKey syntax
+        // and falls back to fuzzy matching, so any picker key resolves to
+        // the live stored value.
+        const resolved = resolveGhlCustomValue(customValues, normalized);
         // If the subaccount has no stored value, surface the tag itself
         // so the user can see what was inserted (template placeholder).
         return {
