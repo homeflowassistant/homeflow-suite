@@ -108,6 +108,9 @@ export default function ReviewConfirm({
               fieldValue: c.lastTimeScooped,
             },
             { fieldKey: "clean_up_frequency", fieldValue: c.frequency },
+            ...(consent
+              ? [{ fieldKey: "marketing_allowed", fieldValue: "Yes" }]
+              : []),
           ].filter(field => String(field.fieldValue ?? "").trim() !== ""),
         }));
 

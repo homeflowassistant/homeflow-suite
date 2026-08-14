@@ -153,6 +153,9 @@ export default function SingleContactForm({
             fieldKey: "clean_up_frequency",
             fieldValue: formData.frequency.trim(),
           },
+          ...(consent
+            ? [{ fieldKey: "marketing_allowed", fieldValue: "Yes" }]
+            : []),
         ],
       },
     });
