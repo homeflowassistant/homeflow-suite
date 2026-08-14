@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,19 @@ export default function SGLinkPopup({
   const [isSaving, setIsSaving] = useState(false);
 
   const saveMutation = trpc.requestScheduling.saveSgLinkSettings.useMutation();
+  const settingsQuery = trpc.requestScheduling.getSgLinkSettings.useQuery(
+    { locationId },
+    { enabled: open, staleTime: 0, refetchOnMount: true }
+  );
+
+  // Prefill the field whenever the popup opens: use the latest saved value
+  // from the GHL custom value if present, otherwise keep the default value.
+  useEffect(() => {
+    if (open) {
+      const saved = settingsQuery.data?.baseOnboardingLink?.trim() ?? "";
+      setBaseLink(saved);
+    }
+  }, [open, settingsQuery.data?.baseOnboardingLink]);
 
   const handleCopyLink = () => {
     if (baseLink.trim()) {
@@ -79,15 +92,34 @@ export default function SGLinkPopup({
     }
   };
 
+  // Normalize the URL before saving:
+  // - add https:// if no protocol is present
+  // - remove a trailing /
+  const normalizeUrl = (url: string): string => {
+    let normalized = url.trim();
+    if (!normalized) return normalized;
+    if (!/^https?:\/\//i.test(normalized)) {
+      normalized = `https://${normalized}`;
+    }
+    while (normalized.endsWith("/")) {
+      normalized = normalized.slice(0, -1);
+    }
+    return normalized;
+  };
+
   const handleSave = async () => {
-    if (!baseLink.trim()) return;
+    const raw = baseLink.trim();
+    if (!raw) return;
+    const normalizedLink = normalizeUrl(raw);
     setIsSaving(true);
     try {
       await saveMutation.mutateAsync({
         locationId,
-        baseOnboardingLink: baseLink.trim(),
+        baseOnboardingLink: normalizedLink,
       });
       toast.success("Base onboarding link saved successfully!");
+      // Close the popup only after a successful save
+      onOpenChange(false);
     } catch (error) {
       toast.error("Failed to save. Please try again.");
     } finally {
