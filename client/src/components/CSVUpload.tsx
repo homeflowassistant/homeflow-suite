@@ -24,23 +24,28 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
   const handleFile = useCallback(
     (file: File) => {
       if (!file.name.endsWith(".csv") && file.type !== "text/csv") {
-        toast.error("Invalid file type", { description: "Please upload a CSV file only." });
+        toast.error("Invalid file type", {
+          description: "Please upload a CSV file only.",
+        });
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File too large", { description: "Maximum file size is 10MB." });
+        toast.error("File too large", {
+          description: "Maximum file size is 10MB.",
+        });
         return;
       }
       setSelectedFile(file);
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         try {
           const text = e.target?.result as string;
           const parsed = parseCSV(text, file.name);
           onFileUploaded(parsed);
         } catch (error) {
           toast.error("Failed to parse CSV", {
-            description: error instanceof Error ? error.message : "Invalid CSV format",
+            description:
+              error instanceof Error ? error.message : "Invalid CSV format",
           });
           setSelectedFile(null);
         }
@@ -91,11 +96,15 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
         <div className="csv-dropzone-file">
           <FileSpreadsheet className="h-6 w-6 text-cyan-500 shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate">{selectedFile.name}</p>
-            <p className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+            <p className="text-sm font-semibold text-slate-900 truncate">
+              {selectedFile.name}
+            </p>
+            <p className="text-xs text-slate-500">
+              {(selectedFile.size / 1024).toFixed(1)} KB
+            </p>
           </div>
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               clearFile();
             }}
@@ -112,8 +121,7 @@ export default function CSVUpload({ onFileUploaded }: CSVUploadProps) {
           <p className="text-sm text-slate-700 font-semibold text-center leading-snug">
             Drag and Drop
             <br />
-            or{" "}
-            <span className="text-cyan-500">Upload from Computer</span>
+            or <span className="text-cyan-500">Upload from Computer</span>
           </p>
           <p className="text-xs text-slate-400 mt-1">CSV files only</p>
         </div>

@@ -54,7 +54,7 @@ export default function ActionsMenu({
       // Refresh immediately after the mutation succeeds
       onFullRefresh();
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to toggle DND");
     },
   });
@@ -68,7 +68,7 @@ export default function ActionsMenu({
       setShowDeleteConfirm(false);
       setActiveAction(null);
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to delete contact");
     },
   });
@@ -192,7 +192,8 @@ export default function ActionsMenu({
               Delete Contact
             </h3>
             <p className="text-sm text-slate-600 text-center mb-6">
-              Are you sure you want to delete <strong>{contactName}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{contactName}</strong>?
+              This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-center">
               <button

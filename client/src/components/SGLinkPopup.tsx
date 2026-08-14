@@ -16,17 +16,20 @@ const INSTRUCTIONS = [
   {
     step: 1,
     title: "Log in to WordPress",
-    description: "Go to your WordPress admin dashboard at yourdomain.com/wp-admin and log in with your credentials.",
+    description:
+      "Go to your WordPress admin dashboard at yourdomain.com/wp-admin and log in with your credentials.",
   },
   {
     step: 2,
     title: "Navigate to Sweep&Go Core",
-    description: "In the left sidebar, find and click on 'Sweep&Go Core' to expand the menu.",
+    description:
+      "In the left sidebar, find and click on 'Sweep&Go Core' to expand the menu.",
   },
   {
     step: 3,
     title: "Click on Pages",
-    description: "Under the Sweep&Go Core menu, click on 'Pages' to view all available pages.",
+    description:
+      "Under the Sweep&Go Core menu, click on 'Pages' to view all available pages.",
   },
   {
     step: 4,
@@ -36,12 +39,14 @@ const INSTRUCTIONS = [
   {
     step: 5,
     title: "View the Page",
-    description: "Hover over 'Client Onboarding' and click 'View' to open the page in your browser.",
+    description:
+      "Hover over 'Client Onboarding' and click 'View' to open the page in your browser.",
   },
   {
     step: 6,
     title: "Copy the URL",
-    description: "Copy the full URL from your browser's address bar. This is your base onboarding link.",
+    description:
+      "Copy the full URL from your browser's address bar. This is your base onboarding link.",
   },
 ];
 
@@ -51,7 +56,11 @@ interface SGLinkPopupProps {
   locationId: string;
 }
 
-export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPopupProps) {
+export default function SGLinkPopup({
+  open,
+  onOpenChange,
+  locationId,
+}: SGLinkPopupProps) {
   const [baseLink, setBaseLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -87,12 +96,15 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) {
-        setBaseLink("");
-      }
-      onOpenChange(newOpen);
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={newOpen => {
+        if (!newOpen) {
+          setBaseLink("");
+        }
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[96vw] lg:max-w-[92vw] xl:max-w-[1600px] p-0 gap-0 max-h-[95vh] rounded-xl border-2 border-blue-600 flex flex-col">
         {/* Fixed Header */}
         <div className="px-6 pt-6 pb-4 border-b border-blue-100 flex-shrink-0">
@@ -100,7 +112,8 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
             Sweep & Go Base Onboarding Link
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Watch the video below to learn how to find your base onboarding link, then paste it in the field below.
+            Watch the video below to learn how to find your base onboarding
+            link, then paste it in the field below.
           </DialogDescription>
         </div>
 
@@ -129,14 +142,18 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                   How to Find Your Base Onboarding Link
                 </h3>
                 <ol className="space-y-3">
-                  {INSTRUCTIONS.map((instruction) => (
+                  {INSTRUCTIONS.map(instruction => (
                     <li key={instruction.step} className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
                         {instruction.step}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-slate-800">{instruction.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{instruction.description}</p>
+                        <p className="text-sm font-medium text-slate-800">
+                          {instruction.title}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {instruction.description}
+                        </p>
                       </div>
                     </li>
                   ))}
@@ -151,7 +168,8 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                   Enter Your Base Onboarding Link
                 </h3>
                 <p className="text-sm text-slate-500">
-                  Paste the URL you copied from the Client Onboarding page in WordPress.
+                  Paste the URL you copied from the Client Onboarding page in
+                  WordPress.
                 </p>
 
                 <div className="space-y-3">
@@ -163,7 +181,7 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                       type="url"
                       placeholder="https://yourdomain.com/client-onboarding"
                       value={baseLink}
-                      onChange={(e) => setBaseLink(e.target.value)}
+                      onChange={e => setBaseLink(e.target.value)}
                       className="flex-1"
                     />
                   </div>
@@ -193,7 +211,9 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                   {/* Link preview */}
                   {baseLink.trim() && (
                     <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-xs font-medium text-green-700 mb-1">Link Preview:</p>
+                      <p className="text-xs font-medium text-green-700 mb-1">
+                        Link Preview:
+                      </p>
                       <p className="text-xs text-green-600 break-all font-mono">
                         {baseLink.trim()}
                       </p>
@@ -217,9 +237,6 @@ export default function SGLinkPopup({ open, onOpenChange, locationId }: SGLinkPo
                     {isSaving ? "Saving..." : "Save Base Link"}
                   </button>
                 </div>
-
-                
-                
               </div>
             </div>
           </div>

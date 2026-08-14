@@ -86,8 +86,8 @@ export default function ContactsPage() {
           </div>
           <h1 className="text-xl font-semibold text-slate-900">All Contacts</h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            This page is designed to be embedded inside GoHighLevel. Add it as a Custom Menu Link
-            with the{" "}
+            This page is designed to be embedded inside GoHighLevel. Add it as a
+            Custom Menu Link with the{" "}
             <code className="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-mono">
               ?locationId=YOUR_LOCATION_ID
             </code>{" "}
@@ -111,7 +111,9 @@ export default function ContactsPage() {
             disabled={isRefreshing || contactsQuery.isLoading}
             className="gap-1.5 text-sm"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -126,7 +128,7 @@ export default function ContactsPage() {
                 type="text"
                 placeholder="Search contacts by email, name, or phone..."
                 value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={e => handleSearchChange(e.target.value)}
                 className="h-9 pl-2 pr-3 text-sm border-slate-200 focus-visible:ring-cyan-400"
               />
             </div>

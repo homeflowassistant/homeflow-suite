@@ -1,7 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getLocationCustomValueMap, upsertGhlCustomValue, updateExistingCustomValuesOnly, uploadToGhlMedia } from "../ghl-service.js";
+import {
+  getLocationCustomValueMap,
+  upsertGhlCustomValue,
+  updateExistingCustomValuesOnly,
+  uploadToGhlMedia,
+} from "../ghl-service.js";
 
 // ─── Reactivation campaign option values ─────────────────────────────
 // "Lite"              → saved as "Lite"         to lead_followup_options
@@ -12,7 +17,7 @@ type ReactivationOption = (typeof REACTIVATION_OPTIONS)[number];
 
 // Maps the UI label to the exact GHL custom value string
 const OPTION_TO_GHL_VALUE: Record<ReactivationOption, string> = {
-  "Lite": "Lite",
+  Lite: "Lite",
   "Custom Quote & Link": "Custom-Link",
 };
 
@@ -78,7 +83,11 @@ const CV = {
 
 // ─── Normalise a timing label → index ────────────────────────────────
 function onetimeTimingToIndex(value: string): number {
-  const normalised = value.trim().toLowerCase().replace(/[\s_-]+/g, " ").trim();
+  const normalised = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .trim();
   const map: Record<string, number> = {
     never: 0,
     immediately: 1,
@@ -91,7 +100,7 @@ function onetimeTimingToIndex(value: string): number {
   };
   return (
     map[normalised] ??
-    ONETIME_TIMING_LABELS.findIndex((l) => l.toLowerCase() === normalised) ??
+    ONETIME_TIMING_LABELS.findIndex(l => l.toLowerCase() === normalised) ??
     0
   );
 }
@@ -151,7 +160,10 @@ const saveCustomValuesSettingsProcedure = publicProcedure
   .mutation(async ({ input }) => {
     const locationId = input.locationId.trim();
     if (!locationId) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Location ID cannot be empty",
+      });
     }
 
     await updateExistingCustomValuesOnly(locationId, {
@@ -159,7 +171,10 @@ const saveCustomValuesSettingsProcedure = publicProcedure
       [CV.onetimeServiceScheduling]: input.onetimeTiming,
     });
 
-    if (input.reactivationOption === "Custom Quote & Link" && input.customQuoteData) {
+    if (
+      input.reactivationOption === "Custom Quote & Link" &&
+      input.customQuoteData
+    ) {
       const d = input.customQuoteData;
 
       const MIME_TO_EXT: Record<string, string> = {
@@ -171,11 +186,14 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         "image/svg+xml": ".svg",
       };
 
-      const handleImg = async (val: string | undefined, name: string): Promise<string> => {
+      const handleImg = async (
+        val: string | undefined,
+        name: string
+      ): Promise<string> => {
         if (!val) return "";
         if (val.startsWith("data:image")) {
           const mimeMatch = val.match(/^data:([A-Za-z-+\/]+);/);
-          const ext = mimeMatch ? (MIME_TO_EXT[mimeMatch[1]] || ".png") : ".png";
+          const ext = mimeMatch ? MIME_TO_EXT[mimeMatch[1]] || ".png" : ".png";
           const fileName = `${name}_${Date.now()}${ext}`;
           return await uploadToGhlMedia(locationId, val, fileName);
         }
@@ -185,9 +203,17 @@ const saveCustomValuesSettingsProcedure = publicProcedure
       const [
         businessLogoUrl,
         companyImageUrl,
-        img1, img2, img3, img4, img5, img6,
+        img1,
+        img2,
+        img3,
+        img4,
+        img5,
+        img6,
         offer2ImageUrl,
-        rev1Photo, rev2Photo, rev3Photo, rev4Photo,
+        rev1Photo,
+        rev2Photo,
+        rev3Photo,
+        rev4Photo,
       ] = await Promise.all([
         handleImg(d.businessLogo, "business_logo"),
         handleImg(d.companyImage, "company_image"),
@@ -206,15 +232,18 @@ const saveCustomValuesSettingsProcedure = publicProcedure
 
       const exactUpdates: Record<string, string> = {
         [CV.companyLogo]: businessLogoUrl,
-        "homeflow_business_logo": businessLogoUrl,
-        "quote_title": d.quoteTitle ?? "",
+        homeflow_business_logo: businessLogoUrl,
+        quote_title: d.quoteTitle ?? "",
         [CV.companyDescription]: d.bioText ?? "",
         [CV.companyImage]: companyImageUrl,
-        "leads_line_item_2": d.offer2Title ?? "2 Weeks FREE",
-        "leads_line_item_description_2": d.offer2Description ?? "",
-        "leads_line_item_image_2": offer2ImageUrl,
-        "discountfree_offer_for_reengagement_campaigns": d.offer2Title ?? "2 Weeks FREE",
-        [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically ? "true" : "false",
+        leads_line_item_2: d.offer2Title ?? "2 Weeks FREE",
+        leads_line_item_description_2: d.offer2Description ?? "",
+        leads_line_item_image_2: offer2ImageUrl,
+        discountfree_offer_for_reengagement_campaigns:
+          d.offer2Title ?? "2 Weeks FREE",
+        [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically
+          ? "true"
+          : "false",
         [CV.tosLink]: d.tosLink ?? "",
         [CV.showCardSection]: d.showCardSection ? "true" : "false",
         [CV.image1]: img1,
@@ -222,7 +251,7 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         [CV.image3]: img3,
         [CV.image4]: img4,
         [CV.image5]: img5,
-        "image_6": img6,
+        image_6: img6,
         [CV.review1]: d.review1 ?? "",
         [CV.review1Name]: d.review1Name ?? "",
         [CV.review1Photo]: rev1Photo,
@@ -261,7 +290,10 @@ export const reactivationRouter = router({
         let result = "";
         customValueMap.forEach((entry, apiKey) => {
           const norm = apiKey.toLowerCase().replace(/^location\./, "");
-          if (norm === key.toLowerCase() || apiKey.toLowerCase() === key.toLowerCase()) {
+          if (
+            norm === key.toLowerCase() ||
+            apiKey.toLowerCase() === key.toLowerCase()
+          ) {
             result = entry.value;
           }
         });
@@ -272,7 +304,8 @@ export const reactivationRouter = router({
       // Only "Lite" and "Custom-Link" are valid for this page.
       const savedOption = get(CV.leadFollowupOptions);
       let reactivationOption: ReactivationOption = "Lite";
-      if (savedOption === "Custom-Link") reactivationOption = "Custom Quote & Link";
+      if (savedOption === "Custom-Link")
+        reactivationOption = "Custom Quote & Link";
 
       const savedTiming = get(CV.onetimeServiceScheduling);
 
@@ -287,7 +320,8 @@ export const reactivationRouter = router({
           bioText: get(CV.companyDescription),
           companyImage: get(CV.companyImage),
           discountOffer: get(CV.discountOffer),
-          offer2Title: get("leads_line_item_2") || get(CV.discountOffer) || "2 Weeks FREE",
+          offer2Title:
+            get("leads_line_item_2") || get(CV.discountOffer) || "2 Weeks FREE",
           offer2Description: get("leads_line_item_description_2"),
           offer2Image: get("leads_line_item_image_2"),
           sendQuoteAutomatically: get(CV.sendQuoteAutomatically) !== "false",

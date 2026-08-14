@@ -43,7 +43,9 @@ interface SingleContactFormProps {
   locationId: string;
 }
 
-export default function SingleContactForm({ locationId }: SingleContactFormProps) {
+export default function SingleContactForm({
+  locationId,
+}: SingleContactFormProps) {
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
@@ -58,18 +60,20 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
     frequency: "",
   });
   const [dnd, setDnd] = useState(false);
-  const [tagOption, setTagOption] = useState<ContactTagOption>("new lead (via homeflow)");
+  const [tagOption, setTagOption] = useState<ContactTagOption>(
+    "new lead (via homeflow)"
+  );
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
   const createContactMutation = trpc.ghl.createContact.useMutation({
-    onSuccess: (result) => {
+    onSuccess: result => {
       toast.success("Contact added successfully!", {
         description: result.enrolledInWorkflow
           ? "Contact has been enrolled in the Review Reactivation workflow."
           : dnd
-          ? "Contact marked as Do Not Disturb — not enrolled in workflow."
-          : "Contact created.",
+            ? "Contact marked as Do Not Disturb — not enrolled in workflow."
+            : "Contact created.",
         icon: <CheckCircle2 className="h-4 w-4 text-primary" />,
       });
 
@@ -91,7 +95,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
       setConsent(false);
       setErrors({});
     },
-    onError: (error) => {
+    onError: error => {
       toast.error("Failed to add contact", {
         description: error.message || "Unknown error occurred",
       });
@@ -100,12 +104,16 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
 
   const validate = (): boolean => {
     const newErrors: Partial<FormData> = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
     if (!formData.email.trim() && !formData.phone.trim()) {
       newErrors.email = "Email or phone is required";
       newErrors.phone = "Email or phone is required";
     }
-    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    if (
+      formData.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+    ) {
       newErrors.email = "Invalid email format";
     }
     setErrors(newErrors);
@@ -133,9 +141,18 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         dnd,
         tagName: tagOption,
         customFields: [
-          { fieldKey: "number_of_dogs", fieldValue: formData.numberOfDogs.trim() },
-          { fieldKey: "last_time_yard_was_thoroughly_cleaned", fieldValue: formData.lastTimeScooped.trim() },
-          { fieldKey: "clean_up_frequency", fieldValue: formData.frequency.trim() },
+          {
+            fieldKey: "number_of_dogs",
+            fieldValue: formData.numberOfDogs.trim(),
+          },
+          {
+            fieldKey: "last_time_yard_was_thoroughly_cleaned",
+            fieldValue: formData.lastTimeScooped.trim(),
+          },
+          {
+            fieldKey: "clean_up_frequency",
+            fieldValue: formData.frequency.trim(),
+          },
         ],
       },
     });
@@ -143,8 +160,8 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
 
   const handleChange =
     (field: keyof FormData) => (e: ChangeEvent<HTMLInputElement>) => {
-      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-      if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+      setFormData(prev => ({ ...prev, [field]: e.target.value }));
+      if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
   const isFormValid =
@@ -304,7 +321,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
       <div className="scf-tags">
         <p className="scf-tags-title">Add contacts to:</p>
         <div className="scf-tags-grid">
-          {TAG_OPTIONS.map((option) => (
+          {TAG_OPTIONS.map(option => (
             <label key={option.value} className="scf-radio-label">
               <input
                 type="radio"
@@ -325,7 +342,7 @@ export default function SingleContactForm({ locationId }: SingleContactFormProps
         <Checkbox
           id="consent"
           checked={consent}
-          onCheckedChange={(checked) => setConsent(checked === true)}
+          onCheckedChange={checked => setConsent(checked === true)}
           className="mt-0.5 h-4 w-4 border-cyan-300 data-[state=checked]:bg-cyan-400 data-[state=checked]:border-cyan-400"
         />
         <label htmlFor="consent" className="scf-consent-label">

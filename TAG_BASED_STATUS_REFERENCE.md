@@ -23,10 +23,12 @@ const status = calculateReviewContactStatus({
 Your GHL workflows must add/remove these tags:
 
 **Review Reactivation Workflow:**
+
 - Add `review_reactivation_active` at start
 - Remove `review_reactivation_active` and add `review_reactivation_finished` at end/exit
 
 **Review Request Workflow:**
+
 - Add `review_request_active` at start
 - Remove `review_request_active` and add `review_request_finished` at end/exit
 
@@ -106,6 +108,7 @@ if (reviewPipelineId) {
 ### New tRPC Procedures
 
 **Get Pipelines:**
+
 ```
 POST /trpc/ghl.getPipelines
 Input: { locationId: string }
@@ -113,6 +116,7 @@ Output: Array<{ id: string; name: string }>
 ```
 
 **Check Won Opportunity:**
+
 ```
 POST /trpc/ghl.hasWonOpportunity
 Input: {
@@ -126,10 +130,12 @@ Output: { hasWon: boolean }
 ### Backend Changes
 
 **New Functions in ghl-service.ts:**
+
 - `getPipelines(locationId)` - Fetch pipelines
 - `hasOpportunityInStatus(locationId, contactId, pipelineId, status)` - Check opportunities
 
 **Updated Functions:**
+
 - `determineContactStatus(contact)` - Now uses tag-based logic
 
 ## Troubleshooting
@@ -137,6 +143,7 @@ Output: { hasWon: boolean }
 ### Status Shows Wrong Value
 
 **Check:**
+
 1. Are tags being added to contact? (View contact in GHL)
 2. Are tag names exact? (Case-insensitive, but no typos)
 3. Are workflow tags being removed properly on exit? (Check workflow exit actions)
@@ -144,6 +151,7 @@ Output: { hasWon: boolean }
 ### Status Not Updating
 
 **Check:**
+
 1. Is pagination cache cleared? (Try "Clear All" button)
 2. Did workflow tag recently change? (May take few seconds to sync)
 3. Is location connected? (Check connection status on page)
@@ -151,6 +159,7 @@ Output: { hasWon: boolean }
 ### "Clicked" Status Not Appearing
 
 **Check:**
+
 1. Does "Review" pipeline exist? (Search pipelines for "review")
 2. Is contact's opportunity in "won" status? (Check in GHL)
 3. Can app access opportunities? (Check API logs)

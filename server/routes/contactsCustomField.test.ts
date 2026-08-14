@@ -3,7 +3,7 @@ import express from "express";
 import type { Express } from "express";
 
 // ── Mock ghl-service ─────────────────────────────────────────────────
-vi.mock("../ghl-service", async (importOriginal) => {
+vi.mock("../ghl-service", async importOriginal => {
   const actual = await importOriginal<typeof import("../ghl-service")>();
   return {
     ...actual,
@@ -29,7 +29,9 @@ vi.mock("../ghl-service", async (importOriginal) => {
         // the same location/field name succeeds.
         const callHistory = (fn as any).mock.calls as Array<[string, string]>;
         // Exclude the current call itself.
-        const priorSameFieldCalls = callHistory.slice(0, -1).filter(([loc, f]) => loc === locationId && f === fieldName);
+        const priorSameFieldCalls = callHistory
+          .slice(0, -1)
+          .filter(([loc, f]) => loc === locationId && f === fieldName);
         if (priorSameFieldCalls.length === 0) return null;
         return "FIELD_456";
       });
@@ -59,7 +61,9 @@ beforeAll(async () => {
   // use an equivalent manual parser that also captures the raw body (like prod createApp).
   app.use((req, res, next) => {
     let raw = "";
-    req.on("data", (c) => { raw += c; });
+    req.on("data", c => {
+      raw += c;
+    });
     req.on("end", () => {
       (req as any).rawBody = raw;
       let parsed: unknown = undefined;
@@ -74,25 +78,30 @@ beforeAll(async () => {
     req.on("error", next);
   });
   registerContactsCustomFieldRoutes(app);
-  server = await new Promise<Express["listen"] extends (cb?: () => void) => infer S ? S : any>((resolve) => {
+  server = await new Promise<
+    Express["listen"] extends (cb?: () => void) => infer S ? S : any
+  >(resolve => {
     const s = app.listen(0, () => resolve(s as any));
   });
   port = (server.address() as any).port;
 });
 
 afterAll(async () => {
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await new Promise<void>(resolve => server.close(() => resolve()));
 });
 
 async function basicRequest(body: object | null, opts: { key?: string } = {}) {
-  const res = await fetch(`${BASE_URL}:${port}/api/contacts/update-custom-field`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Internal-Key ${opts.key ?? INTERNAL_API_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const res = await fetch(
+    `${BASE_URL}:${port}/api/contacts/update-custom-field`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Internal-Key ${opts.key ?? INTERNAL_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    }
+  );
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
@@ -101,7 +110,12 @@ async function basicRequest(body: object | null, opts: { key?: string } = {}) {
 describe("POST /api/contacts/update-custom-field — authentication", () => {
   it("rejects requests without the internal key", async () => {
     const res = await basicRequest(
-      { locationId: "LOC_1", email: "joe@example.com", customFieldName: "customer_status", value: "Active" },
+      {
+        locationId: "LOC_1",
+        email: "joe@example.com",
+        customFieldName: "customer_status",
+        value: "Active",
+      },
       { key: "wrong-key" }
     );
     expect(res.status).toBe(401);
@@ -114,46 +128,75 @@ describe("POST /api/contacts/update-custom-field — authentication", () => {
 describe("POST /api/contacts/update-custom-field — validation", () => {
   it("rejects an invalid JSON body", async () => {
     const rawBody = "{not json}";
-    const res = await fetch(`${BASE_URL}:${port}/api/contacts/update-custom-field`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Internal-Key ${INTERNAL_API_KEY}`,
-      },
-      body: rawBody,
-    });
+    const res = await fetch(
+      `${BASE_URL}:${port}/api/contacts/update-custom-field`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Internal-Key ${INTERNAL_API_KEY}`,
+        },
+        body: rawBody,
+      }
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.code).toBe("INVALID_PAYLOAD");
   });
 
   it("rejects a missing locationId", async () => {
-    const res = await basicRequest({ email: "joe@example.com", customFieldName: "customer_status", value: "Active" });
+    const res = await basicRequest({
+      email: "joe@example.com",
+      customFieldName: "customer_status",
+      value: "Active",
+    });
     expect(res.status).toBe(400);
     expect(res.body?.code).toBe("INVALID_PAYLOAD");
-    expect(res.body?.details?.some((d: any) => d.field === "locationId")).toBe(true);
+    expect(res.body?.details?.some((d: any) => d.field === "locationId")).toBe(
+      true
+    );
   });
 
   it("rejects a missing email", async () => {
-    const res = await basicRequest({ locationId: "LOC_1", customFieldName: "customer_status", value: "Active" });
+    const res = await basicRequest({
+      locationId: "LOC_1",
+      customFieldName: "customer_status",
+      value: "Active",
+    });
     expect(res.status).toBe(400);
     expect(res.body?.details?.some((d: any) => d.field === "email")).toBe(true);
   });
 
   it("rejects an invalid email format", async () => {
-    const res = await basicRequest({ locationId: "LOC_1", email: "not-an-email", customFieldName: "customer_status", value: "Active" });
+    const res = await basicRequest({
+      locationId: "LOC_1",
+      email: "not-an-email",
+      customFieldName: "customer_status",
+      value: "Active",
+    });
     expect(res.status).toBe(400);
     expect(res.body?.details?.some((d: any) => d.field === "email")).toBe(true);
   });
 
   it("rejects a missing customFieldName", async () => {
-    const res = await basicRequest({ locationId: "LOC_1", email: "joe@example.com", value: "Active" });
+    const res = await basicRequest({
+      locationId: "LOC_1",
+      email: "joe@example.com",
+      value: "Active",
+    });
     expect(res.status).toBe(400);
-    expect(res.body?.details?.some((d: any) => d.field === "customFieldName")).toBe(true);
+    expect(
+      res.body?.details?.some((d: any) => d.field === "customFieldName")
+    ).toBe(true);
   });
 
   it("rejects an empty value", async () => {
-    const res = await basicRequest({ locationId: "LOC_1", email: "joe@example.com", customFieldName: "customer_status", value: "" });
+    const res = await basicRequest({
+      locationId: "LOC_1",
+      email: "joe@example.com",
+      customFieldName: "customer_status",
+      value: "",
+    });
     expect(res.status).toBe(400);
     expect(res.body?.details?.some((d: any) => d.field === "value")).toBe(true);
   });
@@ -166,7 +209,7 @@ const ghlCalls: Array<{ url: string; init: any }> = [];
 const realFetch = globalThis.fetch;
 
 const fetchMock = vi.fn(async (input: any, init?: any) => {
-  const url = String(typeof input === "string" ? input : input?.url ?? "");
+  const url = String(typeof input === "string" ? input : (input?.url ?? ""));
   ghlCalls.push({ url, init });
   if (url.includes("services.leadconnectorhq.com/contacts/search")) {
     return new Response(
@@ -177,7 +220,9 @@ const fetchMock = vi.fn(async (input: any, init?: any) => {
             email: "joe@example.com",
             firstName: "Joe",
             lastName: "Doe",
-            customFields: [{ fieldKey: "customer_status", field_value: "Inactive" }],
+            customFields: [
+              { fieldKey: "customer_status", field_value: "Inactive" },
+            ],
           },
         ],
       }),
@@ -223,12 +268,18 @@ describe("POST /api/contacts/update-custom-field — happy path", () => {
     expect(ghlCalls[1].init?.method).toBe("POST");
     const searchBody = JSON.parse(ghlCalls[1].init?.body);
     expect(searchBody.locationId).toBe("LOC_1");
-    expect(searchBody.filters?.[0]).toEqual({ field: "email", operator: "eq", value: "joe@example.com" });
+    expect(searchBody.filters?.[0]).toEqual({
+      field: "email",
+      operator: "eq",
+      value: "joe@example.com",
+    });
 
     expect(ghlCalls[2].url).toContain("/contacts/CONTACT_42");
     expect(ghlCalls[2].init?.method).toBe("PUT");
     const putBody = JSON.parse(ghlCalls[2].init?.body);
-    expect(putBody.customFields).toEqual([{ key: "FIELD_123", field_value: "Active" }]);
+    expect(putBody.customFields).toEqual([
+      { key: "FIELD_123", field_value: "Active" },
+    ]);
 
     // Both GHL requests must carry the per-location bearer token and GHL API version
     for (const call of [ghlCalls[1], ghlCalls[2]]) {
@@ -246,7 +297,9 @@ describe("POST /api/contacts/update-custom-field — happy path", () => {
     });
     expect(res.status).toBe(200);
     expect(res.body?.customFieldId).toBe("FIELD_456");
-    expect(vi.mocked(await import("../ghl-service")).clearCustomFieldCache).toHaveBeenCalledWith("LOC_1");
+    expect(
+      vi.mocked(await import("../ghl-service")).clearCustomFieldCache
+    ).toHaveBeenCalledWith("LOC_1");
   });
 });
 
@@ -266,7 +319,9 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
   it("returns 404 when no contact matches the email", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     fetchSpy.mockImplementation(async (input: any, init?: any) => {
-      const url = String(typeof input === "string" ? input : input?.url ?? "");
+      const url = String(
+        typeof input === "string" ? input : (input?.url ?? "")
+      );
       if (url.includes("/contacts/search")) {
         return new Response(JSON.stringify({ contacts: [] }), {
           status: 200,
@@ -304,18 +359,27 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
   it("returns 422 when the GHL update call fails", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     fetchSpy.mockImplementation(async (input: any, init?: any) => {
-      const url = String(typeof input === "string" ? input : input?.url ?? "");
+      const url = String(
+        typeof input === "string" ? input : (input?.url ?? "")
+      );
       if (url.includes("/contacts/search")) {
         return new Response(
-          JSON.stringify({ contacts: [{ id: "CONTACT_42", email: "joe@example.com" }] }),
+          JSON.stringify({
+            contacts: [{ id: "CONTACT_42", email: "joe@example.com" }],
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
       if (url.includes("/contacts/CONTACT_42") && init?.method === "PUT") {
-        return new Response(JSON.stringify({ error: { code: "VALIDATION_ERROR", message: "Field locked" } }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: { code: "VALIDATION_ERROR", message: "Field locked" },
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
       return realFetch(input, init);
     });
@@ -335,12 +399,17 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
   it("returns 422 when the GHL contact search fails", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     fetchSpy.mockImplementation(async (input: any, init?: any) => {
-      const url = String(typeof input === "string" ? input : input?.url ?? "");
+      const url = String(
+        typeof input === "string" ? input : (input?.url ?? "")
+      );
       if (url.includes("/contacts/search")) {
-        return new Response(JSON.stringify({ error: { message: "server boom" } }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: { message: "server boom" } }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
       return realFetch(input, init);
     });

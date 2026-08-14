@@ -1,6 +1,6 @@
 /**
  * ColumnMapping Component
- * 
+ *
  * Design: Clean SaaS Utility — Functional Clarity
  * - Preview table showing first 7 rows
  * - Column mapping interface with dropdowns
@@ -8,10 +8,15 @@
  * - Validation before proceeding
  */
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { type ParsedCSV, type ColumnMapping as ColumnMappingType, autoDetectMappings, validateMappings } from '@/lib/csv-parser';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Check, X, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  type ParsedCSV,
+  type ColumnMapping as ColumnMappingType,
+  autoDetectMappings,
+  validateMappings,
+} from "@/lib/csv-parser";
 
 interface ColumnMappingProps {
   parsedCSV: ParsedCSV;
@@ -20,32 +25,71 @@ interface ColumnMappingProps {
 }
 
 type MappingField =
-  | 'firstName'
-  | 'lastName'
-  | 'fullName'
-  | 'email'
-  | 'phone'
-  | 'address1'
-  | 'city'
-  | 'postalCode'
-  | 'numberOfDogs'
-  | 'lastTimeScooped'
-  | 'frequency';
+  | "firstName"
+  | "lastName"
+  | "fullName"
+  | "email"
+  | "phone"
+  | "address1"
+  | "city"
+  | "postalCode"
+  | "numberOfDogs"
+  | "lastTimeScooped"
+  | "frequency";
 
-const FIELD_OPTIONS: { key: MappingField; label: string; required: boolean; helper?: string }[] = [
-  { key: 'firstName', label: 'First Name', required: true },
-  { key: 'phone', label: 'Phone Number', required: true },
-  { key: 'numberOfDogs', label: 'Number of Dogs', required: false, helper: 'GHL custom field: number_of_dogs' },
-  { key: 'lastName', label: 'Last Name', required: false },
-  { key: 'email', label: 'Email', required: true },
-  { key: 'lastTimeScooped', label: 'Last Time Scooped', required: false, helper: 'GHL custom field: last_time_yard_was_thoroughly_cleaned' },
-  { key: 'frequency', label: 'Frequency', required: false, helper: 'GHL custom field: clean_up_frequency' },
-  { key: 'address1', label: 'Street Address', required: false, helper: 'GHL standard field: address1' },
-  { key: 'city', label: 'City', required: false, helper: 'GHL standard field: city' },
-  { key: 'postalCode', label: 'Zip Code', required: false, helper: 'GHL standard field: postalCode' },
+const FIELD_OPTIONS: {
+  key: MappingField;
+  label: string;
+  required: boolean;
+  helper?: string;
+}[] = [
+  { key: "firstName", label: "First Name", required: true },
+  { key: "phone", label: "Phone Number", required: true },
+  {
+    key: "numberOfDogs",
+    label: "Number of Dogs",
+    required: false,
+    helper: "GHL custom field: number_of_dogs",
+  },
+  { key: "lastName", label: "Last Name", required: false },
+  { key: "email", label: "Email", required: true },
+  {
+    key: "lastTimeScooped",
+    label: "Last Time Scooped",
+    required: false,
+    helper: "GHL custom field: last_time_yard_was_thoroughly_cleaned",
+  },
+  {
+    key: "frequency",
+    label: "Frequency",
+    required: false,
+    helper: "GHL custom field: clean_up_frequency",
+  },
+  {
+    key: "address1",
+    label: "Street Address",
+    required: false,
+    helper: "GHL standard field: address1",
+  },
+  {
+    key: "city",
+    label: "City",
+    required: false,
+    helper: "GHL standard field: city",
+  },
+  {
+    key: "postalCode",
+    label: "Zip Code",
+    required: false,
+    helper: "GHL standard field: postalCode",
+  },
 ];
 
-export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappingProps) {
+export default function ColumnMapping({
+  parsedCSV,
+  onBack,
+  onNext,
+}: ColumnMappingProps) {
   const [mapping, setMapping] = useState<ColumnMappingType>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
@@ -56,7 +100,7 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
   }, [parsedCSV.headers]);
 
   const handleMappingChange = (field: MappingField, value: string) => {
-    setMapping((prev) => ({
+    setMapping(prev => ({
       ...prev,
       [field]: value || undefined,
     }));
@@ -64,7 +108,7 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
   };
 
   const handleRemoveMapping = (field: MappingField) => {
-    setMapping((prev) => {
+    setMapping(prev => {
       const next = { ...prev };
       delete next[field];
       return next;
@@ -101,9 +145,14 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-3 py-2 text-left font-medium text-muted-foreground w-8">#</th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground w-8">
+                  #
+                </th>
                 {parsedCSV.headers.map((header, idx) => (
-                  <th key={idx} className="px-3 py-2 text-left font-medium text-foreground whitespace-nowrap">
+                  <th
+                    key={idx}
+                    className="px-3 py-2 text-left font-medium text-foreground whitespace-nowrap"
+                  >
                     {header}
                   </th>
                 ))}
@@ -111,11 +160,19 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
             </thead>
             <tbody>
               {previewRows.map((row, rowIdx) => (
-                <tr key={rowIdx} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 text-muted-foreground">{rowIdx + 1}</td>
+                <tr
+                  key={rowIdx}
+                  className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+                >
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {rowIdx + 1}
+                  </td>
                   {parsedCSV.headers.map((_, colIdx) => (
-                    <td key={colIdx} className="px-3 py-2 text-foreground whitespace-nowrap">
-                      {row[colIdx] || ''}
+                    <td
+                      key={colIdx}
+                      className="px-3 py-2 text-foreground whitespace-nowrap"
+                    >
+                      {row[colIdx] || ""}
                     </td>
                   ))}
                 </tr>
@@ -128,24 +185,34 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
       {/* Column Mapping */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-foreground">Map Your Columns</h3>
-          <span className="text-xs text-muted-foreground">At least one field per group required</span>
+          <h3 className="text-base font-semibold text-foreground">
+            Map Your Columns
+          </h3>
+          <span className="text-xs text-muted-foreground">
+            At least one field per group required
+          </span>
         </div>
 
-        <div className={`border-l-4 ${(hasNameMapping && hasContactMapping) ? 'border-l-primary' : 'border-l-border'} pl-4 mb-5 py-3`}>
+        <div
+          className={`border-l-4 ${hasNameMapping && hasContactMapping ? "border-l-primary" : "border-l-border"} pl-4 mb-5 py-3`}
+        >
           <div className="flex items-center gap-2 mb-3">
-            {hasNameMapping && hasContactMapping && <Check className="h-4 w-4 text-primary" />}
-            <h4 className="text-sm font-medium text-foreground">Map the CSV fields below</h4>
+            {hasNameMapping && hasContactMapping && (
+              <Check className="h-4 w-4 text-primary" />
+            )}
+            <h4 className="text-sm font-medium text-foreground">
+              Map the CSV fields below
+            </h4>
           </div>
           <div className="space-y-3">
-            {FIELD_OPTIONS.map((field) => (
+            {FIELD_OPTIONS.map(field => (
               <MappingRow
                 key={field.key}
                 label={field.label}
                 helper={field.helper}
                 value={mapping[field.key]}
                 options={parsedCSV.headers}
-                onChange={(val) => handleMappingChange(field.key, val)}
+                onChange={val => handleMappingChange(field.key, val)}
                 onRemove={() => handleRemoveMapping(field.key)}
               />
             ))}
@@ -163,7 +230,9 @@ export default function ColumnMapping({ parsedCSV, onBack, onNext }: ColumnMappi
       {validationErrors.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
           {validationErrors.map((error, idx) => (
-            <p key={idx} className="text-sm text-destructive">{error}</p>
+            <p key={idx} className="text-sm text-destructive">
+              {error}
+            </p>
           ))}
         </div>
       )}
@@ -203,16 +272,20 @@ function MappingRow({
     <div className="flex items-center gap-3">
       <div className="w-36 shrink-0">
         <span className="text-sm text-foreground block">{label}</span>
-        {helper && <span className="text-[11px] text-muted-foreground block mt-0.5">{helper}</span>}
+        {helper && (
+          <span className="text-[11px] text-muted-foreground block mt-0.5">
+            {helper}
+          </span>
+        )}
       </div>
       <span className="text-muted-foreground">→</span>
       <select
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        value={value || ""}
+        onChange={e => onChange(e.target.value)}
         className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
       >
         <option value="">Select column</option>
-        {options.map((opt) => (
+        {options.map(opt => (
           <option key={opt} value={opt}>
             {opt}
           </option>

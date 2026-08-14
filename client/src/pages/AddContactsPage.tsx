@@ -19,8 +19,8 @@ export default function AddContactsPage() {
           </div>
           <h1 className="text-xl font-semibold text-slate-900">Add Contacts</h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            This page is designed to be embedded inside GoHighLevel. Add it as a Custom Menu Link
-            with the{" "}
+            This page is designed to be embedded inside GoHighLevel. Add it as a
+            Custom Menu Link with the{" "}
             <code className="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-mono">
               ?locationId=YOUR_LOCATION_ID
             </code>{" "}
@@ -64,7 +64,9 @@ export default function AddContactsPage() {
             </div>
             <div className="card-body">
               <div className="csv-hint">
-                <p className="csv-hint-title">Your CSV file should include the following:</p>
+                <p className="csv-hint-title">
+                  Your CSV file should include the following:
+                </p>
                 <div className="csv-hint-grid">
                   <span>*First Name</span>
                   <span>*Phone Number</span>

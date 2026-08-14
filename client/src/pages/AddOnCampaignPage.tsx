@@ -44,18 +44,30 @@ function sliderBackground(value: number, max: number) {
 }
 
 function addonDurationToIndex(value: string): number {
-  const n = value.trim().toLowerCase().replace(/[\s_-]+/g, " ").trim();
+  const n = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .trim();
   const map: Record<string, number> = {
-    "4 weeks": 0, "4 wk": 0, "4w": 0,
-    "6 weeks": 1, "6 wk": 1, "6w": 1,
-    "8 weeks": 2, "8 wk": 2, "8w": 2,
-    "10 weeks": 3, "10 wk": 3, "10w": 3,
-    "12 weeks": 4, "12 wk": 4, "12w": 4,
+    "4 weeks": 0,
+    "4 wk": 0,
+    "4w": 0,
+    "6 weeks": 1,
+    "6 wk": 1,
+    "6w": 1,
+    "8 weeks": 2,
+    "8 wk": 2,
+    "8w": 2,
+    "10 weeks": 3,
+    "10 wk": 3,
+    "10w": 3,
+    "12 weeks": 4,
+    "12 wk": 4,
+    "12w": 4,
   };
   return (
-    map[n] ??
-    ADDON_DURATION_OPTIONS.findIndex((l) => l.toLowerCase() === n) ??
-    3 // default to 10 Weeks
+    map[n] ?? ADDON_DURATION_OPTIONS.findIndex(l => l.toLowerCase() === n) ?? 3 // default to 10 Weeks
   );
 }
 
@@ -68,7 +80,10 @@ export default function AddOnCampaignPage() {
   const showToast = useCallback((message: string, isError = false) => {
     toast(message, {
       style: isError
-        ? { background: "var(--destructive)", color: "var(--destructive-foreground)" }
+        ? {
+            background: "var(--destructive)",
+            color: "var(--destructive-foreground)",
+          }
         : undefined,
     });
   }, []);
@@ -96,7 +111,10 @@ export default function AddOnCampaignPage() {
       });
       showToast("Add-on Campaign settings saved successfully.");
     } catch (err) {
-      showToast(`Error: ${err instanceof Error ? err.message : "Unknown error"}`, true);
+      showToast(
+        `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        true
+      );
     } finally {
       setIsSaving(false);
     }
@@ -119,7 +137,9 @@ export default function AddOnCampaignPage() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <Link2 className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Add-On Campaign</h1>
+          <h1 className="text-xl font-semibold text-foreground">
+            Add-On Campaign
+          </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Add this page as a GHL custom menu link with the{" "}
             <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">
@@ -136,7 +156,6 @@ export default function AddOnCampaignPage() {
   return (
     <div className="aoc-main">
       <div className="aoc-shell">
-
         {/* ── Page Header ── */}
         <header className="aoc-page-header">
           <h1 className="aoc-main-title">Add-On Campaign</h1>
@@ -144,7 +163,9 @@ export default function AddOnCampaignPage() {
           <div className="aoc-how-steps">
             <p className="aoc-how-step">1. Add Contacts manually</p>
             <p className="aoc-how-step">2. We reach out with a message</p>
-            <p className="aoc-how-step">3. They approve and you schedule their service</p>
+            <p className="aoc-how-step">
+              3. They approve and you schedule their service
+            </p>
           </div>
         </header>
 
@@ -154,9 +175,13 @@ export default function AddOnCampaignPage() {
             <div className="aoc-lite-content">
               <div className="aoc-lite-label">LITE</div>
               <p className="aoc-lite-text">
-                Add-On Follow-Up helps you promote extra services to current customers without feeling pushy.
-                Send a text message every few weeks to stay top of mind, educate customers, and gently remind them about helpful add-ons like deodorizer, disinfectant, or deterrent services.
-                Consistent follow-up helps customers see the value of extra services over time, increasing revenue while making upgrades feel easy and natural.
+                Add-On Follow-Up helps you promote extra services to current
+                customers without feeling pushy. Send a text message every few
+                weeks to stay top of mind, educate customers, and gently remind
+                them about helpful add-ons like deodorizer, disinfectant, or
+                deterrent services. Consistent follow-up helps customers see the
+                value of extra services over time, increasing revenue while
+                making upgrades feel easy and natural.
               </p>
             </div>
             <div className="aoc-lite-phone">
@@ -187,13 +212,20 @@ export default function AddOnCampaignPage() {
               max={ADDON_DURATION_OPTIONS.length - 1}
               step={1}
               value={addonDuration}
-              onChange={(e) => setAddonDuration(Number.parseInt(e.target.value, 10))}
-              style={{ background: sliderBackground(addonDuration, ADDON_DURATION_OPTIONS.length - 1) }}
+              onChange={e =>
+                setAddonDuration(Number.parseInt(e.target.value, 10))
+              }
+              style={{
+                background: sliderBackground(
+                  addonDuration,
+                  ADDON_DURATION_OPTIONS.length - 1
+                ),
+              }}
               className="aoc-slider"
               aria-label="Add-On Duration"
             />
             <div className="aoc-slider-labels">
-              {ADDON_DURATION_OPTIONS.map((label) => (
+              {ADDON_DURATION_OPTIONS.map(label => (
                 <span key={label}>{label}</span>
               ))}
             </div>
@@ -211,8 +243,8 @@ export default function AddOnCampaignPage() {
               </li>
               <li>
                 <strong>
-                  Texts will be sent every two weeks, and messages are throttled, so your delivery
-                  will not be affected
+                  Texts will be sent every two weeks, and messages are
+                  throttled, so your delivery will not be affected
                 </strong>
               </li>
             </ul>
@@ -232,12 +264,31 @@ export default function AddOnCampaignPage() {
                   <div key={step.day} className="aoc-timeline-row-inner">
                     <div className="aoc-timeline-step">
                       <span className="aoc-timeline-step-day">{step.day}</span>
-                      <span className="aoc-timeline-step-label">{step.label}</span>
+                      <span className="aoc-timeline-step-label">
+                        {step.label}
+                      </span>
                     </div>
                     {idx < FIRST_ROW.length - 1 && (
-                      <svg className="aoc-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                        <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                      <svg
+                        className="aoc-dashed-arrow"
+                        viewBox="0 0 200 30"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <line
+                          x1="0"
+                          y1="15"
+                          x2="160"
+                          y2="15"
+                          stroke="#2563eb"
+                          strokeWidth="4"
+                          strokeDasharray="16 8"
+                          opacity="0.4"
+                        />
+                        <polygon
+                          points="170,8 195,15 170,22"
+                          fill="#2563eb"
+                          opacity="0.4"
+                        />
                       </svg>
                     )}
                   </div>
@@ -250,12 +301,31 @@ export default function AddOnCampaignPage() {
                   <div key={step.day} className="aoc-timeline-row-inner">
                     <div className="aoc-timeline-step">
                       <span className="aoc-timeline-step-day">{step.day}</span>
-                      <span className="aoc-timeline-step-label">{step.label}</span>
+                      <span className="aoc-timeline-step-label">
+                        {step.label}
+                      </span>
                     </div>
                     {idx < SECOND_ROW.length - 1 && (
-                      <svg className="aoc-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                        <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                      <svg
+                        className="aoc-dashed-arrow"
+                        viewBox="0 0 200 30"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <line
+                          x1="0"
+                          y1="15"
+                          x2="160"
+                          y2="15"
+                          stroke="#2563eb"
+                          strokeWidth="4"
+                          strokeDasharray="16 8"
+                          opacity="0.4"
+                        />
+                        <polygon
+                          points="170,8 195,15 170,22"
+                          fill="#2563eb"
+                          opacity="0.4"
+                        />
                       </svg>
                     )}
                   </div>
@@ -269,7 +339,9 @@ export default function AddOnCampaignPage() {
             {/* CTA (right side) */}
             <div className="aoc-timeline-cta">
               <p className="aoc-timeline-cta-text">
-                To personalize<br />your prompts
+                To personalize
+                <br />
+                your prompts
               </p>
               <button
                 type="button"
@@ -294,7 +366,6 @@ export default function AddOnCampaignPage() {
             {isSaving ? "Saving…" : "Save Settings"}
           </button>
         </div>
-
       </div>
     </div>
   );

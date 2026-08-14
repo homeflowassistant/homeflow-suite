@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getLocationCustomValueMap, upsertGhlCustomValue, updateExistingCustomValuesOnly } from "../ghl-service.js";
+import {
+  getLocationCustomValueMap,
+  upsertGhlCustomValue,
+  updateExistingCustomValuesOnly,
+} from "../ghl-service.js";
 
 // ─── Default Templates matching UI layout exact specifications ─────────
 export const DEFAULT_ALERT_TEMPLATES = {
@@ -93,7 +97,9 @@ export const alertsNotificationsSchema = z.object({
   subscriptionPausedNotifyMessage: z.string(),
 });
 
-export type AlertsNotificationsSettings = z.infer<typeof alertsNotificationsSchema>;
+export type AlertsNotificationsSettings = z.infer<
+  typeof alertsNotificationsSchema
+>;
 
 export const alertsNotificationsRouter = router({
   /**
@@ -113,8 +119,14 @@ export const alertsNotificationsRouter = router({
         // Normalize helper to search across key variants
         const getValueForKeys = (keys: string[]): string | undefined => {
           for (const k of keys) {
-            const entry = cvMap.get(k) || cvMap.get(k.toLowerCase().replace(/[^a-z0-9]/g, ""));
-            if (entry?.value !== undefined && entry.value !== null && entry.value !== "") {
+            const entry =
+              cvMap.get(k) ||
+              cvMap.get(k.toLowerCase().replace(/[^a-z0-9]/g, ""));
+            if (
+              entry?.value !== undefined &&
+              entry.value !== null &&
+              entry.value !== ""
+            ) {
               return entry.value;
             }
           }
@@ -124,7 +136,10 @@ export const alertsNotificationsRouter = router({
         const parseBool = (keys: string[], fallback: boolean): boolean => {
           const val = getValueForKeys(keys);
           if (!val) return fallback;
-          return val.trim().toUpperCase() === "ON" || val.trim().toLowerCase() === "true";
+          return (
+            val.trim().toUpperCase() === "ON" ||
+            val.trim().toLowerCase() === "true"
+          );
         };
 
         const parseStr = (keys: string[], fallback: string): string => {
@@ -138,16 +153,27 @@ export const alertsNotificationsRouter = router({
             DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled
           ),
           autoReplyNewLeadMessage: parseStr(
-            [CV_KEYS.autoReplyNewLeadMessage, "auto_reply_new_lead_message", "Auto-Reply New Lead Message"],
+            [
+              CV_KEYS.autoReplyNewLeadMessage,
+              "auto_reply_new_lead_message",
+              "Auto-Reply New Lead Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadMessage
           ),
 
           autoReplyNewCustomerEnabled: parseBool(
-            [CV_KEYS.autoReplyNewCustomerEnabled, "auto_reply_new_customer_enabled"],
+            [
+              CV_KEYS.autoReplyNewCustomerEnabled,
+              "auto_reply_new_customer_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewCustomerEnabled
           ),
           autoReplyNewCustomerMessage: parseStr(
-            [CV_KEYS.autoReplyNewCustomerMessage, "auto_reply_new_customer_message", "Auto-Reply New Customer Message"],
+            [
+              CV_KEYS.autoReplyNewCustomerMessage,
+              "auto_reply_new_customer_message",
+              "Auto-Reply New Customer Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewCustomerMessage
           ),
 
@@ -156,34 +182,60 @@ export const alertsNotificationsRouter = router({
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewLeadEnabled
           ),
           teamNotifyNewLeadMessage: parseStr(
-            [CV_KEYS.teamNotifyNewLeadMessage, "team_notify_new_lead_message", "Team-Notification New Lead Message"],
+            [
+              CV_KEYS.teamNotifyNewLeadMessage,
+              "team_notify_new_lead_message",
+              "Team-Notification New Lead Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewLeadMessage
           ),
 
           teamNotifyNewCustomerEnabled: parseBool(
-            [CV_KEYS.teamNotifyNewCustomerEnabled, "team_notify_new_customer_enabled"],
+            [
+              CV_KEYS.teamNotifyNewCustomerEnabled,
+              "team_notify_new_customer_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewCustomerEnabled
           ),
           teamNotifyNewCustomerMessage: parseStr(
-            [CV_KEYS.teamNotifyNewCustomerMessage, "team_notify_new_customer_message", "Team-Notification New Customer Message"],
+            [
+              CV_KEYS.teamNotifyNewCustomerMessage,
+              "team_notify_new_customer_message",
+              "Team-Notification New Customer Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewCustomerMessage
           ),
 
           teamNotifyPhone: parseStr(
-            [CV_KEYS.teamNotifyPhone, "team_notify_phone", "Send Team Notification Phone"],
+            [
+              CV_KEYS.teamNotifyPhone,
+              "team_notify_phone",
+              "Send Team Notification Phone",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyPhone
           ),
           teamNotifyEmail: parseStr(
-            [CV_KEYS.teamNotifyEmail, "team_notify_email", "Send Team Notification Email"],
+            [
+              CV_KEYS.teamNotifyEmail,
+              "team_notify_email",
+              "Send Team Notification Email",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyEmail
           ),
 
           failedPaymentNotifyEnabled: parseBool(
-            [CV_KEYS.failedPaymentNotifyEnabled, "failed_payment_notify_enabled"],
+            [
+              CV_KEYS.failedPaymentNotifyEnabled,
+              "failed_payment_notify_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.failedPaymentNotifyEnabled
           ),
           failedPaymentNotifyMessage: parseStr(
-            [CV_KEYS.failedPaymentNotifyMessage, "failed_payment_notify_message", "Custom Failed Payment Message"],
+            [
+              CV_KEYS.failedPaymentNotifyMessage,
+              "failed_payment_notify_message",
+              "Custom Failed Payment Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.failedPaymentNotifyMessage
           ),
 
@@ -192,21 +244,35 @@ export const alertsNotificationsRouter = router({
             DEFAULT_ALERT_TEMPLATES.skippedJobNotifyEnabled
           ),
           skippedJobNotifyMessage: parseStr(
-            [CV_KEYS.skippedJobNotifyMessage, "skipped_job_notify_message", "Custom Skipped Job Message"],
+            [
+              CV_KEYS.skippedJobNotifyMessage,
+              "skipped_job_notify_message",
+              "Custom Skipped Job Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.skippedJobNotifyMessage
           ),
 
           subscriptionPausedNotifyEnabled: parseBool(
-            [CV_KEYS.subscriptionPausedNotifyEnabled, "subscription_paused_notify_enabled"],
+            [
+              CV_KEYS.subscriptionPausedNotifyEnabled,
+              "subscription_paused_notify_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyEnabled
           ),
           subscriptionPausedNotifyMessage: parseStr(
-            [CV_KEYS.subscriptionPausedNotifyMessage, "subscription_paused_notify_message", "Custom Subscription Paused/Unpaused Message"],
+            [
+              CV_KEYS.subscriptionPausedNotifyMessage,
+              "subscription_paused_notify_message",
+              "Custom Subscription Paused/Unpaused Message",
+            ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage
           ),
         };
       } catch (err) {
-        console.warn("[AlertsNotifications] Failed to load custom values from GHL, using defaults:", err);
+        console.warn(
+          "[AlertsNotifications] Failed to load custom values from GHL, using defaults:",
+          err
+        );
         return DEFAULT_ALERT_TEMPLATES;
       }
     }),
@@ -216,75 +282,107 @@ export const alertsNotificationsRouter = router({
    * Maps typed form values to the exact custom value keys in the GHL "Alerts and Notifications" folder.
    * Uses non-destructive update strategy preserving GHL display names.
    */
-  saveSettings: publicProcedure.input(alertsNotificationsSchema).mutation(async ({ input }) => {
-    const { locationId, ...data } = input;
+  saveSettings: publicProcedure
+    .input(alertsNotificationsSchema)
+    .mutation(async ({ input }) => {
+      const { locationId, ...data } = input;
 
-    // Exact GHL Custom Value Key Mappings matching screenshot
-    const customValuePayload: Record<string, string> = {
-      // Message Templates
-      [CV_KEYS.autoReplyNewLeadMessage]: data.autoReplyNewLeadMessage,
-      [CV_KEYS.autoReplyNewCustomerMessage]: data.autoReplyNewCustomerMessage,
-      [CV_KEYS.teamNotifyNewLeadMessage]: data.teamNotifyNewLeadMessage,
-      [CV_KEYS.teamNotifyNewCustomerMessage]: data.teamNotifyNewCustomerMessage,
-      [CV_KEYS.teamNotifyPhone]: data.teamNotifyPhone,
-      [CV_KEYS.teamNotifyEmail]: data.teamNotifyEmail,
-      [CV_KEYS.failedPaymentNotifyMessage]: data.failedPaymentNotifyMessage,
-      [CV_KEYS.skippedJobNotifyMessage]: data.skippedJobNotifyMessage,
-      [CV_KEYS.subscriptionPausedNotifyMessage]: data.subscriptionPausedNotifyMessage,
+      // Exact GHL Custom Value Key Mappings matching screenshot
+      const customValuePayload: Record<string, string> = {
+        // Message Templates
+        [CV_KEYS.autoReplyNewLeadMessage]: data.autoReplyNewLeadMessage,
+        [CV_KEYS.autoReplyNewCustomerMessage]: data.autoReplyNewCustomerMessage,
+        [CV_KEYS.teamNotifyNewLeadMessage]: data.teamNotifyNewLeadMessage,
+        [CV_KEYS.teamNotifyNewCustomerMessage]:
+          data.teamNotifyNewCustomerMessage,
+        [CV_KEYS.teamNotifyPhone]: data.teamNotifyPhone,
+        [CV_KEYS.teamNotifyEmail]: data.teamNotifyEmail,
+        [CV_KEYS.failedPaymentNotifyMessage]: data.failedPaymentNotifyMessage,
+        [CV_KEYS.skippedJobNotifyMessage]: data.skippedJobNotifyMessage,
+        [CV_KEYS.subscriptionPausedNotifyMessage]:
+          data.subscriptionPausedNotifyMessage,
 
-      // Also dual-write secondary aliases for complete sub-account coverage
-      "auto_reply_new_lead_message": data.autoReplyNewLeadMessage,
-      "auto_reply_new_customer_message": data.autoReplyNewCustomerMessage,
-      "team_notify_new_lead_message": data.teamNotifyNewLeadMessage,
-      "team_notify_new_customer_message": data.autoReplyNewCustomerMessage,
-      "team_notify_phone": data.teamNotifyPhone,
-      "team_notify_email": data.teamNotifyEmail,
-      "failed_payment_notify_message": data.failedPaymentNotifyMessage,
-      "skipped_job_notify_message": data.skippedJobNotifyMessage,
-      "subscription_paused_notify_message": data.subscriptionPausedNotifyMessage,
+        // Also dual-write secondary aliases for complete sub-account coverage
+        auto_reply_new_lead_message: data.autoReplyNewLeadMessage,
+        auto_reply_new_customer_message: data.autoReplyNewCustomerMessage,
+        team_notify_new_lead_message: data.teamNotifyNewLeadMessage,
+        team_notify_new_customer_message: data.autoReplyNewCustomerMessage,
+        team_notify_phone: data.teamNotifyPhone,
+        team_notify_email: data.teamNotifyEmail,
+        failed_payment_notify_message: data.failedPaymentNotifyMessage,
+        skipped_job_notify_message: data.skippedJobNotifyMessage,
+        subscription_paused_notify_message:
+          data.subscriptionPausedNotifyMessage,
 
-      // Toggle States
-      [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "ON" : "OFF",
-      [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled ? "ON" : "OFF",
-      [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled ? "ON" : "OFF",
-      [CV_KEYS.teamNotifyNewCustomerEnabled]: data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
-      [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled ? "ON" : "OFF",
-      [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled ? "ON" : "OFF",
-      [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "ON" : "OFF",
-    };
+        // Toggle States
+        [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled
+          ? "ON"
+          : "OFF",
+        [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled
+          ? "ON"
+          : "OFF",
+        [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled
+          ? "ON"
+          : "OFF",
+        [CV_KEYS.teamNotifyNewCustomerEnabled]:
+          data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
+        [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled
+          ? "ON"
+          : "OFF",
+        [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled
+          ? "ON"
+          : "OFF",
+        [CV_KEYS.subscriptionPausedNotifyEnabled]:
+          data.subscriptionPausedNotifyEnabled ? "ON" : "OFF",
+      };
 
-    try {
-      // Step 1: Update existing custom values while preserving display names
-      await updateExistingCustomValuesOnly(locationId, customValuePayload);
+      try {
+        // Step 1: Update existing custom values while preserving display names
+        await updateExistingCustomValuesOnly(locationId, customValuePayload);
 
-      // Step 2: Upsert primary keys to guarantee creation if not existing
-      const primaryEntries = [
-        [CV_KEYS.autoReplyNewLeadMessage, data.autoReplyNewLeadMessage],
-        [CV_KEYS.autoReplyNewCustomerMessage, data.autoReplyNewCustomerMessage],
-        [CV_KEYS.teamNotifyNewLeadMessage, data.teamNotifyNewLeadMessage],
-        [CV_KEYS.teamNotifyNewCustomerMessage, data.teamNotifyNewCustomerMessage],
-        [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
-        [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
-        [CV_KEYS.failedPaymentNotifyMessage, data.failedPaymentNotifyMessage],
-        [CV_KEYS.skippedJobNotifyMessage, data.skippedJobNotifyMessage],
-        [CV_KEYS.subscriptionPausedNotifyMessage, data.subscriptionPausedNotifyMessage],
-      ];
+        // Step 2: Upsert primary keys to guarantee creation if not existing
+        const primaryEntries = [
+          [CV_KEYS.autoReplyNewLeadMessage, data.autoReplyNewLeadMessage],
+          [
+            CV_KEYS.autoReplyNewCustomerMessage,
+            data.autoReplyNewCustomerMessage,
+          ],
+          [CV_KEYS.teamNotifyNewLeadMessage, data.teamNotifyNewLeadMessage],
+          [
+            CV_KEYS.teamNotifyNewCustomerMessage,
+            data.teamNotifyNewCustomerMessage,
+          ],
+          [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
+          [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
+          [CV_KEYS.failedPaymentNotifyMessage, data.failedPaymentNotifyMessage],
+          [CV_KEYS.skippedJobNotifyMessage, data.skippedJobNotifyMessage],
+          [
+            CV_KEYS.subscriptionPausedNotifyMessage,
+            data.subscriptionPausedNotifyMessage,
+          ],
+        ];
 
-      for (const [key, val] of primaryEntries) {
-        try {
-          await upsertGhlCustomValue(locationId, key, val);
-        } catch (e) {
-          console.warn(`[AlertsNotifications] Upsert custom value '${key}':`, e);
+        for (const [key, val] of primaryEntries) {
+          try {
+            await upsertGhlCustomValue(locationId, key, val);
+          } catch (e) {
+            console.warn(
+              `[AlertsNotifications] Upsert custom value '${key}':`,
+              e
+            );
+          }
         }
-      }
 
-      return { success: true };
-    } catch (err) {
-      console.error("[AlertsNotifications] Error saving settings:", err);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Failed to save alert notification settings",
-      });
-    }
-  }),
+        return { success: true };
+      } catch (err) {
+        console.error("[AlertsNotifications] Error saving settings:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to save alert notification settings",
+        });
+      }
+    }),
 });

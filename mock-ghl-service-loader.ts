@@ -8,7 +8,10 @@ import path from "node:path";
 import esbuild from "esbuild";
 
 export const resolve: ResolveHook = (specifier, context, nextResolve) => {
-  if (specifier.endsWith("/ghl-service") || specifier.includes("ghl-service.")) {
+  if (
+    specifier.endsWith("/ghl-service") ||
+    specifier.includes("ghl-service.")
+  ) {
     // Only mock the local package module, not the test file itself.
     if (context.parentURL?.includes("mock-ghl-service-loader")) {
       return nextResolve(specifier, context);
@@ -16,7 +19,9 @@ export const resolve: ResolveHook = (specifier, context, nextResolve) => {
     return {
       format: "module",
       shortCircuit: true,
-      url: pathToFileURL(path.join(import.meta.dirname ?? process.cwd(), "mock-ghl-service.ts")).href,
+      url: pathToFileURL(
+        path.join(import.meta.dirname ?? process.cwd(), "mock-ghl-service.ts")
+      ).href,
     };
   }
   return nextResolve(specifier, context);
@@ -26,7 +31,11 @@ export const load: LoadHook = (url, context, nextLoad) => {
   if (url.endsWith("mock-ghl-service.ts") && url.startsWith("file://")) {
     try {
       const raw = readFileSync(new URL(url), "utf8");
-      const { code } = esbuild.transformSync(raw, { loader: "ts", format: "esm", target: "node22" });
+      const { code } = esbuild.transformSync(raw, {
+        loader: "ts",
+        format: "esm",
+        target: "node22",
+      });
       return { format: "module", source: code, shortCircuit: true };
     } catch {
       return nextLoad(url, context);

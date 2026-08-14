@@ -41,19 +41,30 @@ const TAG_OPTIONS: Array<{ value: ContactTagOption; label: string }> = [
 interface CSVUploadFlowProps {
   locationId: string;
   /** If set, the tag is locked to this value and the tag picker is hidden */
-  fixedTag?: "new lead (via homeflow)" | "homeflow: inactive customer" | "add-on-campaign" | "quick-send";
+  fixedTag?:
+    | "new lead (via homeflow)"
+    | "homeflow: inactive customer"
+    | "add-on-campaign"
+    | "quick-send";
   /** Optional callback invoked when the entire upload flow completes (dialog closed) */
   onFlowComplete?: () => void;
   /** Indicates the flow context (e.g. "quick-add" for the Quick Add page) */
   flowContext?: "quick-add";
 }
 
-export default function CSVUploadFlow({ locationId, fixedTag, flowContext, onFlowComplete }: CSVUploadFlowProps) {
+export default function CSVUploadFlow({
+  locationId,
+  fixedTag,
+  flowContext,
+  onFlowComplete,
+}: CSVUploadFlowProps) {
   const [step, setStep] = useState<FlowStep>("upload");
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [mapping, setMapping] = useState<ColumnMappingType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<ContactTagOption>(fixedTag || "new lead (via homeflow)");
+  const [selectedTag, setSelectedTag] = useState<ContactTagOption>(
+    fixedTag || "new lead (via homeflow)"
+  );
 
   const handleFileUploaded = (data: ParsedCSV) => {
     setParsedCSV(data);
@@ -104,11 +115,8 @@ export default function CSVUploadFlow({ locationId, fixedTag, flowContext, onFlo
           <div className="csv-tag-box">
             <p className="csv-tag-title">Add contacts to:</p>
             <div className="csv-tag-grid">
-              {TAG_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className="scf-radio-label"
-                >
+              {TAG_OPTIONS.map(option => (
+                <label key={option.value} className="scf-radio-label">
                   <input
                     type="radio"
                     name="csvTag"
@@ -193,8 +201,8 @@ function StepDot({
         active
           ? "bg-primary text-primary-foreground"
           : completed
-          ? "bg-primary/20 text-primary"
-          : "bg-muted text-muted-foreground"
+            ? "bg-primary/20 text-primary"
+            : "bg-muted text-muted-foreground"
       }`}
     >
       {label}

@@ -71,17 +71,30 @@ export interface GHLCreateContactResponse {
 // ─── Custom Value Map Utilities ─────────────────────────────────────
 
 function matchesCustomKey(apiKey: string, configKey: string): boolean {
-  const normalize = (value: string) => value.toLowerCase().replace(/[\s-]/g, "_");
-  return normalize(apiKey) === normalize(configKey) || normalize(apiKey) === `contact.${normalize(configKey)}` || apiKey === configKey;
+  const normalize = (value: string) =>
+    value.toLowerCase().replace(/[\s-]/g, "_");
+  return (
+    normalize(apiKey) === normalize(configKey) ||
+    normalize(apiKey) === `contact.${normalize(configKey)}` ||
+    apiKey === configKey
+  );
 }
 
-function getCustomValueMap(customValues: Record<string, unknown>[]): Map<string, { id: string; value: string }> {
+function getCustomValueMap(
+  customValues: Record<string, unknown>[]
+): Map<string, { id: string; value: string }> {
   const map = new Map<string, { id: string; value: string }>();
 
   for (const customValue of customValues) {
-    const key = typeof customValue.fieldKey === "string" ? customValue.fieldKey : typeof customValue.name === "string" ? customValue.name : "";
+    const key =
+      typeof customValue.fieldKey === "string"
+        ? customValue.fieldKey
+        : typeof customValue.name === "string"
+          ? customValue.name
+          : "";
     const id = typeof customValue.id === "string" ? customValue.id : "";
-    const value = typeof customValue.value === "string" ? customValue.value : "";
+    const value =
+      typeof customValue.value === "string" ? customValue.value : "";
 
     if (!key || !id) continue;
     map.set(key, { id, value });
@@ -90,9 +103,13 @@ function getCustomValueMap(customValues: Record<string, unknown>[]): Map<string,
   return map;
 }
 
-export async function getLocationCustomValueMap(locationId: string): Promise<Map<string, { id: string; value: string }>> {
+export async function getLocationCustomValueMap(
+  locationId: string
+): Promise<Map<string, { id: string; value: string }>> {
   const { accessToken } = await getAccessTokenAndInstallation(locationId);
-  const response = await fetchJson<{ customValues?: Record<string, unknown>[] }>(
+  const response = await fetchJson<{
+    customValues?: Record<string, unknown>[];
+  }>(
     `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
     accessToken,
     { method: "GET" }
@@ -113,7 +130,11 @@ async function getAccessTokenAndInstallation(locationId: string) {
   };
 }
 
-async function fetchJson<T>(url: string, accessToken: string, init: RequestInit = {}): Promise<T> {
+async function fetchJson<T>(
+  url: string,
+  accessToken: string,
+  init: RequestInit = {}
+): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -164,19 +185,36 @@ async function fetchLocationCustomFields(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error(`[GHL] Failed to fetch custom fields: ${response.status} ${errorBody}`);
+    console.error(
+      `[GHL] Failed to fetch custom fields: ${response.status} ${errorBody}`
+    );
     return [];
   }
 
   const data = (await response.json()) as Record<string, any>;
-  const fieldsArray = (Array.isArray(data.customFields) ? data.customFields : data.fields ?? []) as any[];
+  const fieldsArray = (
+    Array.isArray(data.customFields) ? data.customFields : (data.fields ?? [])
+  ) as any[];
 
   return fieldsArray
-    .filter((field: any): field is Record<string, unknown> => !!field && typeof field === "object")
+    .filter(
+      (field: any): field is Record<string, unknown> =>
+        !!field && typeof field === "object"
+    )
     .map((field: Record<string, any>) => ({
       id: typeof field.id === "string" ? field.id : "",
-      fieldKey: typeof field.fieldKey === "string" ? field.fieldKey : typeof field.name === "string" ? field.name : "",
-      displayName: typeof field.displayName === "string" ? field.displayName : typeof field.name === "string" ? field.name : "",
+      fieldKey:
+        typeof field.fieldKey === "string"
+          ? field.fieldKey
+          : typeof field.name === "string"
+            ? field.name
+            : "",
+      displayName:
+        typeof field.displayName === "string"
+          ? field.displayName
+          : typeof field.name === "string"
+            ? field.name
+            : "",
     }))
     .filter((field: any) => field.id && field.fieldKey);
 }
@@ -216,7 +254,10 @@ export async function getCustomFieldIdByName(
 
     return found;
   } catch (error) {
-    console.error(`[GHL] Error discovering custom field "${fieldNamePattern}":`, error);
+    console.error(
+      `[GHL] Error discovering custom field "${fieldNamePattern}":`,
+      error
+    );
     return null;
   }
 }
@@ -236,7 +277,10 @@ export function clearCustomFieldCache(locationId?: string): void {
  * Strips "contact." prefix, removes all non-alphanumeric chars, lowercases.
  */
 function normalizeKey(key: string): string {
-  return key.toLowerCase().replace(/^contact\./, "").replace(/[^a-z0-9]/g, "");
+  return key
+    .toLowerCase()
+    .replace(/^contact\./, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
 /**
@@ -251,7 +295,11 @@ export function findCustomValueId(
   customValues: Record<string, unknown>[],
   targetName: string
 ): string | undefined {
-  if (!customValues || !Array.isArray(customValues) || customValues.length === 0) {
+  if (
+    !customValues ||
+    !Array.isArray(customValues) ||
+    customValues.length === 0
+  ) {
     return undefined;
   }
 
@@ -259,7 +307,12 @@ export function findCustomValueId(
 
   // Tier 1: Exact or case-insensitive match
   for (const cv of customValues) {
-    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
+    const id =
+      typeof cv.id === "string"
+        ? cv.id
+        : typeof cv._id === "string"
+          ? cv._id
+          : undefined;
     if (!id) continue;
 
     const candidates = [
@@ -269,7 +322,10 @@ export function findCustomValueId(
     ].filter(Boolean) as string[];
 
     for (const cand of candidates) {
-      if (cand === targetName || cand.toLowerCase() === targetName.toLowerCase()) {
+      if (
+        cand === targetName ||
+        cand.toLowerCase() === targetName.toLowerCase()
+      ) {
         return id;
       }
     }
@@ -277,7 +333,12 @@ export function findCustomValueId(
 
   // Tier 2: Normalized exact match
   for (const cv of customValues) {
-    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
+    const id =
+      typeof cv.id === "string"
+        ? cv.id
+        : typeof cv._id === "string"
+          ? cv._id
+          : undefined;
     if (!id) continue;
 
     const candidates = [
@@ -296,7 +357,12 @@ export function findCustomValueId(
 
   // Tier 3: Substring / pattern match (e.g. "lead_followup_options" inside "Lead Follow-up Options (Lite, SG-Link, Custom-Link)")
   for (const cv of customValues) {
-    const id = typeof cv.id === "string" ? cv.id : (typeof cv._id === "string" ? cv._id : undefined);
+    const id =
+      typeof cv.id === "string"
+        ? cv.id
+        : typeof cv._id === "string"
+          ? cv._id
+          : undefined;
     if (!id) continue;
 
     const candidates = [
@@ -310,7 +376,8 @@ export function findCustomValueId(
       if (
         normCand.includes(normTarget) ||
         normTarget.includes(normCand) ||
-        (normTarget.startsWith("leadfollowup") && normCand.startsWith("leadfollowup"))
+        (normTarget.startsWith("leadfollowup") &&
+          normCand.startsWith("leadfollowup"))
       ) {
         return id;
       }
@@ -341,7 +408,9 @@ export async function fetchAllCustomValues(
 
   if (!response.ok) {
     const body = await response.text();
-    console.warn(`[GHL] Failed to fetch custom values: ${response.status} ${body}`);
+    console.warn(
+      `[GHL] Failed to fetch custom values: ${response.status} ${body}`
+    );
     return [];
   }
 
@@ -364,7 +433,9 @@ export async function uploadToGhlMedia(
   // If it's already a URL (not base64), return as-is — no upload needed
   const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
   if (!matches || matches.length !== 3) {
-    console.log(`[GHL Media] Skipping upload for '${fileName}' — not base64, returning as-is.`);
+    console.log(
+      `[GHL Media] Skipping upload for '${fileName}' — not base64, returning as-is.`
+    );
     return base64Data;
   }
 
@@ -374,7 +445,9 @@ export async function uploadToGhlMedia(
   // Convert base64 to binary buffer
   const buffer = Buffer.from(base64Content, "base64");
 
-  console.log(`[GHL Media] Uploading '${fileName}' (type: ${mimeType}, size: ${buffer.length} bytes) to location ${locationId}`);
+  console.log(
+    `[GHL Media] Uploading '${fileName}' (type: ${mimeType}, size: ${buffer.length} bytes) to location ${locationId}`
+  );
 
   // Use the v3 medias/upload-file endpoint with multipart form-data
   const formData = new FormData();
@@ -396,7 +469,9 @@ export async function uploadToGhlMedia(
   const responseBody = await response.text();
 
   if (!response.ok) {
-    console.error(`[GHL Media] Upload FAILED for '${fileName}': HTTP ${response.status} — ${responseBody}`);
+    console.error(
+      `[GHL Media] Upload FAILED for '${fileName}': HTTP ${response.status} — ${responseBody}`
+    );
     // Return empty string instead of raw base64 so the Custom Value doesn't store junk
     return "";
   }
@@ -406,7 +481,9 @@ export async function uploadToGhlMedia(
   try {
     data = JSON.parse(responseBody);
   } catch (parseErr) {
-    console.error(`[GHL Media] Failed to parse upload response for '${fileName}': ${responseBody}`);
+    console.error(
+      `[GHL Media] Failed to parse upload response for '${fileName}': ${responseBody}`
+    );
     return "";
   }
 
@@ -419,11 +496,15 @@ export async function uploadToGhlMedia(
 
   // Fallback: try fileId
   if (data.fileId) {
-    console.warn(`[GHL Media] No 'url' in response for '${fileName}', falling back to fileId: ${data.fileId}`);
+    console.warn(
+      `[GHL Media] No 'url' in response for '${fileName}', falling back to fileId: ${data.fileId}`
+    );
     return data.fileId;
   }
 
-  console.error(`[GHL Media] Unexpected response for '${fileName}': ${responseBody}`);
+  console.error(
+    `[GHL Media] Unexpected response for '${fileName}': ${responseBody}`
+  );
   return "";
 }
 
@@ -436,7 +517,9 @@ export async function updateExistingCustomValuesOnly(
   // Step 1: Fetch all existing custom values for this sub-account
   const cvs = await fetchAllCustomValues(locationId, accessToken);
   if (!cvs || cvs.length === 0) {
-    console.warn(`[GHL] No custom values found for location ${locationId}. Skipping all updates.`);
+    console.warn(
+      `[GHL] No custom values found for location ${locationId}. Skipping all updates.`
+    );
     return;
   }
 
@@ -475,7 +558,9 @@ export async function updateExistingCustomValuesOnly(
   const promises = Object.entries(updates).map(async ([key, value]) => {
     const entry = existingMap.get(key) || existingMap.get(normalizeKey(key));
     if (!entry) {
-      console.warn(`[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`);
+      console.warn(
+        `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`
+      );
       return;
     }
 
@@ -493,7 +578,9 @@ export async function updateExistingCustomValuesOnly(
 
     if (!resp.ok) {
       const errBody = await resp.text();
-      console.error(`[GHL] PUT failed for custom value '${key}' (display name: '${entry.displayName}'): ${resp.status} ${errBody}`);
+      console.error(
+        `[GHL] PUT failed for custom value '${key}' (display name: '${entry.displayName}'): ${resp.status} ${errBody}`
+      );
     }
   });
 
@@ -532,8 +619,10 @@ export async function upsertGhlCustomValue(
 
   // Broad fuzzy fallback for lead follow-up custom value if still not found
   if (!existingId && normName.includes("leadfollowup")) {
-    const leadCv = customValues.find((cv) => {
-      const cvName = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
+    const leadCv = customValues.find(cv => {
+      const cvName = String(
+        cv.name || cv.key || cv.fieldKey || ""
+      ).toLowerCase();
       return cvName.includes("lead") && cvName.includes("follow");
     });
     if (leadCv && typeof leadCv.id === "string") {
@@ -543,7 +632,9 @@ export async function upsertGhlCustomValue(
 
   // Step 3: If no existing custom value ID is found in the sub-account, skip (NEVER POST)
   if (!existingId) {
-    console.warn(`[GHL] Custom value '${name}' not found in sub-account location ${locationId}. Skipping PUT — will NOT create.`);
+    console.warn(
+      `[GHL] Custom value '${name}' not found in sub-account location ${locationId}. Skipping PUT — will NOT create.`
+    );
     return { id: "skipped_not_found", name, value };
   }
 
@@ -572,7 +663,9 @@ export async function upsertGhlCustomValue(
   }
 
   const errBody = await resp.text();
-  console.error(`[GHL] PUT failed for custom value '${name}': ${resp.status} ${errBody}`);
+  console.error(
+    `[GHL] PUT failed for custom value '${name}': ${resp.status} ${errBody}`
+  );
   return { id: existingId, name, value };
 }
 
@@ -647,9 +740,12 @@ export async function upsertInstallation(
   if (!db) throw new Error("Database not available");
 
   const normalizedLocationId = locationId.trim();
-  const expiresAt = Date.now() + (Number(tokenResponse.expires_in) || 60 * 60 * 24) * 1000;
-  const isCompanyToken = tokenResponse.userType === "Company" || !tokenResponse.locationId;
-  const companyId = tokenResponse.companyId ?? (isCompanyToken ? normalizedLocationId : null);
+  const expiresAt =
+    Date.now() + (Number(tokenResponse.expires_in) || 60 * 60 * 24) * 1000;
+  const isCompanyToken =
+    tokenResponse.userType === "Company" || !tokenResponse.locationId;
+  const companyId =
+    tokenResponse.companyId ?? (isCompanyToken ? normalizedLocationId : null);
 
   await db
     .insert(ghlInstallations)
@@ -730,12 +826,12 @@ export async function removeInstallation(locationId: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  await db.delete(ghlInstallations).where(eq(ghlInstallations.locationId, locationId));
+  await db
+    .delete(ghlInstallations)
+    .where(eq(ghlInstallations.locationId, locationId));
 }
 
-export async function getValidAccessToken(
-  locationId: string
-): Promise<string> {
+export async function getValidAccessToken(locationId: string): Promise<string> {
   const installation = await getInstallation(locationId);
   if (!installation) {
     throw new Error(`No GHL installation found for location: ${locationId}`);
@@ -749,14 +845,18 @@ export async function getValidAccessToken(
       return newTokens.access_token;
     } catch (error) {
       console.error(`[GHL] Failed to refresh token for ${locationId}:`, error);
-      throw new Error("Failed to refresh GHL access token. The app may need to be reinstalled.");
+      throw new Error(
+        "Failed to refresh GHL access token. The app may need to be reinstalled."
+      );
     }
   }
 
   return installation.accessToken;
 }
 
-export async function refreshInstallationAccessToken(locationId: string): Promise<string> {
+export async function refreshInstallationAccessToken(
+  locationId: string
+): Promise<string> {
   const installation = await getInstallation(locationId);
   if (!installation) {
     throw new Error(`No GHL installation found for location: ${locationId}`);
@@ -774,9 +874,13 @@ export async function refreshInstallationAccessToken(locationId: string): Promis
  * custom values for the sub-account so that the Request Scheduling page
  * has sensible defaults on first load.
  */
-export async function updateCustomValuesOnInstall(locationId: string): Promise<void> {
+export async function updateCustomValuesOnInstall(
+  locationId: string
+): Promise<void> {
   try {
-    console.log(`[GHL Install] Starting custom value seeding for location: ${locationId}`);
+    console.log(
+      `[GHL Install] Starting custom value seeding for location: ${locationId}`
+    );
 
     const accessToken = await getValidAccessToken(locationId);
 
@@ -790,14 +894,17 @@ export async function updateCustomValuesOnInstall(locationId: string): Promise<v
           Version: GHL_API_VERSION,
         },
       }),
-      fetch(`${GHL_BASE_URL}/businesses/?locationId=${encodeURIComponent(locationId)}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          Version: GHL_API_VERSION,
-        },
-      }),
+      fetch(
+        `${GHL_BASE_URL}/businesses/?locationId=${encodeURIComponent(locationId)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            Version: GHL_API_VERSION,
+          },
+        }
+      ),
     ]);
 
     let locationName = "";
@@ -821,25 +928,44 @@ export async function updateCustomValuesOnInstall(locationId: string): Promise<v
       }
     }
 
-    console.log(`[GHL Install] Fetched details for location ${locationId}: Owner="${ownerFirstName}", Business="${locationName}"`);
+    console.log(
+      `[GHL Install] Fetched details for location ${locationId}: Owner="${ownerFirstName}", Business="${locationName}"`
+    );
 
     // Seed default custom values
     const customValuesToUpdate = [
-      { name: "Lead Follow-up Options (Lite, SG-Link, Custom-Link)", value: "Lite" },
+      {
+        name: "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
+        value: "Lite",
+      },
       { name: "Initial Outreach Scheduling", value: "24 Hours" },
       { name: "follow_up_limit", value: "3" },
     ];
 
-    const updatePromises = customValuesToUpdate.map((cv) =>
+    const updatePromises = customValuesToUpdate.map(cv =>
       upsertGhlCustomValue(locationId, cv.name, cv.value)
-        .then(() => console.log(`[GHL Install] Successfully updated custom value: "${cv.name}"`))
-        .catch((err) => console.error(`[GHL Install] Failed to update custom value "${cv.name}":`, err))
+        .then(() =>
+          console.log(
+            `[GHL Install] Successfully updated custom value: "${cv.name}"`
+          )
+        )
+        .catch(err =>
+          console.error(
+            `[GHL Install] Failed to update custom value "${cv.name}":`,
+            err
+          )
+        )
     );
 
     await Promise.all(updatePromises);
-    console.log(`[GHL Install] Finished seeding custom values for location: ${locationId}`);
+    console.log(
+      `[GHL Install] Finished seeding custom values for location: ${locationId}`
+    );
   } catch (error) {
-    console.error(`[GHL Install] Error seeding custom values for location ${locationId}:`, error);
+    console.error(
+      `[GHL Install] Error seeding custom values for location ${locationId}:`,
+      error
+    );
     // Don't rethrow — a failure here should not crash the install process
   }
 }
@@ -888,14 +1014,22 @@ export async function createContact(
 
         // Find an exact match by email or phone
         const exactMatch = contacts.find((c: any) => {
-          const emailMatch = contact.email && c.email && c.email.toLowerCase() === contact.email.toLowerCase();
-          const phoneMatch = contact.phone && c.phone && normalizePhone(c.phone) === normalizePhone(contact.phone);
+          const emailMatch =
+            contact.email &&
+            c.email &&
+            c.email.toLowerCase() === contact.email.toLowerCase();
+          const phoneMatch =
+            contact.phone &&
+            c.phone &&
+            normalizePhone(c.phone) === normalizePhone(contact.phone);
           return emailMatch || phoneMatch;
         });
 
         if (exactMatch) {
           existingContactId = exactMatch.id;
-          console.log(`[GHL DEBUG] Found existing contact by search: ${existingContactId} (${query})`);
+          console.log(
+            `[GHL DEBUG] Found existing contact by search: ${existingContactId} (${query})`
+          );
         }
       }
     } catch (err) {
@@ -918,14 +1052,21 @@ export async function createContact(
       dnd: contact.dnd || false,
       source: "Royal Review - Add Contacts",
       customFields: contact.customFields
-        ?.map((field) => ({
+        ?.map(field => ({
           id: field.fieldKey,
           field_value: field.fieldValue,
         }))
-        .filter((field) => String(field.field_value ?? "").trim() !== ""),
+        .filter(field => String(field.field_value ?? "").trim() !== ""),
     };
 
-    console.log("[GHL DEBUG] Upserting existing contact:", JSON.stringify({ contactId: existingContactId, ...upsertPayload }, null, 2));
+    console.log(
+      "[GHL DEBUG] Upserting existing contact:",
+      JSON.stringify(
+        { contactId: existingContactId, ...upsertPayload },
+        null,
+        2
+      )
+    );
 
     // Use v3 upsert endpoint — requires Version: v3
     const upsertResp = await fetch(`${GHL_BASE_URL}/contacts/upsert`, {
@@ -941,7 +1082,9 @@ export async function createContact(
 
     if (!upsertResp.ok) {
       const errorBody = await upsertResp.json().catch(() => ({}));
-      const msg = (errorBody as Record<string, string>).message || `Failed to upsert contact: ${upsertResp.status}`;
+      const msg =
+        (errorBody as Record<string, string>).message ||
+        `Failed to upsert contact: ${upsertResp.status}`;
       console.error(`[GHL DEBUG] Upsert failed: ${msg}`);
 
       // Fallback: try PUT on the specific contact ID if upsert fails
@@ -959,16 +1102,19 @@ export async function createContact(
         dnd: contact.dnd || false,
       };
 
-      const putResp = await fetch(`${GHL_BASE_URL}/contacts/${existingContactId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          Version: GHL_API_VERSION,
-        },
-        body: JSON.stringify(fallbackPayload),
-      });
+      const putResp = await fetch(
+        `${GHL_BASE_URL}/contacts/${existingContactId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            Version: GHL_API_VERSION,
+          },
+          body: JSON.stringify(fallbackPayload),
+        }
+      );
 
       if (!putResp.ok) {
         const putErrorBody = await putResp.json().catch(() => ({}));
@@ -1022,14 +1168,17 @@ export async function createContact(
     dnd: contact.dnd || false,
     source: "Royal Review - Add Contacts",
     customFields: contact.customFields
-      ?.map((field) => ({
+      ?.map(field => ({
         id: field.fieldKey,
         field_value: field.fieldValue,
       }))
-      .filter((field) => String(field.field_value ?? "").trim() !== ""),
+      .filter(field => String(field.field_value ?? "").trim() !== ""),
   };
 
-  console.log("[GHL DEBUG] Creating new contact via upsert:", JSON.stringify(createPayload, null, 2));
+  console.log(
+    "[GHL DEBUG] Creating new contact via upsert:",
+    JSON.stringify(createPayload, null, 2)
+  );
 
   // Use v3 upsert endpoint for both create and update — it handles dedup automatically
   const response = await fetch(`${GHL_BASE_URL}/contacts/upsert`, {
@@ -1045,7 +1194,9 @@ export async function createContact(
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    const msg = (errorBody as Record<string, string>).message || `Failed to create contact: ${response.status}`;
+    const msg =
+      (errorBody as Record<string, string>).message ||
+      `Failed to create contact: ${response.status}`;
     console.error(`[GHL DEBUG] Upsert create failed: ${msg}`);
 
     // Fallback to v1 POST if v3 upsert fails
@@ -1064,11 +1215,11 @@ export async function createContact(
       source: "Royal Review - Add Contacts",
       tags: contact.tagName ? [contact.tagName] : undefined,
       customFields: contact.customFields
-        ?.map((field) => ({
+        ?.map(field => ({
           key: field.fieldKey,
           fieldValue: field.fieldValue,
         }))
-        .filter((field) => String(field.fieldValue ?? "").trim() !== ""),
+        .filter(field => String(field.fieldValue ?? "").trim() !== ""),
     };
 
     const fallbackResp = await fetch(`${GHL_BASE_URL}/contacts/`, {
@@ -1116,20 +1267,27 @@ export async function removeTagFromContact(
   const accessToken = await getValidAccessToken(locationId);
 
   const encodedContactId = encodeURIComponent(contactId);
-  console.log(`[GHL DEBUG] removeTagFromContact removing tag "${tagName}" from contact ${contactId}`);
-  const deleteResp = await fetch(`${GHL_BASE_URL}/contacts/${encodedContactId}/tags`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      Version: GHL_API_VERSION,
-    },
-    body: JSON.stringify({ tags: [tagName] }),
-  });
+  console.log(
+    `[GHL DEBUG] removeTagFromContact removing tag "${tagName}" from contact ${contactId}`
+  );
+  const deleteResp = await fetch(
+    `${GHL_BASE_URL}/contacts/${encodedContactId}/tags`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify({ tags: [tagName] }),
+    }
+  );
 
   if (deleteResp.ok) {
-    console.log(`[GHL DEBUG] removeTagFromContact succeeded for tag "${tagName}" on contact ${contactId}`);
+    console.log(
+      `[GHL DEBUG] removeTagFromContact succeeded for tag "${tagName}" on contact ${contactId}`
+    );
     return { success: true };
   }
 
@@ -1150,18 +1308,22 @@ export async function removeTagFromContact(
 
   if (!getResp.ok) {
     const body = await getResp.text().catch(() => "");
-    throw new Error(`Failed to fetch contact ${contactId} for tag removal: ${getResp.status} ${body}`);
+    throw new Error(
+      `Failed to fetch contact ${contactId} for tag removal: ${getResp.status} ${body}`
+    );
   }
 
   const contactData = (await getResp.json()) as Record<string, any>;
   const rawContact = contactData.contact || contactData;
   const currentTags: string[] = Array.isArray(rawContact.tags)
-    ? rawContact.tags.map((t: any) => (typeof t === "string" ? t : t?.name || t?.tagName || ""))
+    ? rawContact.tags.map((t: any) =>
+        typeof t === "string" ? t : t?.name || t?.tagName || ""
+      )
     : [];
 
   const normalizedTag = tagName.toLowerCase().trim();
   const remainingTags = currentTags.filter(
-    (tag) => tag.toLowerCase().trim() !== normalizedTag
+    tag => tag.toLowerCase().trim() !== normalizedTag
   );
 
   if (remainingTags.length === currentTags.length) {
@@ -1179,22 +1341,28 @@ export async function removeTagFromContact(
   const updatePayload: Record<string, unknown> = {
     firstName: rawContact.firstName || undefined,
     lastName: rawContact.lastName || undefined,
-    name: rawContact.name || `${rawContact.firstName || ""} ${rawContact.lastName || ""}`.trim() || undefined,
+    name:
+      rawContact.name ||
+      `${rawContact.firstName || ""} ${rawContact.lastName || ""}`.trim() ||
+      undefined,
     email: rawContact.email || undefined,
     phone: rawContact.phone || undefined,
     tags: remainingTags,
   };
 
-  const updateResp = await fetch(`${GHL_BASE_URL}/contacts/${encodedContactId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      Version: GHL_API_VERSION,
-    },
-    body: JSON.stringify(updatePayload),
-  });
+  const updateResp = await fetch(
+    `${GHL_BASE_URL}/contacts/${encodedContactId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+      body: JSON.stringify(updatePayload),
+    }
+  );
 
   if (updateResp.ok) {
     return { success: true };
@@ -1211,12 +1379,26 @@ export async function addTagToContact(
   contactId: string,
   tagName: string
 ): Promise<{ success: boolean }> {
-  console.log(`[GHL DEBUG] addTagToContact called with tagName: "${tagName}" for contact: ${contactId}`);
+  console.log(
+    `[GHL DEBUG] addTagToContact called with tagName: "${tagName}" for contact: ${contactId}`
+  );
   const accessToken = await getValidAccessToken(locationId);
   const attempts: Array<{ url: string; method?: string; body?: unknown }> = [
-    { url: `${GHL_BASE_URL}/contacts/${contactId}/tags`, method: "POST", body: { tags: [tagName] } },
-    { url: `${GHL_BASE_URL}/contacts/${contactId}/tag`, method: "POST", body: { tag: tagName } },
-    { url: `${GHL_BASE_URL}/contacts/${contactId}`, method: "PATCH", body: { tags: [tagName] } },
+    {
+      url: `${GHL_BASE_URL}/contacts/${contactId}/tags`,
+      method: "POST",
+      body: { tags: [tagName] },
+    },
+    {
+      url: `${GHL_BASE_URL}/contacts/${contactId}/tag`,
+      method: "POST",
+      body: { tag: tagName },
+    },
+    {
+      url: `${GHL_BASE_URL}/contacts/${contactId}`,
+      method: "PATCH",
+      body: { tags: [tagName] },
+    },
   ];
 
   let lastError = "";
@@ -1233,14 +1415,15 @@ export async function addTagToContact(
         body: attempt.body ? JSON.stringify(attempt.body) : undefined,
       });
 
-            if (response.ok) {
-        console.log(`[GHL DEBUG] addTagToContact SUCCESS via ${attempt.url} with tag: "${tagName}"`);
+      if (response.ok) {
+        console.log(
+          `[GHL DEBUG] addTagToContact SUCCESS via ${attempt.url} with tag: "${tagName}"`
+        );
         return { success: true };
       }
       const body = await response.text().catch(() => "");
       lastError = `${response.status} ${body} (${attempt.url})`;
       console.log(`[GHL DEBUG] addTagToContact attempt FAILED: ${lastError}`);
-
 
       if (response.status !== 404 && response.status !== 405) break;
     } catch (err: any) {
@@ -1261,18 +1444,21 @@ export async function addTagToContact(
     });
 
     if (createResp.ok) {
-      const created = await createResp.json().catch(() => ({} as any));
+      const created = await createResp.json().catch(() => ({}) as any);
       const tagId = (created && (created.id || created.tagId)) || undefined;
       if (tagId) {
-        const attachResp = await fetch(`${GHL_BASE_URL}/contacts/${contactId}/tags/${tagId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            Version: GHL_API_VERSION,
-          },
-        });
+        const attachResp = await fetch(
+          `${GHL_BASE_URL}/contacts/${contactId}/tags/${tagId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              Authorization: `Bearer ${accessToken}`,
+              Version: GHL_API_VERSION,
+            },
+          }
+        );
 
         if (attachResp.ok) return { success: true };
         const body = await attachResp.text().catch(() => "");
@@ -1286,14 +1472,18 @@ export async function addTagToContact(
     lastError = String(err?.message ?? err);
   }
 
-  throw new Error(lastError || `Failed to add tag ${tagName} to contact ${contactId}`);
+  throw new Error(
+    lastError || `Failed to add tag ${tagName} to contact ${contactId}`
+  );
 }
 
 export async function processContact(
   locationId: string,
   contact: GHLContactData
 ): Promise<{ contactId: string; enrolledInWorkflow: boolean }> {
-  console.log(`[GHL DEBUG] processContact received tagName: "${contact.tagName}" customFields: ${JSON.stringify(contact.customFields)}`);
+  console.log(
+    `[GHL DEBUG] processContact received tagName: "${contact.tagName}" customFields: ${JSON.stringify(contact.customFields)}`
+  );
   const result = await createContact(locationId, contact);
   const contactId = result.contact.id;
 
@@ -1317,17 +1507,22 @@ export async function processContact(
       try {
         await addTagToContact(locationId, contactId, contact.tagName);
       } catch (error) {
-        console.warn(`[GHL] Failed to add selected tag to contact ${contactId}:`, error);
+        console.warn(
+          `[GHL] Failed to add selected tag to contact ${contactId}:`,
+          error
+        );
       }
     }
 
     try {
       await addTagToContact(locationId, contactId, triggerTag);
     } catch (error) {
-      console.warn(`[GHL] Failed to add trigger tag to contact ${contactId}:`, error);
+      console.warn(
+        `[GHL] Failed to add trigger tag to contact ${contactId}:`,
+        error
+      );
     }
   }
 
   return { contactId, enrolledInWorkflow };
 }
-

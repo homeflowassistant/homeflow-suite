@@ -10,6 +10,7 @@ import AddOnCampaignPage from "./pages/AddOnCampaignPage";
 import QuickSendPage from "./pages/QuickSendPage";
 import ContactsPage from "./pages/ContactsPage";
 import AlertsNotificationsPage from "./pages/AlertsNotificationsPage";
+import PricingPage from "./pages/PricingPage";
 
 function Router() {
   return (
@@ -20,7 +21,11 @@ function Router() {
       <Route path={"/add-contacts"} component={AddContactsPage} />
       <Route path={"/quick-send"} component={QuickSendPage} />
       <Route path={"/contacts"} component={ContactsPage} />
-      <Route path={"/alerts-notifications"} component={AlertsNotificationsPage} />
+      <Route
+        path={"/alerts-notifications"}
+        component={AlertsNotificationsPage}
+      />
+      <Route path={"/pricing"} component={PricingPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />
       </Route>

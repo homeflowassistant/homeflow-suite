@@ -30,10 +30,10 @@ import { trpc } from "@/lib/trpc";
 // ─── Types ───────────────────────────────────────────────────────────
 
 interface QuoteOffer {
-  name: string;          // Offer title / name (editable for Offer 2)
-  price: string;         // Static price display ($XX.XX)
-  description: string;   // Editable description
-  image: string | null;  // Editable image
+  name: string; // Offer title / name (editable for Offer 2)
+  price: string; // Static price display ($XX.XX)
+  description: string; // Editable description
+  image: string | null; // Editable image
 }
 
 interface QuoteFormData {
@@ -42,9 +42,9 @@ interface QuoteFormData {
   bioTitle: string;
   bioDescription: string;
   tosLink: string;
-  offers: QuoteOffer[];    // Two offers: paid + free
-  price1: string;          // Subtotal ($XX.XX)
-  price2: string;          // Total ($XX.XX)
+  offers: QuoteOffer[]; // Two offers: paid + free
+  price1: string; // Subtotal ($XX.XX)
+  price2: string; // Total ($XX.XX)
   galleryImages: string[];
   testimonialHeadshots: (string | null)[];
   testimonialNames: string[];
@@ -110,7 +110,12 @@ const DEFAULT_FORM: QuoteFormData = {
     DEFAULT_AVATAR,
     DEFAULT_AVATAR,
   ],
-  testimonialNames: ["Joshua -n- Megan", "Amber K.", "Marcus L.", "Samantha P."],
+  testimonialNames: [
+    "Joshua -n- Megan",
+    "Amber K.",
+    "Marcus L.",
+    "Samantha P.",
+  ],
   testimonialTexts: [
     "Default testimonial text will appear here.",
     "Default testimonial text will appear here.",
@@ -176,7 +181,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           <div className="w-full h-48 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
             <div className="text-center">
               <Image className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-              <span className="text-[11px] text-slate-400">No Photo Uploaded</span>
+              <span className="text-[11px] text-slate-400">
+                No Photo Uploaded
+              </span>
             </div>
           </div>
         )}
@@ -185,14 +192,16 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       {/* ── Quote Title ── */}
       <div>
         <h2 className="text-base font-bold text-slate-800 mb-2">
-          {formData.bioTitle || "[service area]'s Highest Rated Pooper Scooper Service"}
+          {formData.bioTitle ||
+            "[service area]'s Highest Rated Pooper Scooper Service"}
         </h2>
       </div>
 
       {/* ── Bio Description ── */}
       <div>
         <p className="text-xs text-slate-600 leading-relaxed">
-          {formData.bioDescription || "Your company description will appear here."}
+          {formData.bioDescription ||
+            "Your company description will appear here."}
         </p>
       </div>
 
@@ -223,7 +232,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Freebie Offer ── */}
       <div className="space-y-2 pt-2">
-        <label className="text-[11px] text-slate-500 font-medium">Free Sign Up Offer</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Free Sign Up Offer
+        </label>
         <div>
           <h2 className="text-sm font-bold text-slate-800">
             {formData.offers[0]?.name}
@@ -274,7 +285,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </div>
         <div className="flex justify-between items-center px-1 py-1">
           <span className="text-xs text-slate-700 font-semibold">Total</span>
-          <span className="text-xs text-slate-800 font-bold">{formData.price2}</span>
+          <span className="text-xs text-slate-800 font-bold">
+            {formData.price2}
+          </span>
         </div>
         <div className="border-t border-slate-200" />
       </div>
@@ -284,7 +297,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <div className="flex items-center gap-2 justify-center py-1">
           <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
           <span className="text-[11px] text-slate-500">I agree to the</span>
-          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+          <span className="text-[11px] text-blue-600 underline">
+            Terms of Service
+          </span>
         </div>
       )}
       <div className="flex justify-center">
@@ -299,7 +314,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Gallery Images ── */}
       <div className="pt-2">
-        <label className="text-[11px] text-slate-500 font-medium block mb-2">Images</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-2">
+          Images
+        </label>
         <div className="grid grid-cols-3 gap-3 mt-1.5">
           {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => (
             <div
@@ -329,9 +346,14 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Testimonials ── */}
       <div className="space-y-4 pt-1">
-        <label className="text-[11px] text-slate-500 font-medium block">Reviews</label>
+        <label className="text-[11px] text-slate-500 font-medium block">
+          Reviews
+        </label>
         {formData.testimonialNames.map((name, idx) => (
-          <div key={idx} className="space-y-2 pb-3 border-b border-slate-200 last:border-0">
+          <div
+            key={idx}
+            className="space-y-2 pb-3 border-b border-slate-200 last:border-0"
+          >
             <div className="flex items-center gap-2">
               <img
                 src={formData.testimonialHeadshots[idx] || DEFAULT_AVATAR}
@@ -342,12 +364,17 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
               <span className="text-sm font-medium text-slate-700">{name}</span>
             </div>
             <div className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} size={14} className="fill-amber-400 text-amber-400" />
+              {[1, 2, 3, 4, 5].map(star => (
+                <Star
+                  key={star}
+                  size={14}
+                  className="fill-amber-400 text-amber-400"
+                />
               ))}
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              {formData.testimonialTexts[idx] || "Default testimonial text will appear here."}
+              {formData.testimonialTexts[idx] ||
+                "Default testimonial text will appear here."}
             </p>
           </div>
         ))}
@@ -358,7 +385,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <div className="flex items-center gap-2 justify-center py-2">
           <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
           <span className="text-[11px] text-slate-500">I agree to the</span>
-          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+          <span className="text-[11px] text-blue-600 underline">
+            Terms of Service
+          </span>
         </div>
       )}
       <div className="flex justify-center pb-2">
@@ -401,7 +430,10 @@ function QuoteFormFields({
     setFormData({ ...formData, [field]: base64 });
   };
 
-  const handleGalleryUpload = async (files: FileList | null, replaceIndex?: number) => {
+  const handleGalleryUpload = async (
+    files: FileList | null,
+    replaceIndex?: number
+  ) => {
     if (!files) return;
     const newImages: string[] = [];
     for (let i = 0; i < files.length; i++) {
@@ -415,7 +447,11 @@ function QuoteFormFields({
     } else {
       const updated = [...formData.galleryImages];
       let slotIdx = 0;
-      for (let i = 0; i < newImages.length && slotIdx < MAX_GALLERY_IMAGES; i++) {
+      for (
+        let i = 0;
+        i < newImages.length && slotIdx < MAX_GALLERY_IMAGES;
+        i++
+      ) {
         if (updated[slotIdx] === undefined || updated[slotIdx] === null) {
           updated[slotIdx] = newImages[i];
         }
@@ -446,7 +482,9 @@ function QuoteFormFields({
 
       {/* ── Company Logo ── */}
       <div className="flex justify-center">
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Company Logo
+        </label>
         <div className="mt-1 flex items-center gap-3">
           {formData.companyLogo ? (
             <div className="relative group inline-block">
@@ -473,7 +511,9 @@ function QuoteFormFields({
               onClick={() => logoInputRef.current?.click()}
             >
               <Upload size={18} className="text-slate-400 mb-1" />
-              <span className="text-xs text-slate-500 font-medium">Upload Logo</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Upload Logo
+              </span>
             </div>
           )}
           <input
@@ -481,15 +521,21 @@ function QuoteFormFields({
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handleImageUpload(e.target.files?.[0], "companyLogo")}
+            onChange={e =>
+              handleImageUpload(e.target.files?.[0], "companyLogo")
+            }
           />
         </div>
       </div>
 
       {/* ── Company Photo ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Photo</label>
-        <p className="text-[10px] text-slate-400 italic mb-1">(best if there are people in it)</p>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Company Photo
+        </label>
+        <p className="text-[10px] text-slate-400 italic mb-1">
+          (best if there are people in it)
+        </p>
         <div
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
           onClick={() => photoInputRef.current?.click()}
@@ -503,7 +549,7 @@ function QuoteFormFields({
                 crossOrigin="anonymous"
               />
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   setFormData({ ...formData, teamPhoto: null });
                 }}
@@ -515,8 +561,12 @@ function QuoteFormFields({
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload size={24} className="text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Upload Company Photo</span>
-              <span className="text-[10px] text-slate-400">(best if there are people in it)</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Upload Company Photo
+              </span>
+              <span className="text-[10px] text-slate-400">
+                (best if there are people in it)
+              </span>
             </div>
           )}
         </div>
@@ -525,7 +575,7 @@ function QuoteFormFields({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => handleImageUpload(e.target.files?.[0], "teamPhoto")}
+          onChange={e => handleImageUpload(e.target.files?.[0], "teamPhoto")}
         />
       </div>
 
@@ -536,7 +586,7 @@ function QuoteFormFields({
         </label>
         <Input
           value={formData.bioTitle}
-          onChange={(e) => setFormData({ ...formData, bioTitle: e.target.value })}
+          onChange={e => setFormData({ ...formData, bioTitle: e.target.value })}
           className="mt-1 text-xs h-8"
           placeholder="[service area]'s Highest Rated Pooper Scooper Service"
         />
@@ -549,7 +599,9 @@ function QuoteFormFields({
         </label>
         <textarea
           value={formData.bioDescription}
-          onChange={(e) => setFormData({ ...formData, bioDescription: e.target.value })}
+          onChange={e =>
+            setFormData({ ...formData, bioDescription: e.target.value })
+          }
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 min-h-[100px] resize-y"
           placeholder="Insert Company Description Here"
         />
@@ -557,13 +609,15 @@ function QuoteFormFields({
 
       {/* ── Free Sign Up Offer ── */}
       <div className="space-y-2">
-        <label className="text-[11px] text-slate-500 font-medium">Free Sign Up Offer</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Free Sign Up Offer
+        </label>
         <div className="bg-slate-50 rounded-lg p-3 space-y-2">
           <div>
             <label className="text-[10px] text-slate-400">Offer Title</label>
             <Input
               value={formData.offers[0]?.name || "2 Weeks FREE"}
-              onChange={(e) => {
+              onChange={e => {
                 const offers = [...formData.offers];
                 offers[0] = { ...offers[0], name: e.target.value };
                 setFormData({ ...formData, offers });
@@ -573,14 +627,16 @@ function QuoteFormFields({
             />
           </div>
           <div>
-            <span className="text-[11px] text-slate-500">{formData.offers[0]?.price}</span>
+            <span className="text-[11px] text-slate-500">
+              {formData.offers[0]?.price}
+            </span>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-[10px] text-slate-400">Description</label>
               <textarea
                 value={formData.offers[0]?.description || ""}
-                onChange={(e) => {
+                onChange={e => {
                   const offers = [...formData.offers];
                   offers[0] = { ...offers[0], description: e.target.value };
                   setFormData({ ...formData, offers });
@@ -610,11 +666,13 @@ function QuoteFormFields({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                ref={(el) => { offerImageRefs.current[0] = el; }}
-                onChange={(e) => {
+                ref={el => {
+                  offerImageRefs.current[0] = el;
+                }}
+                onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    fileToBase64(file).then((b64) => {
+                    fileToBase64(file).then(b64 => {
                       const offers = [...formData.offers];
                       offers[0] = { ...offers[0], image: b64 };
                       setFormData({ ...formData, offers });
@@ -630,13 +688,17 @@ function QuoteFormFields({
       {/* ── Pricing ── */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Subtotal</label>
+          <label className="text-[11px] text-slate-500 font-medium block mb-1">
+            Subtotal
+          </label>
           <div className="mt-1 text-xs h-8 px-3 py-1.5 rounded-md border border-slate-200 bg-slate-100 text-slate-600 font-semibold">
             $XX.XX
           </div>
         </div>
         <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Total</label>
+          <label className="text-[11px] text-slate-500 font-medium block mb-1">
+            Total
+          </label>
           <div className="mt-1 text-xs h-8 px-3 py-1.5 rounded-md border border-slate-200 bg-slate-100 text-slate-700 font-bold">
             $XX.XX
           </div>
@@ -645,7 +707,9 @@ function QuoteFormFields({
 
       {/* ── Gallery Images ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Gallery Images (max 6)</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Gallery Images (max 6)
+        </label>
         <div className="grid grid-cols-6 gap-2 mt-1.5">
           {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => {
             const isFilled = formData.galleryImages[idx] !== undefined;
@@ -657,7 +721,11 @@ function QuoteFormFields({
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
-                  input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files, isFilled ? idx : undefined);
+                  input.onchange = e =>
+                    handleGalleryUpload(
+                      (e.target as HTMLInputElement).files,
+                      isFilled ? idx : undefined
+                    );
                   input.click();
                 }}
               >
@@ -685,9 +753,14 @@ function QuoteFormFields({
 
       {/* ── Testimonials ── */}
       <div className="space-y-4">
-        <label className="text-[11px] text-slate-500 font-medium block">Testimonials (4 required)</label>
+        <label className="text-[11px] text-slate-500 font-medium block">
+          Testimonials (4 required)
+        </label>
         {formData.testimonialNames.map((name, idx) => (
-          <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+          <div
+            key={idx}
+            className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2"
+          >
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-400 w-16">Headshot</span>
               {formData.testimonialHeadshots[idx] ? (
@@ -697,11 +770,15 @@ function QuoteFormFields({
                     alt={`Headshot ${name}`}
                     className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer hover:opacity-80"
                     crossOrigin="anonymous"
-                    onClick={() => testimonialHeadshotRefs.current[idx]?.click()}
+                    onClick={() =>
+                      testimonialHeadshotRefs.current[idx]?.click()
+                    }
                     title="Click to change headshot"
                   />
                   <button
-                    onClick={() => updateTestimonial(idx, "testimonialHeadshots", null)}
+                    onClick={() =>
+                      updateTestimonial(idx, "testimonialHeadshots", null)
+                    }
                     className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow"
                     title="Remove headshot"
                   >
@@ -725,12 +802,15 @@ function QuoteFormFields({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                ref={(el) => {
+                ref={el => {
                   testimonialHeadshotRefs.current[idx] = el;
                   if (el) {
                     el.onchange = (ev: Event) => {
                       const file = (ev.target as HTMLInputElement).files?.[0];
-                      if (file) fileToBase64(file).then((b64) => updateTestimonial(idx, "testimonialHeadshots", b64));
+                      if (file)
+                        fileToBase64(file).then(b64 =>
+                          updateTestimonial(idx, "testimonialHeadshots", b64)
+                        );
                     };
                   }
                 }}
@@ -741,7 +821,9 @@ function QuoteFormFields({
               <span className="text-[10px] text-slate-400 w-16">Name</span>
               <Input
                 value={name}
-                onChange={(e) => updateTestimonial(idx, "testimonialNames", e.target.value)}
+                onChange={e =>
+                  updateTestimonial(idx, "testimonialNames", e.target.value)
+                }
                 className="text-xs h-7 flex-1"
                 placeholder="Testimonial name"
                 required
@@ -749,10 +831,14 @@ function QuoteFormFields({
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Google Review Text</label>
+              <label className="text-[10px] text-slate-400 block mb-1">
+                Google Review Text
+              </label>
               <textarea
                 value={formData.testimonialTexts[idx] || ""}
-                onChange={(e) => updateTestimonial(idx, "testimonialTexts", e.target.value)}
+                onChange={e =>
+                  updateTestimonial(idx, "testimonialTexts", e.target.value)
+                }
                 placeholder="Default testimonial text will appear here (copy/paste Google Review text)"
                 className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs min-h-[60px] resize-y"
               />
@@ -768,7 +854,7 @@ function QuoteFormFields({
         </label>
         <Input
           value={formData.tosLink}
-          onChange={(e) => setFormData({ ...formData, tosLink: e.target.value })}
+          onChange={e => setFormData({ ...formData, tosLink: e.target.value })}
           className="mt-1 text-xs h-8"
           placeholder="https://www.yourcompany.com/terms-of-service"
         />
@@ -823,7 +909,7 @@ export default function ReactivationQuotePopup({
   useEffect(() => {
     if (!settingsQuery.data?.customQuote) return;
     const q = settingsQuery.data.customQuote;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       companyLogo: q.businessLogo || prev.companyLogo,
       teamPhoto: q.companyImage || prev.teamPhoto,
@@ -918,7 +1004,15 @@ export default function ReactivationQuotePopup({
     } finally {
       setIsSaving(false);
     }
-  }, [locationId, reactivationOption, onetimeTiming, formData, saveMutation, onSaveSuccess, onOpenChange]);
+  }, [
+    locationId,
+    reactivationOption,
+    onetimeTiming,
+    formData,
+    saveMutation,
+    onSaveSuccess,
+    onOpenChange,
+  ]);
 
   const handleClose = (open: boolean) => {
     if (!open) {
@@ -941,7 +1035,9 @@ export default function ReactivationQuotePopup({
             </DialogDescription>
             <div className="text-[12px] text-slate-500 space-y-0.5">
               <p>1. Upload all empty image files (example on the left)</p>
-              <p>2. Fill out the editable text boxes (offer descriptions, bio)</p>
+              <p>
+                2. Fill out the editable text boxes (offer descriptions, bio)
+              </p>
               <p>3. Replace the default images</p>
               <p>4. Add the 4 testimonials</p>
               <p>5. Click Save Settings</p>

@@ -70,7 +70,7 @@ export interface ContactWithStatus extends GHLContact {
 
 function hasTag(tags: string[], targetTag: string): boolean {
   return tags.some(
-    (tag) => tag.toLowerCase().trim() === targetTag.toLowerCase().trim()
+    tag => tag.toLowerCase().trim() === targetTag.toLowerCase().trim()
   );
 }
 
@@ -127,10 +127,13 @@ async function fetchContactById(
   accessToken: string,
   contactId: string
 ): Promise<ContactWithStatus> {
-  const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
-    method: "GET",
-    headers: ghlHeaders(accessToken),
-  });
+  const resp = await fetch(
+    `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+    {
+      method: "GET",
+      headers: ghlHeaders(accessToken),
+    }
+  );
 
   if (!resp.ok) {
     const body = await resp.text();
@@ -151,9 +154,20 @@ async function fetchContacts(
   page: number,
   pageSize: number,
   search?: string
-): Promise<{ contacts: GHLContact[]; total: number; page: number; pageSize: number }> {
+): Promise<{
+  contacts: GHLContact[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   if (search && search.trim()) {
-    return searchContacts(locationId, accessToken, search.trim(), page, pageSize);
+    return searchContacts(
+      locationId,
+      accessToken,
+      search.trim(),
+      page,
+      pageSize
+    );
   }
   return listContacts(locationId, accessToken, page, pageSize);
 }
@@ -163,7 +177,12 @@ async function listContacts(
   accessToken: string,
   page: number,
   pageSize: number
-): Promise<{ contacts: GHLContact[]; total: number; page: number; pageSize: number }> {
+): Promise<{
+  contacts: GHLContact[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   const url = `${GHL_BASE_URL}/contacts/?locationId=${encodeURIComponent(locationId)}&page=${page}&limit=${pageSize}`;
 
   const resp = await fetch(url, {
@@ -196,7 +215,12 @@ async function searchContacts(
   query: string,
   page: number,
   pageSize: number
-): Promise<{ contacts: GHLContact[]; total: number; page: number; pageSize: number }> {
+): Promise<{
+  contacts: GHLContact[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   // GHL search endpoint supports multiple fields. We search by query across
   // all searchable fields. The API supports case-insensitive matching.
   const url = `${GHL_BASE_URL}/contacts/search`;
@@ -208,13 +232,16 @@ async function searchContacts(
       query: { locationId },
       type: "contact",
       filters: [
-        { group: "OR", filters: [
-          { field: "email", operator: "contains", value: query },
-          { field: "name", operator: "contains", value: query },
-          { field: "phone", operator: "contains", value: query },
-          { field: "firstName", operator: "contains", value: query },
-          { field: "lastName", operator: "contains", value: query },
-        ]},
+        {
+          group: "OR",
+          filters: [
+            { field: "email", operator: "contains", value: query },
+            { field: "name", operator: "contains", value: query },
+            { field: "phone", operator: "contains", value: query },
+            { field: "firstName", operator: "contains", value: query },
+            { field: "lastName", operator: "contains", value: query },
+          ],
+        },
       ],
       sort: [{ field: "dateAdded", direction: "desc" }],
       page,
@@ -231,7 +258,9 @@ async function searchContacts(
   }
 
   const data = (await resp.json()) as any;
-  const contacts = (data.contacts || data.data?.contacts || []).map(normalizeContact);
+  const contacts = (data.contacts || data.data?.contacts || []).map(
+    normalizeContact
+  );
   const total = data.totalCount || data.data?.totalCount || contacts.length;
 
   return {
@@ -250,14 +279,19 @@ function normalizeContact(c: any): GHLContact {
     id: c.id || "",
     firstName: c.firstName || "",
     lastName: c.lastName || "",
-    name: c.name || [c.firstName, c.lastName].filter(Boolean).join(" ") || "Unknown",
+    name:
+      c.name ||
+      [c.firstName, c.lastName].filter(Boolean).join(" ") ||
+      "Unknown",
     email: c.email || "",
     phone: c.phone || "",
     dnd: !!c.dnd,
     dateAdded: c.dateAdded || c.date_created || null,
     dateUpdated: c.dateUpdated || c.date_updated || null,
     tags: Array.isArray(c.tags)
-      ? c.tags.map((t: any) => (typeof t === "string" ? t : t?.name || t?.tagName || ""))
+      ? c.tags.map((t: any) =>
+          typeof t === "string" ? t : t?.name || t?.tagName || ""
+        )
       : [],
     customFields: Array.isArray(c.customFields)
       ? c.customFields.map((cf: any) => ({
@@ -297,7 +331,8 @@ export const contactsRouter = router({
         input.search
       );
 
-      const contactsWithStatus: ContactWithStatus[] = result.contacts.map(enrichWithStatus);
+      const contactsWithStatus: ContactWithStatus[] =
+        result.contacts.map(enrichWithStatus);
 
       return {
         contacts: contactsWithStatus,
@@ -346,16 +381,21 @@ export const contactsRouter = router({
       const payload = {
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim() || undefined,
-        name: `${input.firstName.trim()} ${input.lastName.trim()}`.trim() || undefined,
+        name:
+          `${input.firstName.trim()} ${input.lastName.trim()}`.trim() ||
+          undefined,
         email: input.email.trim() || undefined,
         phone: input.phone.trim() || undefined,
       };
 
-      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
-        method: "PUT",
-        headers: ghlHeaders(accessToken),
-        body: JSON.stringify(payload),
-      });
+      const resp = await fetch(
+        `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+        {
+          method: "PUT",
+          headers: ghlHeaders(accessToken),
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!resp.ok) {
         const body = await resp.text();
@@ -367,7 +407,10 @@ export const contactsRouter = router({
 
       const data = (await resp.json()) as any;
       const updated = data.contact || data;
-      return { success: true, contact: enrichWithStatus(normalizeContact(updated)) };
+      return {
+        success: true,
+        contact: enrichWithStatus(normalizeContact(updated)),
+      };
     }),
 
   /**
@@ -386,10 +429,13 @@ export const contactsRouter = router({
       const contactId = input.contactId.trim();
 
       // First, fetch the contact to check current DND status
-      const getResp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
-        method: "GET",
-        headers: ghlHeaders(accessToken),
-      });
+      const getResp = await fetch(
+        `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+        {
+          method: "GET",
+          headers: ghlHeaders(accessToken),
+        }
+      );
 
       if (!getResp.ok) {
         const body = await getResp.text();
@@ -408,17 +454,22 @@ export const contactsRouter = router({
       const putPayload = {
         firstName: existingContact.firstName,
         lastName: existingContact.lastName,
-        name: existingContact.name || `${existingContact.firstName || ""} ${existingContact.lastName || ""}`.trim(),
+        name:
+          existingContact.name ||
+          `${existingContact.firstName || ""} ${existingContact.lastName || ""}`.trim(),
         email: existingContact.email || undefined,
         phone: existingContact.phone || undefined,
         dnd: newDnd,
       };
 
-      const putResp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
-        method: "PUT",
-        headers: ghlHeaders(accessToken),
-        body: JSON.stringify(putPayload),
-      });
+      const putResp = await fetch(
+        `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+        {
+          method: "PUT",
+          headers: ghlHeaders(accessToken),
+          body: JSON.stringify(putPayload),
+        }
+      );
 
       if (!putResp.ok) {
         const body = await putResp.text();
@@ -480,7 +531,11 @@ export const contactsRouter = router({
             // Tag added successfully — fetch updated contact
             return {
               success: true,
-              contact: await fetchContactById(locationId, accessToken, contactId),
+              contact: await fetchContactById(
+                locationId,
+                accessToken,
+                contactId
+              ),
             };
           }
 
@@ -515,7 +570,11 @@ export const contactsRouter = router({
             if (attachResp.ok) {
               return {
                 success: true,
-                contact: await fetchContactById(locationId, accessToken, contactId),
+                contact: await fetchContactById(
+                  locationId,
+                  accessToken,
+                  contactId
+                ),
               };
             }
           }
@@ -546,11 +605,14 @@ export const contactsRouter = router({
       const accessToken = await getValidAccessToken(locationId);
       const contactId = input.contactId.trim();
 
-      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags`, {
-        method: "DELETE",
-        headers: ghlHeaders(accessToken),
-        body: JSON.stringify({ tags: [input.tagName] }),
-      });
+      const resp = await fetch(
+        `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags`,
+        {
+          method: "DELETE",
+          headers: ghlHeaders(accessToken),
+          body: JSON.stringify({ tags: [input.tagName] }),
+        }
+      );
 
       if (!resp.ok) {
         const body = await resp.text();
@@ -599,19 +661,23 @@ export const contactsRouter = router({
             // Handle different response shapes
             if (Array.isArray(data)) {
               data.forEach((t: any) => {
-                const name = typeof t === "string" ? t : t?.name || t?.tagName || "";
+                const name =
+                  typeof t === "string" ? t : t?.name || t?.tagName || "";
                 if (name) tags.push(name);
               });
             } else if (Array.isArray(data.tags)) {
               data.tags.forEach((t: any) => {
-                const name = typeof t === "string" ? t : t?.name || t?.tagName || "";
+                const name =
+                  typeof t === "string" ? t : t?.name || t?.tagName || "";
                 if (name) tags.push(name);
               });
             }
 
             // Deduplicate and sort alphabetically
             return {
-              tags: Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b)),
+              tags: Array.from(new Set(tags)).sort((a, b) =>
+                a.localeCompare(b)
+              ),
             };
           }
 
@@ -642,10 +708,13 @@ export const contactsRouter = router({
       const accessToken = await getValidAccessToken(locationId);
       const contactId = input.contactId.trim();
 
-      const resp = await fetch(`${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`, {
-        method: "DELETE",
-        headers: ghlHeaders(accessToken),
-      });
+      const resp = await fetch(
+        `${GHL_BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+        {
+          method: "DELETE",
+          headers: ghlHeaders(accessToken),
+        }
+      );
 
       if (!resp.ok) {
         const body = await resp.text();

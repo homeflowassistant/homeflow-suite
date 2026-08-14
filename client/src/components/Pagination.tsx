@@ -33,11 +33,8 @@ export default function Pagination({
     >
       {/* Item count */}
       <p className="text-xs text-slate-500">
-        Showing{" "}
-        <span className="font-medium text-slate-700">{startItem}</span>
-        {" "}to{" "}
-        <span className="font-medium text-slate-700">{endItem}</span>
-        {" "}of{" "}
+        Showing <span className="font-medium text-slate-700">{startItem}</span>{" "}
+        to <span className="font-medium text-slate-700">{endItem}</span> of{" "}
         <span className="font-medium text-slate-700">{totalItems}</span>
       </p>
 
@@ -56,7 +53,7 @@ export default function Pagination({
 
         {/* Page numbers */}
         <div className="flex items-center gap-0.5 mx-1">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <Button
               key={page}
               variant={page === currentPage ? "default" : "outline"}
@@ -64,7 +61,8 @@ export default function Pagination({
               onClick={() => onPageChange(page)}
               className={cn(
                 "h-8 w-8 p-0 text-xs",
-                page === currentPage && "bg-blue-600 hover:bg-blue-700 text-white"
+                page === currentPage &&
+                  "bg-blue-600 hover:bg-blue-700 text-white"
               )}
             >
               {page}

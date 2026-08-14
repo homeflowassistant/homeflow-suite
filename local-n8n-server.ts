@@ -22,12 +22,15 @@ app.use(
     verify: (req, _res, buf) => {
       (req as any).rawBody = buf.toString("utf8");
     },
-  }),
+  })
 );
 registerN8nRoutes(app);
 
 const PORT = Number(process.env.PORT ?? 4501);
 app.listen(PORT, () => {
   console.log(`Local n8n proxy test server on http://127.0.0.1:${PORT}`);
-  console.log("  INTERNAL_API_KEY =", process.env.INTERNAL_API_KEY ?? "(not set!)");
+  console.log(
+    "  INTERNAL_API_KEY =",
+    process.env.INTERNAL_API_KEY ?? "(not set!)"
+  );
 });

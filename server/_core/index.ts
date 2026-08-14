@@ -24,7 +24,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  const app = createApp({ serveClient: process.env.NODE_ENV !== "development" });
+  const app = createApp({
+    serveClient: process.env.NODE_ENV !== "development",
+  });
   const server = createServer(app);
 
   // Development mode uses Vite middleware. Production serves static files from dist/public.

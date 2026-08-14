@@ -6,7 +6,7 @@ import ReactivationQuotePopup from "@/components/ReactivationQuotePopup";
 import "./ReactivationPage.css";
 
 // ─── Example images (place these PNGs in /public) ─────────────────────
-const EXAMPLE_LITE   = "/lite.png";
+const EXAMPLE_LITE = "/lite.png";
 const EXAMPLE_CUSTOM = "/custom.png";
 
 // ─── Constants ────────────────────────────────────────────────────────
@@ -26,10 +26,10 @@ type OnetimeTiming = (typeof ONETIME_TIMING_LABELS)[number];
 
 // Timeline Data (Matching Follow-Up page exactly)
 const TIMELINE_STEPS = [
-  { day: "Day 1",  label: "Email 1\nSMS 1" },
-  { day: "Day 3",  label: "Email 2\nSMS 2" },
-  { day: "Day 5",  label: "Email 3\nSMS 3" },
-  { day: "Day 8",  label: "Email 4\nSMS 4" },
+  { day: "Day 1", label: "Email 1\nSMS 1" },
+  { day: "Day 3", label: "Email 2\nSMS 2" },
+  { day: "Day 5", label: "Email 3\nSMS 3" },
+  { day: "Day 8", label: "Email 4\nSMS 4" },
   { day: "Day 12", label: "Email 5\nSMS 5" },
   { day: "Day 26", label: "Email 6" },
   { day: "Day 60", label: "Email 7" },
@@ -38,7 +38,7 @@ const TIMELINE_STEPS = [
   { day: "Day 270", label: "Email 10" },
   { day: "Day 360", label: "Email 11" },
 ];
-const FIRST_ROW  = TIMELINE_STEPS.slice(0, 6);
+const FIRST_ROW = TIMELINE_STEPS.slice(0, 6);
 const SECOND_ROW = TIMELINE_STEPS.slice(6);
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -55,7 +55,11 @@ function sliderBackground(value: number, max: number) {
 }
 
 function onetimeTimingToIndex(value: string): number {
-  const n = value.trim().toLowerCase().replace(/[\s_-]+/g, " ").trim();
+  const n = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .trim();
   const map: Record<string, number> = {
     never: 0,
     immediately: 1,
@@ -67,9 +71,7 @@ function onetimeTimingToIndex(value: string): number {
     "1 week": 4,
   };
   return (
-    map[n] ??
-    ONETIME_TIMING_LABELS.findIndex((l) => l.toLowerCase() === n) ??
-    0
+    map[n] ?? ONETIME_TIMING_LABELS.findIndex(l => l.toLowerCase() === n) ?? 0
   );
 }
 
@@ -77,9 +79,10 @@ function onetimeTimingToIndex(value: string): number {
 export default function ReactivationPage() {
   const locationId = useLocationId();
 
-  const [selectedOption, setSelectedOption] = useState<ReactivationOption>("Lite");
-  const [onetimeTiming, setOnetimeTiming]   = useState(0); // default: Never
-  const [isSaving, setIsSaving]             = useState(false);
+  const [selectedOption, setSelectedOption] =
+    useState<ReactivationOption>("Lite");
+  const [onetimeTiming, setOnetimeTiming] = useState(0); // default: Never
+  const [isSaving, setIsSaving] = useState(false);
   const [showQuotePopup, setShowQuotePopup] = useState(false);
 
   // ── Load settings ────────────────────────────────────────────────────
@@ -92,7 +95,10 @@ export default function ReactivationPage() {
   const showToast = useCallback((message: string, isError = false) => {
     toast(message, {
       style: isError
-        ? { background: "var(--destructive)", color: "var(--destructive-foreground)" }
+        ? {
+            background: "var(--destructive)",
+            color: "var(--destructive-foreground)",
+          }
         : undefined,
     });
   }, []);
@@ -120,7 +126,10 @@ export default function ReactivationPage() {
       });
       showToast("Reactivation settings saved successfully.");
     } catch (err) {
-      showToast(`Error: ${err instanceof Error ? err.message : "Unknown error"}`, true);
+      showToast(
+        `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        true
+      );
     } finally {
       setIsSaving(false);
     }
@@ -156,7 +165,9 @@ export default function ReactivationPage() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <Link2 className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Reactivation</h1>
+          <h1 className="text-xl font-semibold text-foreground">
+            Reactivation
+          </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Add this page as a GHL custom menu link with the{" "}
             <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">
@@ -173,16 +184,19 @@ export default function ReactivationPage() {
   return (
     <div className="rs-main reac-page">
       <div className="rs-shell reac-shell">
-
         {/* ── Page Header ── */}
         <header className="rs-page-header reac-page-header">
           <div>
             <h1 className="reac-main-title">Reactivation</h1>
             <h2 className="reac-sub-title">How it works:</h2>
             <div className="rs-page-copy">
-              <p className="rs-how-step">1. Add Contacts manually or a Facebook form</p>
+              <p className="rs-how-step">
+                1. Add Contacts manually or a Facebook form
+              </p>
               <p className="rs-how-step">2. We reach out with a message</p>
-              <p className="rs-how-step">3. They approve a quote and schedule an scoop</p>
+              <p className="rs-how-step">
+                3. They approve a quote and schedule an scoop
+              </p>
             </div>
           </div>
         </header>
@@ -190,7 +204,7 @@ export default function ReactivationPage() {
         {/* ── Campaign Option Cards (2-column) ── */}
         <section className="rs-card rs-option-section reac-card">
           <div className="reac-option-grid">
-            {REACTIVATION_OPTIONS.map((option) => {
+            {REACTIVATION_OPTIONS.map(option => {
               const isSelected = selectedOption === option;
               return (
                 <div key={option} className="rs-option-card-wrapper">
@@ -213,7 +227,9 @@ export default function ReactivationPage() {
                       <div className="reac-example-label">EXAMPLE</div>
                       <div className="rs-example-content">
                         <img
-                          src={option === "Lite" ? EXAMPLE_LITE : EXAMPLE_CUSTOM}
+                          src={
+                            option === "Lite" ? EXAMPLE_LITE : EXAMPLE_CUSTOM
+                          }
                           alt={`${option} example`}
                           className="rs-example-image"
                         />
@@ -222,7 +238,9 @@ export default function ReactivationPage() {
 
                     {/* Centered Radio Circle at bottom center of card (matching screenshot) */}
                     <div className="reac-card-radio-bottom">
-                      <div className={`reac-card-radio-circle ${isSelected ? "reac-radio-checked" : ""}`}>
+                      <div
+                        className={`reac-card-radio-circle ${isSelected ? "reac-radio-checked" : ""}`}
+                      >
                         {isSelected && <div className="reac-radio-dot" />}
                       </div>
                     </div>
@@ -239,10 +257,13 @@ export default function ReactivationPage() {
             <div>
               <h2 className="rs-title">One-Time Service Outreach Scheduling</h2>
               <p className="rs-subtitle">
-                Choose when you want to begin reactivation outreach to one-time clients (Sweep and Go Only).
+                Choose when you want to begin reactivation outreach to one-time
+                clients (Sweep and Go Only).
               </p>
             </div>
-            <span className="rs-current-selection">{ONETIME_TIMING_LABELS[onetimeTiming]}</span>
+            <span className="rs-current-selection">
+              {ONETIME_TIMING_LABELS[onetimeTiming]}
+            </span>
           </div>
 
           <div className="rs-slider-panel">
@@ -252,13 +273,20 @@ export default function ReactivationPage() {
               max={ONETIME_TIMING_LABELS.length - 1}
               step={1}
               value={onetimeTiming}
-              onChange={(e) => setOnetimeTiming(Number.parseInt(e.target.value, 10))}
-              style={{ background: sliderBackground(onetimeTiming, ONETIME_TIMING_LABELS.length - 1) }}
+              onChange={e =>
+                setOnetimeTiming(Number.parseInt(e.target.value, 10))
+              }
+              style={{
+                background: sliderBackground(
+                  onetimeTiming,
+                  ONETIME_TIMING_LABELS.length - 1
+                ),
+              }}
               className="rs-slider"
               aria-label="One-time service outreach timing"
             />
             <div className="rs-slider-labels rs-slider-labels-wide">
-              {ONETIME_TIMING_LABELS.map((label) => (
+              {ONETIME_TIMING_LABELS.map(label => (
                 <span key={label}>{label}</span>
               ))}
             </div>
@@ -272,8 +300,15 @@ export default function ReactivationPage() {
               <span className="rs-info-title">Important Notes:</span>
             </div>
             <ul className="rs-info-list">
-              <li><strong>Messages sent during the day 8 AM to 7 PM</strong></li>
-              <li><strong>Text messages are throttled, so your delivery will not be affected</strong></li>
+              <li>
+                <strong>Messages sent during the day 8 AM to 7 PM</strong>
+              </li>
+              <li>
+                <strong>
+                  Text messages are throttled, so your delivery will not be
+                  affected
+                </strong>
+              </li>
             </ul>
           </div>
         </section>
@@ -291,9 +326,26 @@ export default function ReactivationPage() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < FIRST_ROW.length - 1 && (
-                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    <svg
+                      className="rs-dashed-arrow"
+                      viewBox="0 0 200 30"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="0"
+                        y1="15"
+                        x2="160"
+                        y2="15"
+                        stroke="#2563eb"
+                        strokeWidth="4"
+                        strokeDasharray="16 8"
+                        opacity="0.4"
+                      />
+                      <polygon
+                        points="170,8 195,15 170,22"
+                        fill="#2563eb"
+                        opacity="0.4"
+                      />
                     </svg>
                   )}
                 </div>
@@ -309,9 +361,26 @@ export default function ReactivationPage() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < SECOND_ROW.length - 1 && (
-                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    <svg
+                      className="rs-dashed-arrow"
+                      viewBox="0 0 200 30"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="0"
+                        y1="15"
+                        x2="160"
+                        y2="15"
+                        stroke="#2563eb"
+                        strokeWidth="4"
+                        strokeDasharray="16 8"
+                        opacity="0.4"
+                      />
+                      <polygon
+                        points="170,8 195,15 170,22"
+                        fill="#2563eb"
+                        opacity="0.4"
+                      />
                     </svg>
                   )}
                 </div>
@@ -324,8 +393,10 @@ export default function ReactivationPage() {
         <section className="rs-card rs-templates-section reac-card">
           <div className="rs-templates-content">
             <p className="rs-templates-text">
-              Would you like to view your workflow templates?<br />
-              You will be redirected to a new page. Please save any changes on this page before continuing.
+              Would you like to view your workflow templates?
+              <br />
+              You will be redirected to a new page. Please save any changes on
+              this page before continuing.
             </p>
             <div className="rs-templates-buttons">
               <button
@@ -357,7 +428,6 @@ export default function ReactivationPage() {
             {isSaving ? "Saving…" : "Save Settings"}
           </button>
         </div>
-
       </div>
 
       {/* Reactivation Custom Quote Popup (Dedicated Reactivation Clone) */}
@@ -372,5 +442,3 @@ export default function ReactivationPage() {
     </div>
   );
 }
-
-

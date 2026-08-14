@@ -56,7 +56,9 @@ export const ghlRouter = router({
       const normalizedLocationId = input.locationId.trim();
       const installation = await getInstallation(normalizedLocationId);
       if (!installation) {
-        console.warn(`[GHL] No installation found for location/company id: ${normalizedLocationId}`);
+        console.warn(
+          `[GHL] No installation found for location/company id: ${normalizedLocationId}`
+        );
         return {
           connected: false,
           locationId: normalizedLocationId,
@@ -90,7 +92,10 @@ export const ghlRouter = router({
           message: "GHL location not connected. Please install the app first.",
         });
       }
-      console.log("[GHL DEBUG] router createContact - raw input from frontend:", JSON.stringify(input.contact, null, 2));
+      console.log(
+        "[GHL DEBUG] router createContact - raw input from frontend:",
+        JSON.stringify(input.contact, null, 2)
+      );
       const contactData: GHLContactData = {
         firstName: input.contact.firstName,
         lastName: input.contact.lastName ?? "",
@@ -98,17 +103,24 @@ export const ghlRouter = router({
         phone: input.contact.phone ?? "",
         dnd: input.contact.dnd ?? false,
         tagName: input.contact.tagName,
-        ...(input.contact.address1?.trim() ? { address1: input.contact.address1.trim() } : {}),
-        ...(input.contact.city?.trim() ? { city: input.contact.city.trim() } : {}),
-        ...(input.contact.state?.trim() ? { state: input.contact.state.trim() } : {}),
-        ...(input.contact.postalCode?.trim() ? { postalCode: input.contact.postalCode.trim() } : {}),
-        ...(input.contact.customFields?.length ? { customFields: input.contact.customFields } : {}),
+        ...(input.contact.address1?.trim()
+          ? { address1: input.contact.address1.trim() }
+          : {}),
+        ...(input.contact.city?.trim()
+          ? { city: input.contact.city.trim() }
+          : {}),
+        ...(input.contact.state?.trim()
+          ? { state: input.contact.state.trim() }
+          : {}),
+        ...(input.contact.postalCode?.trim()
+          ? { postalCode: input.contact.postalCode.trim() }
+          : {}),
+        ...(input.contact.customFields?.length
+          ? { customFields: input.contact.customFields }
+          : {}),
       };
 
-      const result = await processContact(
-        normalizedLocationId,
-        contactData
-      );
+      const result = await processContact(normalizedLocationId, contactData);
 
       return result;
     }),
@@ -135,7 +147,11 @@ export const ghlRouter = router({
 
       for (let i = 0; i < input.contacts.length; i++) {
         const contact = input.contacts[i];
-        if (i === 0) console.log("[GHL DEBUG] router processBatch - first contact raw input:", JSON.stringify({ contact, tagName: input.tagName }, null, 2));
+        if (i === 0)
+          console.log(
+            "[GHL DEBUG] router processBatch - first contact raw input:",
+            JSON.stringify({ contact, tagName: input.tagName }, null, 2)
+          );
         const contactData: GHLContactData = {
           firstName: contact.firstName,
           lastName: contact.lastName ?? "",
@@ -143,11 +159,17 @@ export const ghlRouter = router({
           phone: contact.phone ?? "",
           dnd: input.dnd,
           tagName: input.tagName,
-          ...(contact.address1?.trim() ? { address1: contact.address1.trim() } : {}),
+          ...(contact.address1?.trim()
+            ? { address1: contact.address1.trim() }
+            : {}),
           ...(contact.city?.trim() ? { city: contact.city.trim() } : {}),
           ...(contact.state?.trim() ? { state: contact.state.trim() } : {}),
-          ...(contact.postalCode?.trim() ? { postalCode: contact.postalCode.trim() } : {}),
-          ...(contact.customFields?.length ? { customFields: contact.customFields } : {}),
+          ...(contact.postalCode?.trim()
+            ? { postalCode: contact.postalCode.trim() }
+            : {}),
+          ...(contact.customFields?.length
+            ? { customFields: contact.customFields }
+            : {}),
         };
 
         try {
@@ -168,11 +190,16 @@ export const ghlRouter = router({
 
         // Rate limiting: wait 500ms between requests
         if (i < input.contacts.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
-      return { successful, failed, enrolled, errors, total: input.contacts.length };
+      return {
+        successful,
+        failed,
+        enrolled,
+        errors,
+        total: input.contacts.length,
+      };
     }),
 });
-

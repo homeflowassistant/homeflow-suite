@@ -29,7 +29,10 @@ const GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
 const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfoWithJwt`;
 
 class SimpleHttpClient {
-  constructor(private baseURL: string, private timeout: number) {}
+  constructor(
+    private baseURL: string,
+    private timeout: number
+  ) {}
 
   async post<T>(path: string, body: unknown): Promise<{ data: T }> {
     const controller = new AbortController();
@@ -52,7 +55,7 @@ class SimpleHttpClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json() as T;
+      const data = (await response.json()) as T;
       return { data };
     } catch (error) {
       clearTimeout(id);

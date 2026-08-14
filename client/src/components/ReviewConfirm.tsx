@@ -10,19 +10,30 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Upload, Ban, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  Upload,
+  Ban,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
-import { type ParsedCSV, type ColumnMapping, applyMappings } from "@/lib/csv-parser";
+import {
+  type ParsedCSV,
+  type ColumnMapping,
+  applyMappings,
+} from "@/lib/csv-parser";
 import { trpc } from "@/lib/trpc";
 
 interface ReviewConfirmProps {
   parsedCSV: ParsedCSV;
   mapping: ColumnMapping;
   locationId: string;
-  tagName: "new lead (via homeflow)"
-        | "homeflow: inactive customer"
-        | "add-on-campaign"
-        | "quick-send";
+  tagName:
+    | "new lead (via homeflow)"
+    | "homeflow: inactive customer"
+    | "add-on-campaign"
+    | "quick-send";
   /** If set, the tag picker is hidden and the tag is locked */
   fixedTag?: boolean;
   /** Indicates the flow context. "quick-add" surfaces Quick Add–specific messaging. */
@@ -77,11 +88,12 @@ export default function ReviewConfirm({
       let totalSuccessful = 0;
       let totalFailed = 0;
       let totalEnrolled = 0;
-      const allErrors: Array<{ index: number; name: string; error: string }> = [];
+      const allErrors: Array<{ index: number; name: string; error: string }> =
+        [];
 
       for (let i = 0; i < mappedContacts.length; i += BATCH_SIZE) {
         const batch = mappedContacts.slice(i, i + BATCH_SIZE);
-        const contacts = batch.map((c) => ({
+        const contacts = batch.map(c => ({
           firstName: c.firstName,
           lastName: c.lastName,
           email: c.email,
@@ -91,9 +103,12 @@ export default function ReviewConfirm({
           postalCode: c.postalCode,
           customFields: [
             { fieldKey: "number_of_dogs", fieldValue: c.numberOfDogs },
-            { fieldKey: "last_time_yard_was_thoroughly_cleaned", fieldValue: c.lastTimeScooped },
+            {
+              fieldKey: "last_time_yard_was_thoroughly_cleaned",
+              fieldValue: c.lastTimeScooped,
+            },
             { fieldKey: "clean_up_frequency", fieldValue: c.frequency },
-          ].filter((field) => String(field.fieldValue ?? "").trim() !== ""),
+          ].filter(field => String(field.fieldValue ?? "").trim() !== ""),
         }));
 
         const result = await processBatchMutation.mutateAsync({
@@ -127,8 +142,8 @@ export default function ReviewConfirm({
               : totalEnrolled > 0
                 ? `${totalEnrolled} contacts enrolled in Review Reactivation workflow.`
                 : dnd
-                ? "Contacts marked as DND — not enrolled in workflow."
-                : undefined,
+                  ? "Contacts marked as DND — not enrolled in workflow."
+                  : undefined,
             icon: <CheckCircle2 className="h-4 w-4 text-primary" />,
           }
         );
@@ -142,8 +157,7 @@ export default function ReviewConfirm({
       onComplete();
     } catch (error) {
       toast.error("Upload failed", {
-        description:
-          error instanceof Error ? error.message : "Unknown error",
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {
       setIsUploading(false);
@@ -158,7 +172,8 @@ export default function ReviewConfirm({
         </h3>
         {isQuickAdd ? (
           <p className="text-sm text-muted-foreground mt-1">
-            The contacts in your uploaded file will receive the SMS campaign once the upload is completed.
+            The contacts in your uploaded file will receive the SMS campaign
+            once the upload is completed.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground mt-1">
@@ -189,23 +204,35 @@ export default function ReviewConfirm({
 
       {!fixedTag && (
         <div className="rounded-3xl border border-border bg-muted/70 p-4">
-          <p className="text-sm font-semibold text-foreground">Add contacts to:</p>
+          <p className="text-sm font-semibold text-foreground">
+            Add contacts to:
+          </p>
           <div className="grid gap-2 pt-3 text-sm">
             {[
               { value: "new lead (via homeflow)", label: "Lead Follow-Up" },
-              { value: "homeflow: inactive customer", label: "Reactivation Campaign" },
+              {
+                value: "homeflow: inactive customer",
+                label: "Reactivation Campaign",
+              },
               { value: "add-on-campaign", label: "Add-on Campaign" },
-            ].map((option) => (
-              <label key={option.value} className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70">
+            ].map(option => (
+              <label
+                key={option.value}
+                className="flex items-center gap-3 rounded-xl border border-input bg-background p-3 cursor-pointer transition hover:border-primary/70"
+              >
                 <input
                   type="radio"
                   name="batchTag"
                   value={option.value}
                   checked={selectedTag === option.value}
-                  onChange={() => setSelectedTag(option.value as typeof selectedTag)}
+                  onChange={() =>
+                    setSelectedTag(option.value as typeof selectedTag)
+                  }
                   className="h-4 w-4 text-primary focus:ring-primary"
                 />
-                <span className="font-medium text-foreground">{option.label}</span>
+                <span className="font-medium text-foreground">
+                  {option.label}
+                </span>
               </label>
             ))}
           </div>
@@ -240,7 +267,7 @@ export default function ReviewConfirm({
         <Checkbox
           id="bulk-consent"
           checked={consent}
-          onCheckedChange={(checked) => setConsent(checked === true)}
+          onCheckedChange={checked => setConsent(checked === true)}
           className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
         <label

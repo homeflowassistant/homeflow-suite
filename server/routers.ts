@@ -9,6 +9,7 @@ import { addOnCampaignRouter } from "./routers/addOnCampaign";
 import { quickSendRouter } from "./routers/quickSend";
 import { contactsRouter } from "./routers/contacts";
 import { alertsNotificationsRouter } from "./routers/alertsNotifications";
+import { pricingRouter } from "./routers/pricing";
 
 export const appRouter = router({
   system: systemRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   quickSend: quickSendRouter,
   contacts: contactsRouter,
   alertsNotifications: alertsNotificationsRouter,
+  pricing: pricingRouter,
 });
 
 export type AppRouter = typeof appRouter;

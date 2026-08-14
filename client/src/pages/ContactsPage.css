@@ -78,7 +78,9 @@
   border-radius: 8px;
   padding: 0 12px;
   max-width: 420px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .contacts-search-input:focus-within {

@@ -48,13 +48,13 @@ export default function EditContactDialog({
   }, [open, contact]);
 
   const updateContactMutation = trpc.contacts.updateContact.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success("Contact updated successfully");
       onUpdated(data.contact);
       onFullRefresh();
       onClose();
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to update contact");
     },
   });
@@ -81,7 +81,7 @@ export default function EditContactDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-slate-900">
@@ -92,25 +92,31 @@ export default function EditContactDialog({
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-first-name" className="text-sm font-medium text-slate-700">
+              <Label
+                htmlFor="edit-first-name"
+                className="text-sm font-medium text-slate-700"
+              >
                 First Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="edit-first-name"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={e => setFirstName(e.target.value)}
                 placeholder="First name"
                 className="h-9 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-last-name" className="text-sm font-medium text-slate-700">
+              <Label
+                htmlFor="edit-last-name"
+                className="text-sm font-medium text-slate-700"
+              >
                 Last Name
               </Label>
               <Input
                 id="edit-last-name"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={e => setLastName(e.target.value)}
                 placeholder="Last name"
                 className="h-9 text-sm"
               />
@@ -118,28 +124,34 @@ export default function EditContactDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-email" className="text-sm font-medium text-slate-700">
+            <Label
+              htmlFor="edit-email"
+              className="text-sm font-medium text-slate-700"
+            >
               Email
             </Label>
             <Input
               id="edit-email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="email@example.com"
               className="h-9 text-sm"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-phone" className="text-sm font-medium text-slate-700">
+            <Label
+              htmlFor="edit-phone"
+              className="text-sm font-medium text-slate-700"
+            >
               Phone
             </Label>
             <Input
               id="edit-phone"
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={e => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
               className="h-9 text-sm"
             />
@@ -147,7 +159,12 @@ export default function EditContactDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isSaving}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
           <Button

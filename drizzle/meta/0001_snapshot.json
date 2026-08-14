@@ -93,17 +93,13 @@
       "compositePrimaryKeys": {
         "ghl_installations_id": {
           "name": "ghl_installations_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "ghl_installations_locationId_unique": {
           "name": "ghl_installations_locationId_unique",
-          "columns": [
-            "locationId"
-          ]
+          "columns": ["locationId"]
         }
       },
       "checkConstraint": {}
@@ -185,17 +181,13 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "users_openId_unique": {
           "name": "users_openId_unique",
-          "columns": [
-            "openId"
-          ]
+          "columns": ["openId"]
         }
       },
       "checkConstraint": {}

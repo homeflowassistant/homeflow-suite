@@ -1,7 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getLocationCustomValueMap, upsertGhlCustomValue } from "../ghl-service";
+import {
+  getLocationCustomValueMap,
+  upsertGhlCustomValue,
+} from "../ghl-service";
 
 // ─── Add-On Duration options ─────────────────────────────────────────
 // UI labels shown to the user
@@ -25,13 +28,18 @@ const ADDON_DURATION_TO_GHL_VALUE: Record<AddonDuration, string> = {
 
 // ─── Custom value names (GHL) ────────────────────────────────────────
 // GHL display name used for WRITING (what GHL calls it)
-const CV_WRITE_NAME = "Add-On Duration (options: 4_weeks, 6_weeks, 8_weeks, 10_weeks, 12_weeks)";
+const CV_WRITE_NAME =
+  "Add-On Duration (options: 4_weeks, 6_weeks, 8_weeks, 10_weeks, 12_weeks)";
 // GHL field key used for READING (the {{custom_values.addon_duration}} key)
 const CV_READ_KEY = "addon_duration";
 
 // ─── Normalize a duration label → index ──────────────────────────────
 function addonDurationToIndex(value: string): number {
-  const normalized = value.trim().toLowerCase().replace(/[\s_-]+/g, " ").trim();
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .trim();
   const map: Record<string, number> = {
     "4 weeks": 0,
     "4 wk": 0,
@@ -64,7 +72,7 @@ function addonDurationToIndex(value: string): number {
 
   return (
     map[normalized] ??
-    ADDON_DURATION_LABELS.findIndex((l) => l.toLowerCase() === normalized) ??
+    ADDON_DURATION_LABELS.findIndex(l => l.toLowerCase() === normalized) ??
     3 // default to 10 Weeks
   );
 }
@@ -86,7 +94,10 @@ export const addOnCampaignRouter = router({
         let result = "";
         customValueMap.forEach((entry, apiKey) => {
           const norm = apiKey.toLowerCase().replace(/^location\./, "");
-          if (norm === key.toLowerCase() || apiKey.toLowerCase() === key.toLowerCase()) {
+          if (
+            norm === key.toLowerCase() ||
+            apiKey.toLowerCase() === key.toLowerCase()
+          ) {
             result = entry.value;
           }
         });
@@ -116,33 +127,38 @@ export const addOnCampaignRouter = router({
       try {
         const locationId = input.locationId.trim();
         if (!locationId) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Location ID cannot be empty",
+          });
         }
 
         // Use the GHL display name so findCustomValueId can match the existing field
         // The stored value is the option token (e.g., "10_weeks")
         const ghlValue = ADDON_DURATION_TO_GHL_VALUE[input.addonDuration];
 
-        await upsertGhlCustomValue(
-          locationId,
-          CV_WRITE_NAME,
-          ghlValue
-        );
+        await upsertGhlCustomValue(locationId, CV_WRITE_NAME, ghlValue);
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         const msg = error instanceof Error ? error.message : "Unknown error";
         console.error("[addOnCampaign] saveSettings error:", msg);
-        if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("token")) {
+        if (
+          msg.includes("401") ||
+          msg.includes("Unauthorized") ||
+          msg.includes("token")
+        ) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
-            message: "GHL authentication failed. Your access token may be missing or expired.",
+            message:
+              "GHL authentication failed. Your access token may be missing or expired.",
           });
         }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: msg || "Failed to save add-on campaign settings. Please try again.",
+          message:
+            msg || "Failed to save add-on campaign settings. Please try again.",
         });
       }
     }),

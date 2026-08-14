@@ -109,7 +109,10 @@
   border-radius: 14px;
   padding: 20px;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -279,7 +282,12 @@
 
 .rs-scheduling-divider {
   height: 1px;
-  background: linear-gradient(to right, transparent, color-mix(in oklch, var(--primary) 25%, transparent), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklch, var(--primary) 25%, transparent),
+    transparent
+  );
   margin: 16px 0;
 }
 
@@ -429,7 +437,11 @@
 /* ─── Templates Section ─── */
 .rs-templates-section {
   margin-bottom: 24px;
-  background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 6%, transparent), color-mix(in oklch, var(--primary) 2%, transparent));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--primary) 6%, transparent),
+    color-mix(in oklch, var(--primary) 2%, transparent)
+  );
 }
 
 .rs-templates-content {
@@ -459,7 +471,9 @@
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: transform 0.1s ease, opacity 0.2s ease;
+  transition:
+    transform 0.1s ease,
+    opacity 0.2s ease;
 }
 
 .rs-templates-btn:hover {
@@ -492,7 +506,10 @@
   border: none;
   border-radius: 10px;
   font-weight: 700;
-  transition: transform 0.1s ease, opacity 0.2s ease, background 0.2s ease;
+  transition:
+    transform 0.1s ease,
+    opacity 0.2s ease,
+    background 0.2s ease;
 }
 
 .rs-save-btn {
@@ -590,7 +607,9 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
   pointer-events: none;
   max-width: 320px;
   z-index: 9999;

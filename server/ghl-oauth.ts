@@ -22,7 +22,7 @@ import {
 } from "./ghl-service";
 
 async function delay(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+  await new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -37,29 +37,38 @@ async function processLocationInstall(
   const maxAttempts = 3;
   const delayMs = Number(process.env.GHL_LOCATION_TOKEN_RETRY_DELAY_MS || 3000);
 
-  console.log("[GHL Webhook] ========== LOCATION TOKEN EXCHANGE START ==========", {
-    companyId,
-    locationId,
-  });
+  console.log(
+    "[GHL Webhook] ========== LOCATION TOKEN EXCHANGE START ==========",
+    {
+      companyId,
+      locationId,
+    }
+  );
 
   let lastError: Error | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      console.log(`[GHL Webhook] Attempt ${attempt}/${maxAttempts} — calling /oauth/locationToken`, {
-        companyId,
-        locationId,
-      });
+      console.log(
+        `[GHL Webhook] Attempt ${attempt}/${maxAttempts} — calling /oauth/locationToken`,
+        {
+          companyId,
+          locationId,
+        }
+      );
 
-      const response = await fetch("https://services.leadconnectorhq.com/oauth/locationToken", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Bearer ${agencyToken}`,
-          Version: "2021-07-28",
-        },
-        body: new URLSearchParams({ companyId, locationId }).toString(),
-      });
+      const response = await fetch(
+        "https://services.leadconnectorhq.com/oauth/locationToken",
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Bearer ${agencyToken}`,
+            Version: "2021-07-28",
+          },
+          body: new URLSearchParams({ companyId, locationId }).toString(),
+        }
+      );
 
       if (!response.ok) {
         const errorBody = await response.text();
@@ -71,7 +80,9 @@ async function processLocationInstall(
           }
         })();
         const message =
-          parsedError && typeof parsedError === "object" && "message" in parsedError
+          parsedError &&
+          typeof parsedError === "object" &&
+          "message" in parsedError
             ? String((parsedError as Record<string, unknown>).message)
             : errorBody;
 
@@ -88,7 +99,9 @@ async function processLocationInstall(
           isUserTypeError,
         });
 
-        lastError = new Error(`GHL location-token exchange failed: ${response.status} ${message}`);
+        lastError = new Error(
+          `GHL location-token exchange failed: ${response.status} ${message}`
+        );
         if (attempt < maxAttempts) {
           console.log(`[GHL Webhook] Retrying in ${delayMs}ms...`);
           await delay(delayMs);
@@ -97,29 +110,42 @@ async function processLocationInstall(
         throw lastError;
       }
 
-      const locationTokenResponse = (await response.json()) as { access_token?: string };
+      const locationTokenResponse = (await response.json()) as {
+        access_token?: string;
+      };
       if (!locationTokenResponse.access_token) {
-        lastError = new Error("GHL location-token exchange returned no access token");
-        console.error("[GHL Webhook] Location-token exchange FAILED — no access token in response", {
+        lastError = new Error(
+          "GHL location-token exchange returned no access token"
+        );
+        console.error(
+          "[GHL Webhook] Location-token exchange FAILED — no access token in response",
+          {
+            companyId,
+            locationId,
+            attempt,
+          }
+        );
+        if (attempt < maxAttempts) {
+          console.log(`[GHL Webhook] Retrying in ${delayMs}ms...`);
+          await delay(delayMs);
+          continue;
+        }
+        throw lastError;
+      }
+
+      await upsertInstallation(
+        locationTokenResponse as Parameters<typeof upsertInstallation>[0],
+        locationId
+      );
+      console.log(
+        "[GHL Webhook] ========== LOCATION TOKEN EXCHANGE SUCCESS ==========",
+        {
           companyId,
           locationId,
           attempt,
-        });
-        if (attempt < maxAttempts) {
-          console.log(`[GHL Webhook] Retrying in ${delayMs}ms...`);
-          await delay(delayMs);
-          continue;
+          status: "SUCCESS",
         }
-        throw lastError;
-      }
-
-      await upsertInstallation(locationTokenResponse as Parameters<typeof upsertInstallation>[0], locationId);
-      console.log("[GHL Webhook] ========== LOCATION TOKEN EXCHANGE SUCCESS ==========", {
-        companyId,
-        locationId,
-        attempt,
-        status: "SUCCESS",
-      });
+      );
       return;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -138,13 +164,16 @@ async function processLocationInstall(
     }
   }
 
-  console.error("[GHL Webhook] ========== LOCATION TOKEN EXCHANGE FAILED ==========", {
-    companyId,
-    locationId,
-    attempts: maxAttempts,
-    finalError: lastError?.message,
-    status: "FAILED",
-  });
+  console.error(
+    "[GHL Webhook] ========== LOCATION TOKEN EXCHANGE FAILED ==========",
+    {
+      companyId,
+      locationId,
+      attempts: maxAttempts,
+      finalError: lastError?.message,
+      status: "FAILED",
+    }
+  );
   throw lastError ?? new Error("GHL location-token exchange failed");
 }
 
@@ -193,10 +222,17 @@ export function registerGHLOAuthRoutes(app: Express): void {
 
       if (tokenResponse.userType === "Company") {
         await upsertInstallation(tokenResponse, companyId);
-        console.log(`[GHL OAuth] Agency token stored for companyId: ${companyId}`);
-      } else if (tokenResponse.userType === "Location" && tokenResponse.locationId) {
+        console.log(
+          `[GHL OAuth] Agency token stored for companyId: ${companyId}`
+        );
+      } else if (
+        tokenResponse.userType === "Location" &&
+        tokenResponse.locationId
+      ) {
         await upsertInstallation(tokenResponse, tokenResponse.locationId);
-        console.log(`[GHL OAuth] Location token stored for locationId: ${tokenResponse.locationId}`);
+        console.log(
+          `[GHL OAuth] Location token stored for locationId: ${tokenResponse.locationId}`
+        );
       } else {
         await upsertInstallation(tokenResponse, companyId);
         console.log(`[GHL OAuth] Token stored for companyId: ${companyId}`);
@@ -250,17 +286,24 @@ export function registerGHLOAuthRoutes(app: Express): void {
           installType?: string;
         };
 
-        console.log("[GHL Webhook] ========== INSTALL EVENT RECEIVED ==========", {
-          type: payload.type,
-          companyId,
-          locationId,
-          installType,
-          timestamp: new Date().toISOString(),
-        });
+        console.log(
+          "[GHL Webhook] ========== INSTALL EVENT RECEIVED ==========",
+          {
+            type: payload.type,
+            companyId,
+            locationId,
+            installType,
+            timestamp: new Date().toISOString(),
+          }
+        );
 
         if (!companyId || !locationId) {
-          console.error("[GHL Webhook] FAILED — Missing companyId or locationId for install event");
-          return res.status(400).json({ error: "Missing companyId or locationId" });
+          console.error(
+            "[GHL Webhook] FAILED — Missing companyId or locationId for install event"
+          );
+          return res
+            .status(400)
+            .json({ error: "Missing companyId or locationId" });
         }
 
         // Wait for the agency token to be available (may arrive after the webhook)
@@ -282,13 +325,18 @@ export function registerGHLOAuthRoutes(app: Express): void {
         }
 
         if (!agencyInstallation) {
-          console.error("[GHL Webhook] ========== INSTALL FAILED — Agency token not available ==========", {
-            companyId,
-            locationId,
-            attempts: maxAttempts,
-            status: "FAILED",
-          });
-          return res.status(500).json({ error: "Agency token not available for location install" });
+          console.error(
+            "[GHL Webhook] ========== INSTALL FAILED — Agency token not available ==========",
+            {
+              companyId,
+              locationId,
+              attempts: maxAttempts,
+              status: "FAILED",
+            }
+          );
+          return res
+            .status(500)
+            .json({ error: "Agency token not available for location install" });
         }
 
         console.log("[GHL Webhook] Agency token found", {
@@ -300,45 +348,70 @@ export function registerGHLOAuthRoutes(app: Express): void {
         const freshAgencyToken = await getValidAccessToken(companyId);
 
         try {
-          await processLocationInstall(agencyInstallation.accessToken, companyId, locationId);
-          console.log("[GHL Webhook] ========== INSTALL SUCCESS — Location token stored ==========", {
+          await processLocationInstall(
+            agencyInstallation.accessToken,
             companyId,
-            locationId,
-            status: "SUCCESS",
-            timestamp: new Date().toISOString(),
-          });
+            locationId
+          );
+          console.log(
+            "[GHL Webhook] ========== INSTALL SUCCESS — Location token stored ==========",
+            {
+              companyId,
+              locationId,
+              status: "SUCCESS",
+              timestamp: new Date().toISOString(),
+            }
+          );
         } catch (locationError) {
-          console.error("[GHL Webhook] ========== INSTALL FAILED — Location token exchange failed ==========", {
-            companyId,
-            locationId,
-            error: locationError instanceof Error ? locationError.message : String(locationError),
-            status: "FAILED",
-            timestamp: new Date().toISOString(),
-          });
+          console.error(
+            "[GHL Webhook] ========== INSTALL FAILED — Location token exchange failed ==========",
+            {
+              companyId,
+              locationId,
+              error:
+                locationError instanceof Error
+                  ? locationError.message
+                  : String(locationError),
+              status: "FAILED",
+              timestamp: new Date().toISOString(),
+            }
+          );
           throw locationError;
         }
 
         try {
           await updateCustomValuesOnInstall(locationId);
-          console.log("[GHL Webhook] ========== CUSTOM VALUE SEEDING SUCCESS ==========", {
-            locationId,
-            status: "SUCCESS",
-            timestamp: new Date().toISOString(),
-          });
+          console.log(
+            "[GHL Webhook] ========== CUSTOM VALUE SEEDING SUCCESS ==========",
+            {
+              locationId,
+              status: "SUCCESS",
+              timestamp: new Date().toISOString(),
+            }
+          );
         } catch (seedError) {
-          console.error("[GHL Webhook] ========== CUSTOM VALUE SEEDING FAILED ==========", {
-            locationId,
-            error: seedError instanceof Error ? seedError.message : String(seedError),
-            status: "FAILED",
-            timestamp: new Date().toISOString(),
-          });
+          console.error(
+            "[GHL Webhook] ========== CUSTOM VALUE SEEDING FAILED ==========",
+            {
+              locationId,
+              error:
+                seedError instanceof Error
+                  ? seedError.message
+                  : String(seedError),
+              status: "FAILED",
+              timestamp: new Date().toISOString(),
+            }
+          );
         }
       } else if (payload.type === "UNINSTALL" && payload.locationId) {
-        console.log("[GHL Webhook] ========== UNINSTALL EVENT RECEIVED ==========", {
-          type: payload.type,
-          locationId: payload.locationId,
-          timestamp: new Date().toISOString(),
-        });
+        console.log(
+          "[GHL Webhook] ========== UNINSTALL EVENT RECEIVED ==========",
+          {
+            type: payload.type,
+            locationId: payload.locationId,
+            timestamp: new Date().toISOString(),
+          }
+        );
         await removeInstallation(payload.locationId);
         console.log("[GHL Webhook] ========== UNINSTALL SUCCESS ==========", {
           locationId: payload.locationId,

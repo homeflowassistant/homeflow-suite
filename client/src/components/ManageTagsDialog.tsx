@@ -9,7 +9,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, Tag, X, Check, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  Tag,
+  X,
+  Check,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import type { ContactWithStatus } from "../../../server/routers/contacts";
@@ -51,13 +59,15 @@ export default function ManageTagsDialog({
 
   // Tags that are available to add (not already on the contact)
   const availableTags = useMemo(() => {
-    const lowerContactTags = new Set(contactTags.map((t) => t.toLowerCase().trim()));
+    const lowerContactTags = new Set(
+      contactTags.map(t => t.toLowerCase().trim())
+    );
     let filtered = allAccountTags.filter(
-      (t) => !lowerContactTags.has(t.toLowerCase().trim())
+      t => !lowerContactTags.has(t.toLowerCase().trim())
     );
     if (tagSearch.trim()) {
       const query = tagSearch.toLowerCase().trim();
-      filtered = filtered.filter((t) => t.toLowerCase().includes(query));
+      filtered = filtered.filter(t => t.toLowerCase().includes(query));
     }
     return filtered;
   }, [allAccountTags, contactTags, tagSearch]);
@@ -74,28 +84,28 @@ export default function ManageTagsDialog({
   }, [open, contact]);
 
   const addTagMutation = trpc.contacts.addTag.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success("Tag added successfully");
       setContactTags(data.contact.tags);
       onUpdated(data.contact);
       onFullRefresh();
       setIsAdding(null);
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to add tag");
       setIsAdding(null);
     },
   });
 
   const removeTagMutation = trpc.contacts.removeTag.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success("Tag removed successfully");
       setContactTags(data.contact.tags);
       onUpdated(data.contact);
       onFullRefresh();
       setIsRemoving(null);
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to remove tag");
       setIsRemoving(null);
     },
@@ -108,7 +118,11 @@ export default function ManageTagsDialog({
     }
 
     // Prevent duplicate
-    if (contactTags.some((t) => t.toLowerCase().trim() === tagName.toLowerCase().trim())) {
+    if (
+      contactTags.some(
+        t => t.toLowerCase().trim() === tagName.toLowerCase().trim()
+      )
+    ) {
       toast.error("This tag already exists on the contact");
       return;
     }
@@ -138,10 +152,11 @@ export default function ManageTagsDialog({
     }
   };
 
-  const isBusy = isAdding !== null || isRemoving !== null || accountTagsQuery.isLoading;
+  const isBusy =
+    isAdding !== null || isRemoving !== null || accountTagsQuery.isLoading;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-slate-900">
@@ -161,14 +176,16 @@ export default function ManageTagsDialog({
               </p>
             ) : (
               <div className="max-h-[160px] overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
-                {contactTags.map((tag) => (
+                {contactTags.map(tag => (
                   <div
                     key={tag}
                     className="flex items-center justify-between bg-slate-50 rounded-md px-3 py-2 group"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Tag className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                      <span className="text-sm text-slate-700 truncate">{tag}</span>
+                      <span className="text-sm text-slate-700 truncate">
+                        {tag}
+                      </span>
                     </div>
                     <Button
                       variant="ghost"
@@ -224,7 +241,7 @@ export default function ManageTagsDialog({
                   <Search className="h-4 w-4 text-slate-400 shrink-0" />
                   <Input
                     value={tagSearch}
-                    onChange={(e) => setTagSearch(e.target.value)}
+                    onChange={e => setTagSearch(e.target.value)}
                     placeholder="Filter tags..."
                     className="h-7 text-sm border-0 focus-visible:ring-0 px-0 py-0 shadow-none"
                     disabled={isBusy}
@@ -234,15 +251,19 @@ export default function ManageTagsDialog({
                 {accountTagsQuery.isLoading ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="h-4 w-4 animate-spin text-slate-400 mr-2" />
-                    <span className="text-sm text-slate-400">Loading tags...</span>
+                    <span className="text-sm text-slate-400">
+                      Loading tags...
+                    </span>
                   </div>
                 ) : availableTags.length === 0 ? (
                   <p className="text-sm text-slate-400 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                    {tagSearch ? "No tags match your filter" : "All tags are already applied"}
+                    {tagSearch
+                      ? "No tags match your filter"
+                      : "All tags are already applied"}
                   </p>
                 ) : (
                   <div className="max-h-[200px] overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
-                    {availableTags.map((tag) => (
+                    {availableTags.map(tag => (
                       <button
                         key={tag}
                         type="button"
@@ -252,7 +273,9 @@ export default function ManageTagsDialog({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <Tag className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="text-sm text-slate-700 truncate">{tag}</span>
+                          <span className="text-sm text-slate-700 truncate">
+                            {tag}
+                          </span>
                         </div>
                         {isAdding === tag ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500 shrink-0" />
@@ -272,10 +295,7 @@ export default function ManageTagsDialog({
             <Label className="text-sm font-medium text-slate-700">
               Add Custom Tag
             </Label>
-            <ManualTagInput
-              onAdd={handleAddTag}
-              disabled={isBusy}
-            />
+            <ManualTagInput onAdd={handleAddTag} disabled={isBusy} />
           </div>
         </div>
 
@@ -337,7 +357,7 @@ function ManualTagInput({ onAdd, disabled }: ManualTagInputProps) {
     <div className="flex gap-2">
       <Input
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={e => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type a new tag name and press Enter..."
         className="h-9 text-sm flex-1"

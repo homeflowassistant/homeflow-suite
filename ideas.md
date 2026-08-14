@@ -7,6 +7,7 @@
 **Design Movement:** Swiss Design / International Typographic Style applied to modern SaaS tools
 
 **Core Principles:**
+
 1. Maximum clarity with minimum decoration — every pixel serves a purpose
 2. Strong typographic hierarchy using weight contrast rather than color
 3. Generous whitespace as a structural element, not empty space
@@ -17,6 +18,7 @@
 **Layout Paradigm:** Two-panel split layout — left panel for single contact entry, right panel for CSV upload. The panels are separated by a subtle vertical divider with "OR" indicator. This mirrors the reference design exactly while adding refinement through spacing and typography.
 
 **Signature Elements:**
+
 - Floating labels on form inputs that animate on focus
 - A step-indicator progress bar for the CSV upload flow (Upload → Map → Confirm)
 - Subtle card elevation with 1px borders and soft box-shadows
@@ -25,14 +27,15 @@
 
 **Animation:** Minimal but purposeful — 200ms ease transitions on focus states, 300ms slide-up for modals/step transitions, subtle scale on button hover (1.02x). No decorative animations.
 
-**Typography System:** 
+**Typography System:**
+
 - Headings: Inter 600 (semibold) at 20px/24px
 - Body/Labels: Inter 500 (medium) at 14px
 - Input text: Inter 400 (regular) at 14px
 - Helper text: Inter 400 at 12px in muted gray
-</text>
-<probability>0.08</probability>
-</response>
+  </text>
+  <probability>0.08</probability>
+  </response>
 
 <response>
 <text>
@@ -41,6 +44,7 @@
 **Design Movement:** Neo-Brutalism meets Soft UI — structured grids with rounded, tactile elements
 
 **Core Principles:**
+
 1. Bold structural clarity with soft, approachable surfaces
 2. Color-blocked sections that create visual zones without borders
 3. Progressive disclosure — show complexity only when needed
@@ -51,6 +55,7 @@
 **Layout Paradigm:** Stacked card architecture — the page is a vertical stack of distinct "cards" or zones, each with its own subtle background treatment. The single contact form sits in a clean white card, while the CSV upload zone uses a dashed-border drop area with a sage background. On wider screens, these sit side-by-side in a 55/45 split.
 
 **Signature Elements:**
+
 - Chunky toggle switches with smooth spring animations for DND
 - A drag-and-drop zone with animated upload icon (bouncing arrow)
 - Column mapping interface with pill-shaped dropdowns and green checkmarks
@@ -60,13 +65,14 @@
 **Animation:** Spring-based transitions (framer-motion) for modals and step changes. Upload progress uses a smooth linear gradient animation. Step transitions slide horizontally like a carousel.
 
 **Typography System:**
+
 - Headings: DM Sans 700 at 22px — geometric and modern
 - Body: DM Sans 400/500 at 14px — clean readability
 - Monospace for data preview: JetBrains Mono 400 at 13px
 - Labels: DM Sans 500 at 13px with letter-spacing 0.02em
-</text>
-<probability>0.06</probability>
-</response>
+  </text>
+  <probability>0.06</probability>
+  </response>
 
 <response>
 <text>
@@ -75,6 +81,7 @@
 **Design Movement:** Japanese Minimalism (Ma concept) meets Enterprise SaaS
 
 **Core Principles:**
+
 1. Intentional emptiness — space communicates hierarchy and importance
 2. Monochromatic with a single accent — restraint as a design statement
 3. Precision alignment — every element snaps to an 8px grid
@@ -85,6 +92,7 @@
 **Layout Paradigm:** Single-column centered flow with contextual expansion. The default view shows the single contact form centered at 640px max-width. The CSV upload is accessed via a tab or toggle at the top, replacing the form view entirely rather than competing for space. This eliminates cognitive load.
 
 **Signature Elements:**
+
 - Tab-based view switching between "Single Contact" and "Bulk Upload" with an animated underline indicator
 - A stepper component for CSV flow (1. Upload → 2. Map Columns → 3. Review & Confirm)
 - Consent checkbox with a custom green checkmark animation
@@ -94,10 +102,11 @@
 **Animation:** Fade-and-slide transitions between steps (opacity 0→1, translateY 8px→0, 250ms ease-out). Tab switching uses a sliding underline. Loading states use a pulsing dot pattern rather than spinners.
 
 **Typography System:**
+
 - Headings: Instrument Sans 600 at 18px — modern, geometric
 - Body: Instrument Sans 400 at 14px — excellent readability
 - Data tables: Instrument Sans 400 at 13px
 - Micro-copy: Instrument Sans 400 at 12px, muted foreground
-</text>
-<probability>0.07</probability>
-</response>
+  </text>
+  <probability>0.07</probability>
+  </response>

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link2, Save, Loader2, ChevronDown, Search, Upload, Users } from "lucide-react";
+import {
+  Link2,
+  Save,
+  Loader2,
+  ChevronDown,
+  Search,
+  Upload,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CSVUploadFlow from "@/components/CSVUploadFlow";
@@ -55,7 +63,7 @@ function getInitials(name: string): string {
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
+    .map(p => p[0]?.toUpperCase() ?? "")
     .join("");
 }
 
@@ -74,9 +82,7 @@ function MergeFieldDropdown({
     if (!query.trim()) return MERGE_FIELDS;
     const q = query.toLowerCase();
     return MERGE_FIELDS.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.tag.toLowerCase().includes(q)
+      f => f.name.toLowerCase().includes(q) || f.tag.toLowerCase().includes(q)
     );
   }, [query]);
 
@@ -92,8 +98,8 @@ function MergeFieldDropdown({
         type="text"
         placeholder="Search fields..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={e => {
           if (e.key === "Escape") onClose();
           if (e.key === "Enter" && filtered.length > 0) {
             onSelect(filtered[0].tag);
@@ -105,7 +111,7 @@ function MergeFieldDropdown({
           No fields found
         </div>
       )}
-      {filtered.map((field) => (
+      {filtered.map(field => (
         <button
           key={field.tag}
           type="button"
@@ -186,14 +192,14 @@ function ContactSelectionModal({
   const toggleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      setSelectedIds(new Set(allContacts.map((c) => c.id)));
+      setSelectedIds(new Set(allContacts.map(c => c.id)));
     } else {
       setSelectedIds(new Set());
     }
   };
 
   const toggleContact = (id: string) => {
-    setSelectedIds((prev) => {
+    setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -207,7 +213,7 @@ function ContactSelectionModal({
   const filteredContacts = useMemo(() => {
     if (!searchQuery.trim()) return allContacts;
     const q = searchQuery.toLowerCase();
-    return allContacts.filter((c) => {
+    return allContacts.filter(c => {
       const fullName = [c.firstName, c.lastName].filter(Boolean).join(" ");
       return (
         fullName.toLowerCase().includes(q) ||
@@ -233,13 +239,21 @@ function ContactSelectionModal({
   if (!open) return null;
 
   return (
-    <div className="qs-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="qs-modal-content qs-modal-content--large" role="dialog" aria-modal="true">
+    <div
+      className="qs-modal-overlay"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="qs-modal-content qs-modal-content--large"
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Header */}
         <div className="qs-modal-header">
           <h3 className="qs-modal-title">Save & Send</h3>
           <p className="qs-modal-subtitle">
-            Choose which contacts should receive this message. They will be tagged with "quick-send".
+            Choose which contacts should receive this message. They will be
+            tagged with "quick-send".
           </p>
 
           {/* Tab Switcher */}
@@ -288,7 +302,13 @@ function ContactSelectionModal({
                 >
                   {selectAll && (
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M2 6L5 9L10 3"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   )}
                 </div>
@@ -306,14 +326,18 @@ function ContactSelectionModal({
                   type="text"
                   placeholder="Search contacts by name, email, or phone..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
 
               {/* Loading */}
               {loading && (
                 <div style={{ textAlign: "center", padding: "24px 0" }}>
-                  <Loader2 className="qs-spinner" size={24} style={{ color: "#38bdf8", margin: "0 auto" }} />
+                  <Loader2
+                    className="qs-spinner"
+                    size={24}
+                    style={{ color: "#38bdf8", margin: "0 auto" }}
+                  />
                 </div>
               )}
 
@@ -321,12 +345,26 @@ function ContactSelectionModal({
               {!loading && (
                 <div className="qs-contact-list">
                   {filteredContacts.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>
-                      {contactsQuery.isError ? "Failed to load contacts" : "No contacts found"}
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "24px 0",
+                        color: "#94a3b8",
+                        fontSize: 14,
+                      }}
+                    >
+                      {contactsQuery.isError
+                        ? "Failed to load contacts"
+                        : "No contacts found"}
                     </div>
                   )}
-                  {filteredContacts.map((contact) => {
-                    const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.name || "Unknown";
+                  {filteredContacts.map(contact => {
+                    const fullName =
+                      [contact.firstName, contact.lastName]
+                        .filter(Boolean)
+                        .join(" ") ||
+                      contact.name ||
+                      "Unknown";
                     const isSelected = selectedIds.has(contact.id);
                     return (
                       <div
@@ -340,7 +378,9 @@ function ContactSelectionModal({
                         <div className="qs-contact-info">
                           <div className="qs-contact-name">{fullName}</div>
                           <div className="qs-contact-detail">
-                            {[contact.email, contact.phone].filter(Boolean).join(" · ") || "No details"}
+                            {[contact.email, contact.phone]
+                              .filter(Boolean)
+                              .join(" · ") || "No details"}
                           </div>
                         </div>
                         <div
@@ -358,8 +398,19 @@ function ContactSelectionModal({
                           }}
                         >
                           {isSelected && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                            >
+                              <path
+                                d="M2 6L5 9L10 3"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
                             </svg>
                           )}
                         </div>
@@ -373,7 +424,8 @@ function ContactSelectionModal({
             /* CSV Upload Tab */
             <div className="qs-csv-upload-section">
               <p className="qs-csv-upload-hint">
-                Upload a CSV file to import contacts. All imported contacts will be automatically tagged with <strong>"quick-send"</strong>.
+                Upload a CSV file to import contacts. All imported contacts will
+                be automatically tagged with <strong>"quick-send"</strong>.
               </p>
               <CSVUploadFlow
                 locationId={locationId}
@@ -435,7 +487,10 @@ export default function QuickSendPage() {
   const showToast = useCallback((msg: string, isError = false) => {
     toast(msg, {
       style: isError
-        ? { background: "var(--destructive)", color: "var(--destructive-foreground)" }
+        ? {
+            background: "var(--destructive)",
+            color: "var(--destructive-foreground)",
+          }
         : undefined,
     });
   }, []);
@@ -443,7 +498,10 @@ export default function QuickSendPage() {
   // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setShowMergeDropdown(false);
       }
     };
@@ -454,25 +512,22 @@ export default function QuickSendPage() {
   }, [showMergeDropdown]);
 
   // Insert merge field at cursor position
-  const insertMergeField = useCallback(
-    (tag: string) => {
-      const ta = textareaRef.current;
-      if (!ta) {
-        setMessage((prev) => prev + tag);
-        return;
-      }
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const text = ta.value;
-      const newText = text.substring(0, start) + tag + text.substring(end);
-      setMessage(newText);
-      setTimeout(() => {
-        ta.focus();
-        ta.selectionStart = ta.selectionEnd = start + tag.length;
-      }, 0);
-    },
-    []
-  );
+  const insertMergeField = useCallback((tag: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setMessage(prev => prev + tag);
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = ta.value;
+    const newText = text.substring(0, start) + tag + text.substring(end);
+    setMessage(newText);
+    setTimeout(() => {
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = start + tag.length;
+    }, 0);
+  }, []);
 
   // Handle save
   const handleSave = useCallback(
@@ -536,12 +591,19 @@ export default function QuickSendPage() {
         <header className="qs-page-header">
           <h1 className="qs-main-title">Quick Send</h1>
           <p className="qs-description">
-            Quick Send lets you send a one-time text message to customers. Perfect for promoting add-ons, seasonal reminders, referral offers, weather delays, service updates, or special promotions. A fast, simple way to stay top of mind, bring in extra revenue, and get more responses without long follow-up campaigns or extra back and forth. Messages may be spread out help protect delivery.
+            Quick Send lets you send a one-time text message to customers.
+            Perfect for promoting add-ons, seasonal reminders, referral offers,
+            weather delays, service updates, or special promotions. A fast,
+            simple way to stay top of mind, bring in extra revenue, and get more
+            responses without long follow-up campaigns or extra back and forth.
+            Messages may be spread out help protect delivery.
           </p>
           <h2 className="qs-how-title">How It works:</h2>
           <div className="qs-how-steps">
             <p className="qs-how-step">1. Save custom message</p>
-            <p className="qs-how-step">2. Add your contacts to the "Quick Send" campaign</p>
+            <p className="qs-how-step">
+              2. Add your contacts to the "Quick Send" campaign
+            </p>
             <p className="qs-how-step">3. Click "Send Message" on this page</p>
           </div>
         </header>
@@ -559,7 +621,7 @@ export default function QuickSendPage() {
                 className="qs-message-textarea"
                 placeholder="Hi, due to the weather, we are unable to come out today. We will see you next week. If you have any questions, text/call us at: (801) 111-1234"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={e => setMessage(e.target.value)}
                 maxLength={1600}
               />
 
@@ -628,8 +690,67 @@ export default function QuickSendPage() {
                 <div className="qs-phone-statusbar">
                   <span>9:41</span>
                   <div className="qs-phone-statusbar-icons">
-                    <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="6" width="2.5" height="5" rx="0.5" fill="currentColor"/><rect x="4.5" y="4" width="2.5" height="7" rx="0.5" fill="currentColor"/><rect x="9" y="2" width="2.5" height="9" rx="0.5" fill="currentColor"/><rect x="13.5" y="0" width="2.5" height="11" rx="0.5" fill="currentColor" opacity="0.4"/></svg>
-                    <svg width="20" height="11" viewBox="0 0 20 11" fill="none"><rect x="0.5" y="0.5" width="17" height="10" rx="2.5" stroke="currentColor"/><rect x="2" y="2" width="14" height="7" rx="1.5" fill="currentColor"/><rect x="18.5" y="3.5" width="1.5" height="4" rx="0.75" fill="currentColor"/></svg>
+                    <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+                      <rect
+                        x="0"
+                        y="6"
+                        width="2.5"
+                        height="5"
+                        rx="0.5"
+                        fill="currentColor"
+                      />
+                      <rect
+                        x="4.5"
+                        y="4"
+                        width="2.5"
+                        height="7"
+                        rx="0.5"
+                        fill="currentColor"
+                      />
+                      <rect
+                        x="9"
+                        y="2"
+                        width="2.5"
+                        height="9"
+                        rx="0.5"
+                        fill="currentColor"
+                      />
+                      <rect
+                        x="13.5"
+                        y="0"
+                        width="2.5"
+                        height="11"
+                        rx="0.5"
+                        fill="currentColor"
+                        opacity="0.4"
+                      />
+                    </svg>
+                    <svg width="20" height="11" viewBox="0 0 20 11" fill="none">
+                      <rect
+                        x="0.5"
+                        y="0.5"
+                        width="17"
+                        height="10"
+                        rx="2.5"
+                        stroke="currentColor"
+                      />
+                      <rect
+                        x="2"
+                        y="2"
+                        width="14"
+                        height="7"
+                        rx="1.5"
+                        fill="currentColor"
+                      />
+                      <rect
+                        x="18.5"
+                        y="3.5"
+                        width="1.5"
+                        height="4"
+                        rx="0.75"
+                        fill="currentColor"
+                      />
+                    </svg>
                   </div>
                 </div>
                 <div

@@ -6,7 +6,7 @@
  * "Custom Quote & Link" option card.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import {
   Loader2,
   Link,
   CheckSquare,
+  Variable,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -31,21 +32,22 @@ import { trpc } from "@/lib/trpc";
 // ─── Types ───────────────────────────────────────────────────────────
 
 interface QuoteOffer {
-  name: string;          // Offer title / name (editable for Offer 2)
-  price: string;         // Static price display ($XX.XX)
-  description: string;   // Editable description
-  image: string | null;  // Editable image
+  name: string; // Offer title / name (editable for Offer 2)
+  price: string; // Static price display ($XX.XX)
+  description: string; // Editable description
+  image: string | null; // Editable image
 }
 
 interface QuoteFormData {
   companyLogo: string | null;
+  companyName: string;
   teamPhoto: string | null;
   bioTitle: string;
   bioDescription: string;
   tosLink: string;
-  offers: QuoteOffer[];    // Two offers: paid + free
-  price1: string;          // Subtotal ($XX.XX)
-  price2: string;          // Total ($XX.XX)
+  offers: QuoteOffer[]; // Two offers: paid + free
+  price1: string; // Subtotal ($XX.XX)
+  price2: string; // Total ($XX.XX)
   galleryImages: string[];
   testimonialHeadshots: (string | null)[];
   testimonialNames: string[];
@@ -67,7 +69,13 @@ interface CustomQuoteLinkPopupProps {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const TIMING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
+const TIMING_LABELS = [
+  "Immediately",
+  "Next Day",
+  "48 Hours Later",
+  "72 Hours Later",
+  "One Week from Now",
+] as const;
 
 const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   0: "0",
@@ -84,6 +92,7 @@ const DEFAULT_DOG_PHOTO = "/dog-photo.webp";
 
 const DEFAULT_FORM: QuoteFormData = {
   companyLogo: DEFAULT_SCOOPING_LOGO,
+  companyName: "[company name]",
   teamPhoto: DEFAULT_DOG_PHOTO,
   bioTitle: "[service area]'s Highest Rated Pooper Scooper Service",
   bioDescription:
@@ -121,7 +130,12 @@ const DEFAULT_FORM: QuoteFormData = {
     DEFAULT_AVATAR,
     DEFAULT_AVATAR,
   ],
-  testimonialNames: ["Joshua -n- Megan", "Amber K.", "Marcus L.", "Samantha P."],
+  testimonialNames: [
+    "Joshua -n- Megan",
+    "Amber K.",
+    "Marcus L.",
+    "Samantha P.",
+  ],
   testimonialTexts: [
     "Default testimonial text will appear here.",
     "Default testimonial text will appear here.",
@@ -140,6 +154,103 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// ─── GHL Custom Value Picker ──────────────────────────────────────────
+
+interface CustomValueTag {
+  name: string;
+  key?: string;
+  tag: string;
+}
+
+/**
+ * A small search-and-insert dropdown that lets users pick a GHL custom
+ * value (e.g. Company Name, Account Details, or any custom value from
+ * the current subaccount). The resolved (live) value is fetched from
+ * GHL and inserted as real text into the Company Description field.
+ */
+function CustomValuePicker({
+  tags,
+  onInsert,
+}: {
+  tags: CustomValueTag[];
+  onInsert: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+    else setQuery("");
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tags;
+    return tags.filter(
+      t =>
+        t.name.toLowerCase().includes(q) ||
+        t.tag.toLowerCase().includes(q)
+    );
+  }, [query, tags]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-medium rounded transition-colors"
+        title="Insert GHL custom value"
+      >
+        <Variable size={11} />
+        Insert Custom Value
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-64 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Escape") setOpen(false);
+              if (e.key === "Enter" && filtered.length > 0) {
+                onInsert(filtered[0].key || filtered[0].tag);
+                setOpen(false);
+              }
+            }}
+            placeholder="Search custom values..."
+            className="w-full px-2.5 py-1.5 text-xs border-b border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 rounded-t-lg"
+          />
+          {filtered.length === 0 && (
+            <div className="px-2.5 py-2 text-[11px] text-slate-400">
+              No custom values found
+            </div>
+          )}
+          {filtered.map(t => (
+            <button
+              key={t.tag}
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 hover:bg-blue-50 border-b border-slate-100 last:border-b-0"
+              onClick={() => {
+                onInsert(t.key || t.tag);
+                setOpen(false);
+              }}
+            >
+              <div className="text-[11px] font-medium text-slate-700">
+                {t.name}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono truncate">
+                {t.tag}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Left Panel: Quote Template Preview ──────────────────────────────
@@ -187,7 +298,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           <div className="w-full h-48 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
             <div className="text-center">
               <Image className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-              <span className="text-[11px] text-slate-400">No Photo Uploaded</span>
+              <span className="text-[11px] text-slate-400">
+                No Photo Uploaded
+              </span>
             </div>
           </div>
         )}
@@ -196,14 +309,16 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
       {/* ── Quote Title (H2 heading, matching live page) ── */}
       <div>
         <h2 className="text-base font-bold text-slate-800 mb-2">
-          {formData.bioTitle || "[service area]'s Highest Rated Pooper Scooper Service"}
+          {formData.bioTitle ||
+            "[service area]'s Highest Rated Pooper Scooper Service"}
         </h2>
       </div>
 
       {/* ── Bio Description (paragraph text, matching live page) ── */}
       <div>
         <p className="text-xs text-slate-600 leading-relaxed">
-          {formData.bioDescription || "Your company description will appear here."}
+          {formData.bioDescription ||
+            "Your company description will appear here."}
         </p>
       </div>
 
@@ -228,13 +343,15 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
           className="px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full"
           disabled
         >
-          Approve Quote 
+          Approve Quote
         </button>
       </div>
 
       {/* ── Offer 1 (matching live page: title, price, description + image) ── */}
       <div className="space-y-2 pt-2">
-        <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Offer 1
+        </label>
         <div>
           <h2 className="text-sm font-bold text-slate-800">
             {formData.offers[0]?.name}
@@ -279,7 +396,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Offer 2 (matching live page) ── */}
       <div className="space-y-2 pt-2">
-        <label className="text-[11px] text-slate-500 font-medium">Offer 2 (Free Offer)</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Offer 2 (Free Offer)
+        </label>
         <div>
           <h2 className="text-sm font-bold text-slate-800">
             {formData.offers[1]?.name}
@@ -331,7 +450,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         </div>
         <div className="flex justify-between items-center px-1 py-1">
           <span className="text-xs text-slate-700 font-semibold">Total</span>
-          <span className="text-xs text-slate-800 font-bold">{formData.price2}</span>
+          <span className="text-xs text-slate-800 font-bold">
+            {formData.price2}
+          </span>
         </div>
         <div className="border-t border-slate-200" />
       </div>
@@ -341,7 +462,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <div className="flex items-center gap-2 justify-center py-1">
           <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
           <span className="text-[11px] text-slate-500">I agree to the</span>
-          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+          <span className="text-[11px] text-blue-600 underline">
+            Terms of Service
+          </span>
         </div>
       )}
       <div className="flex justify-center">
@@ -356,7 +479,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Gallery Images (matching live page: 2 rows of 3) ── */}
       <div className="pt-2">
-        <label className="text-[11px] text-slate-500 font-medium block mb-2">Images</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-2">
+          Images
+        </label>
         <div className="grid grid-cols-3 gap-3 mt-1.5">
           {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => (
             <div
@@ -386,9 +511,14 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
 
       {/* ── Testimonials (matching live page: avatar + name + stars + text) ── */}
       <div className="space-y-4 pt-1">
-        <label className="text-[11px] text-slate-500 font-medium block">Reviews</label>
+        <label className="text-[11px] text-slate-500 font-medium block">
+          Reviews
+        </label>
         {formData.testimonialNames.map((name, idx) => (
-          <div key={idx} className="space-y-2 pb-3 border-b border-slate-200 last:border-0">
+          <div
+            key={idx}
+            className="space-y-2 pb-3 border-b border-slate-200 last:border-0"
+          >
             <div className="flex items-center gap-2">
               <img
                 src={formData.testimonialHeadshots[idx] || DEFAULT_AVATAR}
@@ -399,12 +529,17 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
               <span className="text-sm font-medium text-slate-700">{name}</span>
             </div>
             <div className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} size={14} className="fill-amber-400 text-amber-400" />
+              {[1, 2, 3, 4, 5].map(star => (
+                <Star
+                  key={star}
+                  size={14}
+                  className="fill-amber-400 text-amber-400"
+                />
               ))}
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              {formData.testimonialTexts[idx] || "Default testimonial text will appear here."}
+              {formData.testimonialTexts[idx] ||
+                "Default testimonial text will appear here."}
             </p>
           </div>
         ))}
@@ -415,7 +550,9 @@ function QuoteTemplatePreview({ formData }: { formData: QuoteFormData }) {
         <div className="flex items-center gap-2 justify-center py-2">
           <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />
           <span className="text-[11px] text-slate-500">I agree to the</span>
-          <span className="text-[11px] text-blue-600 underline">Terms of Service</span>
+          <span className="text-[11px] text-blue-600 underline">
+            Terms of Service
+          </span>
         </div>
       )}
       <div className="flex justify-center pb-2">
@@ -438,14 +575,91 @@ function QuoteFormFields({
   setFormData,
   onSave,
   isSaving,
+  customValueTags,
+  locationId,
 }: {
   formData: QuoteFormData;
-  setFormData: (data: QuoteFormData) => void;
+  setFormData: React.Dispatch<React.SetStateAction<QuoteFormData>>;
   onSave: () => void;
   isSaving: boolean;
+  customValueTags: CustomValueTag[];
+  locationId: string;
 }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Resolve the picked GHL custom value to its live value and insert
+  // it into Company Description exactly where the cursor is. The caret
+  // position is captured at pick time (before the picker dropdown
+  // steals focus), so the text lands at the user's typing location.
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const cursorPosRef = useRef<number>(0);
+  const resolveQuery =
+    trpc.requestScheduling.resolveCustomValue.useQuery(
+      { locationId, key: pendingKey ?? "" },
+      {
+        enabled: pendingKey !== null && pendingKey !== "",
+        retry: 1,
+        staleTime: 5 * 60 * 1000,
+      }
+    );
+
+  // When the live value arrives, insert it at the saved caret position
+  // (state update + restored selection) and clear the pending key.
+  useEffect(() => {
+    if (!pendingKey) return;
+    if (resolveQuery.data === undefined) return;
+    const value = resolveQuery.data.value;
+    const text =
+      typeof value === "string" && value.trim() !== ""
+        ? value.trim()
+        : null;
+
+    setFormData(prev => {
+      if (!text) return prev;
+      const existing = prev.bioDescription ?? "";
+      const pos = Math.min(cursorPosRef.current, existing.length);
+      const before = existing.slice(0, pos);
+      const after = existing.slice(pos);
+      // Separate inserted value from surrounding text with a space
+      // when it joins existing content.
+      const left =
+        before.length > 0 && !before.endsWith(" ") && !before.endsWith("\n")
+          ? `${before} `
+          : before;
+      const right =
+        after.length > 0 && !after.startsWith(" ") && !after.startsWith("\n")
+          ? ` ${after}`
+          : after;
+      return { ...prev, bioDescription: `${left}${text}${right}` };
+    });
+
+    // Restore the caret right after the inserted value so typing can
+    // continue seamlessly; re-select the textarea to make it visible.
+    const ta = descriptionRef.current;
+    if (ta) {
+      const newPos = cursorPosRef.current + (text?.length ?? 0);
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = newPos;
+        ta.focus();
+      });
+    }
+    if (!text) {
+      toast.info(
+        "No value is stored for this custom value yet — its tag will be rendered when GHL sends the quote."
+      );
+    }
+    setPendingKey(null);
+  }, [pendingKey, resolveQuery.data, resolveQuery.error]);
+
+  const insertResolvedValue = useCallback((key: string) => {
+    // Capture where the cursor is inside the description right before
+    // the picker dropdown opens (it moves focus to its search input).
+    const ta = descriptionRef.current;
+    cursorPosRef.current = ta?.selectionStart ?? (ta?.value?.length ?? 0);
+    setPendingKey(key);
+  }, []);
   const offerImageRefs = useRef<(HTMLInputElement | null)[]>([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const testimonialHeadshotRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -459,7 +673,10 @@ function QuoteFormFields({
     setFormData({ ...formData, [field]: base64 });
   };
 
-  const handleGalleryUpload = async (files: FileList | null, replaceIndex?: number) => {
+  const handleGalleryUpload = async (
+    files: FileList | null,
+    replaceIndex?: number
+  ) => {
     if (!files) return;
     const newImages: string[] = [];
     for (let i = 0; i < files.length; i++) {
@@ -475,7 +692,11 @@ function QuoteFormFields({
       // Append to fill empty slots
       const updated = [...formData.galleryImages];
       let slotIdx = 0;
-      for (let i = 0; i < newImages.length && slotIdx < MAX_GALLERY_IMAGES; i++) {
+      for (
+        let i = 0;
+        i < newImages.length && slotIdx < MAX_GALLERY_IMAGES;
+        i++
+      ) {
         if (updated[slotIdx] === undefined || updated[slotIdx] === null) {
           updated[slotIdx] = newImages[i];
         }
@@ -513,7 +734,9 @@ function QuoteFormFields({
 
       {/* ── Company Logo ── */}
       <div className="flex justify-center">
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Logo</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Company Logo
+        </label>
         <div className="mt-1 flex items-center gap-3">
           {formData.companyLogo ? (
             <div className="relative group inline-block">
@@ -540,7 +763,9 @@ function QuoteFormFields({
               onClick={() => logoInputRef.current?.click()}
             >
               <Upload size={18} className="text-slate-400 mb-1" />
-              <span className="text-xs text-slate-500 font-medium">Upload Logo</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Upload Logo
+              </span>
             </div>
           )}
           <input
@@ -548,15 +773,21 @@ function QuoteFormFields({
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handleImageUpload(e.target.files?.[0], "companyLogo")}
+            onChange={e =>
+              handleImageUpload(e.target.files?.[0], "companyLogo")
+            }
           />
         </div>
       </div>
 
       {/* ── Company Photo ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Company Photo</label>
-        <p className="text-[10px] text-slate-400 italic mb-1">(best if there are people in it)</p>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Company Photo
+        </label>
+        <p className="text-[10px] text-slate-400 italic mb-1">
+          (best if there are people in it)
+        </p>
         <div
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors bg-slate-50"
           onClick={() => photoInputRef.current?.click()}
@@ -570,7 +801,7 @@ function QuoteFormFields({
                 crossOrigin="anonymous"
               />
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   setFormData({ ...formData, teamPhoto: null });
                 }}
@@ -582,8 +813,12 @@ function QuoteFormFields({
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload size={24} className="text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Upload Company Photo</span>
-              <span className="text-[10px] text-slate-400">(best if there are people in it)</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Upload Company Photo
+              </span>
+              <span className="text-[10px] text-slate-400">
+                (best if there are people in it)
+              </span>
             </div>
           )}
         </div>
@@ -592,18 +827,37 @@ function QuoteFormFields({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => handleImageUpload(e.target.files?.[0], "teamPhoto")}
+          onChange={e => handleImageUpload(e.target.files?.[0], "teamPhoto")}
+        />
+      </div>
+
+      {/* ── Company Name Field (defaults to GHL company_name custom value) ── */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] text-slate-500 font-medium">
+            Company Name
+          </label>
+        </div>
+        <Input
+          value={formData.companyName}
+          onChange={e =>
+            setFormData({ ...formData, companyName: e.target.value })
+          }
+          className="mt-1 text-xs h-8"
+          placeholder="[company name]"
         />
       </div>
 
       {/* ── Quote Title Field ── */}
       <div className="px-2">
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">
-          Quote Title
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] text-slate-500 font-medium">
+            Quote Title
+          </label>
+        </div>
         <Input
           value={formData.bioTitle}
-          onChange={(e) => setFormData({ ...formData, bioTitle: e.target.value })}
+          onChange={e => setFormData({ ...formData, bioTitle: e.target.value })}
           className="mt-1 text-xs h-8"
           placeholder="[service area]'s Highest Rated Pooper Scooper Service"
         />
@@ -611,12 +865,23 @@ function QuoteFormFields({
 
       {/* ── Company Description Field ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">
-          Company Description
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] text-slate-500 font-medium">
+            Company Description
+          </label>
+          <CustomValuePicker
+            tags={customValueTags}
+            onInsert={selectedKey =>
+              insertResolvedValue(selectedKey)
+            }
+          />
+        </div>
         <textarea
+          ref={descriptionRef}
           value={formData.bioDescription}
-          onChange={(e) => setFormData({ ...formData, bioDescription: e.target.value })}
+          onChange={e =>
+            setFormData({ ...formData, bioDescription: e.target.value })
+          }
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 min-h-[100px] resize-y"
           placeholder="Insert Company Description Here"
         />
@@ -624,21 +889,29 @@ function QuoteFormFields({
 
       {/* ── Offer 1 (Auto-filled title, not editable) ── */}
       <div className="space-y-2">
-        <label className="text-[11px] text-slate-500 font-medium">Offer 1</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Offer 1
+        </label>
         <div className="bg-slate-50 rounded-lg p-3 space-y-2">
           <div>
-            <span className="text-[11px] text-slate-700 font-bold block">{formData.offers[0]?.name}</span>
-            <span className="text-[9px] text-amber-600 italic">(Auto-filled — not editable)</span>
+            <span className="text-[11px] text-slate-700 font-bold block">
+              {formData.offers[0]?.name}
+            </span>
+            <span className="text-[9px] text-amber-600 italic">
+              (Auto-filled — not editable)
+            </span>
           </div>
           <div>
-            <span className="text-[11px] text-slate-500">{formData.offers[0]?.price}</span>
+            <span className="text-[11px] text-slate-500">
+              {formData.offers[0]?.price}
+            </span>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-[10px] text-slate-400">Description</label>
               <textarea
                 value={formData.offers[0]?.description || ""}
-                onChange={(e) => {
+                onChange={e => {
                   const offers = [...formData.offers];
                   offers[0] = { ...offers[0], description: e.target.value };
                   setFormData({ ...formData, offers });
@@ -668,11 +941,13 @@ function QuoteFormFields({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                ref={(el) => { offerImageRefs.current[0] = el; }}
-                onChange={(e) => {
+                ref={el => {
+                  offerImageRefs.current[0] = el;
+                }}
+                onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    fileToBase64(file).then((b64) => {
+                    fileToBase64(file).then(b64 => {
                       const offers = [...formData.offers];
                       offers[0] = { ...offers[0], image: b64 };
                       setFormData({ ...formData, offers });
@@ -687,13 +962,15 @@ function QuoteFormFields({
 
       {/* ── Offer 2 (Editable Free Offer Title) ── */}
       <div className="space-y-2">
-        <label className="text-[11px] text-slate-500 font-medium">Free Sign Up Offer</label>
+        <label className="text-[11px] text-slate-500 font-medium">
+          Free Sign Up Offer
+        </label>
         <div className="bg-slate-50 rounded-lg p-3 space-y-2">
           <div>
             <label className="text-[10px] text-slate-400">Offer Title</label>
             <Input
               value={formData.offers[1]?.name || "2 Weeks FREE"}
-              onChange={(e) => {
+              onChange={e => {
                 const offers = [...formData.offers];
                 offers[1] = { ...offers[1], name: e.target.value };
                 setFormData({ ...formData, offers });
@@ -703,14 +980,16 @@ function QuoteFormFields({
             />
           </div>
           <div>
-            <span className="text-[11px] text-slate-500">{formData.offers[1]?.price}</span>
+            <span className="text-[11px] text-slate-500">
+              {formData.offers[1]?.price}
+            </span>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-[10px] text-slate-400">Description</label>
               <textarea
                 value={formData.offers[1]?.description || ""}
-                onChange={(e) => {
+                onChange={e => {
                   const offers = [...formData.offers];
                   offers[1] = { ...offers[1], description: e.target.value };
                   setFormData({ ...formData, offers });
@@ -740,11 +1019,13 @@ function QuoteFormFields({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                ref={(el) => { offerImageRefs.current[1] = el; }}
-                onChange={(e) => {
+                ref={el => {
+                  offerImageRefs.current[1] = el;
+                }}
+                onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    fileToBase64(file).then((b64) => {
+                    fileToBase64(file).then(b64 => {
                       const offers = [...formData.offers];
                       offers[1] = { ...offers[1], image: b64 };
                       setFormData({ ...formData, offers });
@@ -760,13 +1041,17 @@ function QuoteFormFields({
       {/* ── Pricing: Subtotal + Total (Static $XX.XX) ── */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Subtotal</label>
+          <label className="text-[11px] text-slate-500 font-medium block mb-1">
+            Subtotal
+          </label>
           <div className="mt-1 text-xs h-8 px-3 py-1.5 rounded-md border border-slate-200 bg-slate-100 text-slate-600 font-semibold">
             $XX.XX
           </div>
         </div>
         <div>
-          <label className="text-[11px] text-slate-500 font-medium block mb-1">Total</label>
+          <label className="text-[11px] text-slate-500 font-medium block mb-1">
+            Total
+          </label>
           <div className="mt-1 text-xs h-8 px-3 py-1.5 rounded-md border border-slate-200 bg-slate-100 text-slate-700 font-bold">
             $XX.XX
           </div>
@@ -775,7 +1060,9 @@ function QuoteFormFields({
 
       {/* ── Gallery Images ── */}
       <div>
-        <label className="text-[11px] text-slate-500 font-medium block mb-1">Gallery Images (max 6)</label>
+        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+          Gallery Images (max 6)
+        </label>
         <div className="grid grid-cols-6 gap-2 mt-1.5">
           {Array.from({ length: MAX_GALLERY_IMAGES }).map((_, idx) => {
             const isFilled = formData.galleryImages[idx] !== undefined;
@@ -788,7 +1075,11 @@ function QuoteFormFields({
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
-                  input.onchange = (e) => handleGalleryUpload((e.target as HTMLInputElement).files, isFilled ? idx : undefined);
+                  input.onchange = e =>
+                    handleGalleryUpload(
+                      (e.target as HTMLInputElement).files,
+                      isFilled ? idx : undefined
+                    );
                   input.click();
                 }}
               >
@@ -816,9 +1107,14 @@ function QuoteFormFields({
 
       {/* ── Testimonials (Copy & Paste Text Areas) ── */}
       <div className="space-y-4">
-        <label className="text-[11px] text-slate-500 font-medium block">Testimonials (4 required)</label>
+        <label className="text-[11px] text-slate-500 font-medium block">
+          Testimonials (4 required)
+        </label>
         {formData.testimonialNames.map((name, idx) => (
-          <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+          <div
+            key={idx}
+            className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2"
+          >
             {/* Headshot upload */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-400 w-16">Headshot</span>
@@ -829,11 +1125,15 @@ function QuoteFormFields({
                     alt={`Headshot ${name}`}
                     className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer hover:opacity-80"
                     crossOrigin="anonymous"
-                    onClick={() => testimonialHeadshotRefs.current[idx]?.click()}
+                    onClick={() =>
+                      testimonialHeadshotRefs.current[idx]?.click()
+                    }
                     title="Click to change headshot"
                   />
                   <button
-                    onClick={() => updateTestimonial(idx, "testimonialHeadshots", null)}
+                    onClick={() =>
+                      updateTestimonial(idx, "testimonialHeadshots", null)
+                    }
                     className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow"
                     title="Remove headshot"
                   >
@@ -857,12 +1157,15 @@ function QuoteFormFields({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                ref={(el) => {
+                ref={el => {
                   testimonialHeadshotRefs.current[idx] = el;
                   if (el) {
                     el.onchange = (ev: Event) => {
                       const file = (ev.target as HTMLInputElement).files?.[0];
-                      if (file) fileToBase64(file).then((b64) => updateTestimonial(idx, "testimonialHeadshots", b64));
+                      if (file)
+                        fileToBase64(file).then(b64 =>
+                          updateTestimonial(idx, "testimonialHeadshots", b64)
+                        );
                     };
                   }
                 }}
@@ -874,7 +1177,9 @@ function QuoteFormFields({
               <span className="text-[10px] text-slate-400 w-16">Name</span>
               <Input
                 value={name}
-                onChange={(e) => updateTestimonial(idx, "testimonialNames", e.target.value)}
+                onChange={e =>
+                  updateTestimonial(idx, "testimonialNames", e.target.value)
+                }
                 className="text-xs h-7 flex-1"
                 placeholder="Testimonial name"
                 required
@@ -883,10 +1188,14 @@ function QuoteFormFields({
 
             {/* Google Review Textarea */}
             <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Google Review Text</label>
+              <label className="text-[10px] text-slate-400 block mb-1">
+                Google Review Text
+              </label>
               <textarea
                 value={formData.testimonialTexts[idx] || ""}
-                onChange={(e) => updateTestimonial(idx, "testimonialTexts", e.target.value)}
+                onChange={e =>
+                  updateTestimonial(idx, "testimonialTexts", e.target.value)
+                }
                 placeholder="Default testimonial text will appear here (copy/paste Google Review text)"
                 className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs min-h-[60px] resize-y"
               />
@@ -902,7 +1211,7 @@ function QuoteFormFields({
         </label>
         <Input
           value={formData.tosLink}
-          onChange={(e) => setFormData({ ...formData, tosLink: e.target.value })}
+          onChange={e => setFormData({ ...formData, tosLink: e.target.value })}
           className="mt-1 text-xs h-8"
           placeholder="https://www.yourcompany.com/terms-of-service"
         />
@@ -950,7 +1259,82 @@ export default function CustomQuoteLinkPopup({
   const [isSaving, setIsSaving] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const saveMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
+  const saveMutation =
+    trpc.requestScheduling.saveCustomValuesSettings.useMutation();
+
+  // ── Fetch latest saved values from GHL custom values on every open ──
+  const settingsQuery =
+    trpc.requestScheduling.getQuoteSettings.useQuery(
+      { locationId },
+      { enabled: !!locationId && open }
+    );
+
+  // ── Fetch the subaccount's available custom values for the picker ──
+  const customValueTagsQuery =
+    trpc.requestScheduling.getCustomValueTags.useQuery(
+      { locationId },
+      { enabled: !!locationId }
+    );
+
+  useEffect(() => {
+    if (!open) return;
+    const ghl = settingsQuery.data;
+    if (!ghl) return;
+    // Fill every field with its latest GHL custom value when present;
+    // fall back to the existing/default value when the GHL value is
+    // empty or unavailable.
+    setFormData(prev => ({
+      companyName: ghl.companyName || prev.companyName || DEFAULT_FORM.companyName,
+      companyLogo: ghl.companyLogo || prev.companyLogo,
+      teamPhoto: ghl.companyImage || prev.teamPhoto,
+      bioTitle: ghl.quoteTitle || prev.bioTitle,
+      bioDescription: ghl.companyDescription || prev.bioDescription,
+      tosLink: ghl.tosLink ?? prev.tosLink,
+      price1: prev.price1,
+      price2: prev.price2,
+      offers: [
+        {
+          name: ghl.offer1Title || prev.offers[0]?.name || DEFAULT_FORM.offers[0].name,
+          price: prev.offers[0]?.price ?? DEFAULT_FORM.offers[0].price,
+          description: ghl.offer1Description || prev.offers[0]?.description || "",
+          image: ghl.offer1Image || prev.offers[0]?.image || DEFAULT_FORM.offers[0].image,
+        },
+        {
+          name: ghl.offer2Title || prev.offers[1]?.name || DEFAULT_FORM.offers[1].name,
+          price: prev.offers[1]?.price ?? DEFAULT_FORM.offers[1].price,
+          description: ghl.offer2Description || prev.offers[1]?.description || "",
+          image: ghl.offer2Image || prev.offers[1]?.image || DEFAULT_FORM.offers[1].image,
+        },
+      ],
+      galleryImages: [
+        ghl.image1 || prev.galleryImages[0] || DEFAULT_FORM.galleryImages[0],
+        ghl.image2 || prev.galleryImages[1] || DEFAULT_FORM.galleryImages[1],
+        ghl.image3 || prev.galleryImages[2] || DEFAULT_FORM.galleryImages[2],
+        ghl.image4 || prev.galleryImages[3] || DEFAULT_FORM.galleryImages[3],
+        ghl.image5 || prev.galleryImages[4] || DEFAULT_FORM.galleryImages[4],
+        (ghl.image6 || prev.galleryImages[5] || DEFAULT_FORM.galleryImages[5]),
+      ],
+      testimonialHeadshots: [
+        ghl.review1Photo || prev.testimonialHeadshots[0],
+        ghl.review2Photo || prev.testimonialHeadshots[1],
+        ghl.review3Photo || prev.testimonialHeadshots[2],
+        ghl.review4Photo || prev.testimonialHeadshots[3],
+      ],
+      testimonialNames: [
+        ghl.review1Name || prev.testimonialNames[0],
+        ghl.review2Name || prev.testimonialNames[1],
+        ghl.review3Name || prev.testimonialNames[2],
+        ghl.review4Name || prev.testimonialNames[3],
+      ],
+      testimonialTexts: [
+        ghl.review1 || prev.testimonialTexts[0],
+        ghl.review2 || prev.testimonialTexts[1],
+        ghl.review3 || prev.testimonialTexts[2],
+        ghl.review4 || prev.testimonialTexts[3],
+      ],
+      testimonialScreenshots: prev.testimonialScreenshots,
+    }));
+  }, [settingsQuery.data, open]);
 
   const handleSave = useCallback(async () => {
     if (!formData.companyLogo) {
@@ -1012,10 +1396,21 @@ export default function CustomQuoteLinkPopup({
     } finally {
       setIsSaving(false);
     }
-  }, [locationId, leadFollowUpOption, initialTiming, followUpCount, formData, saveMutation, onSaveSuccess, onOpenChange]);
+  }, [
+    locationId,
+    leadFollowUpOption,
+    initialTiming,
+    followUpCount,
+    formData,
+    saveMutation,
+    onSaveSuccess,
+    onOpenChange,
+  ]);
 
   const handleClose = (open: boolean) => {
     if (!open) {
+      // Reset to defaults so the next open re-fetches the latest
+      // GHL company_name value instead of reusing stale state.
       setFormData(DEFAULT_FORM);
     }
     onOpenChange(open);
@@ -1035,7 +1430,9 @@ export default function CustomQuoteLinkPopup({
             </DialogDescription>
             <div className="text-[12px] text-slate-500 space-y-0.5">
               <p>1. Upload all empty image files (example on the left)</p>
-              <p>2. Fill out the editable text boxes (offer descriptions, bio)</p>
+              <p>
+                2. Fill out the editable text boxes (offer descriptions, bio)
+              </p>
               <p>3. Replace the default images</p>
               <p>4. Add the 4 testimonials</p>
               <p>5. Click Save Settings</p>
@@ -1058,6 +1455,8 @@ export default function CustomQuoteLinkPopup({
                 setFormData={setFormData}
                 onSave={handleSave}
                 isSaving={isSaving}
+                customValueTags={customValueTagsQuery.data?.tags ?? []}
+                locationId={locationId}
               />
             </div>
           </div>

@@ -51,7 +51,13 @@ export const quickSendRouter = router({
 
       // If search query, use the search endpoint
       if (input.search.trim()) {
-        return searchContacts(locationId, accessToken, input.search.trim(), input.page, input.pageSize);
+        return searchContacts(
+          locationId,
+          accessToken,
+          input.search.trim(),
+          input.page,
+          input.pageSize
+        );
       }
 
       // Otherwise, list contacts with pagination
@@ -77,16 +83,26 @@ export const quickSendRouter = router({
 
       // Validate
       if (!locationId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Location ID cannot be empty" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Location ID cannot be empty",
+        });
       }
       if (!input.message.trim()) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Message cannot be empty" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Message cannot be empty",
+        });
       }
 
       const accessToken = await getValidAccessToken(locationId);
 
       // ── Step 1: Save message to GHL custom value ──
-      const messageSaved = await saveMessageToCustomValue(locationId, accessToken, input.message.trim());
+      const messageSaved = await saveMessageToCustomValue(
+        locationId,
+        accessToken,
+        input.message.trim()
+      );
 
       // ── Step 2: Tag selected contacts ──
       let tagResults = { total: 0, tagged: 0, failed: 0 };
@@ -94,8 +110,15 @@ export const quickSendRouter = router({
       if (input.contactSelection === "all") {
         // Get all contact IDs and tag them
         tagResults = await tagAllContacts(locationId, accessToken);
-      } else if (input.contactSelection === "selected" && input.contactIds.length > 0) {
-        tagResults = await tagContactsByIds(locationId, accessToken, input.contactIds);
+      } else if (
+        input.contactSelection === "selected" &&
+        input.contactIds.length > 0
+      ) {
+        tagResults = await tagContactsByIds(
+          locationId,
+          accessToken,
+          input.contactIds
+        );
       }
 
       return {
@@ -207,7 +230,8 @@ async function saveMessageToCustomValue(
     console.error("[QuickSend] Failed to fetch custom values:", err);
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Failed to fetch GHL custom values. Please check your connection.",
+      message:
+        "Failed to fetch GHL custom values. Please check your connection.",
     });
   }
 
@@ -216,25 +240,44 @@ async function saveMessageToCustomValue(
 
   if (!customValueId) {
     // Also try alternate matching
-    const alternate = customValues.find((cv) => {
+    const alternate = customValues.find(cv => {
       const name = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
-      return name.includes("mass") && name.includes("sms") && name.includes("message");
+      return (
+        name.includes("mass") &&
+        name.includes("sms") &&
+        name.includes("message")
+      );
     });
     const altId = (alternate?.id || alternate?._id) as string | undefined;
     if (altId) {
-      return doPutCustomValue(locationId, accessToken, altId, String(alternate?.name || "Mass SMS Message"), message);
+      return doPutCustomValue(
+        locationId,
+        accessToken,
+        altId,
+        String(alternate?.name || "Mass SMS Message"),
+        message
+      );
     }
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: 'Custom value "Mass SMS Message" not found in your GHL account. Please ensure it exists before saving.',
+      message:
+        'Custom value "Mass SMS Message" not found in your GHL account. Please ensure it exists before saving.',
     });
   }
 
   // Get the display name to preserve it
-  const existingCv = customValues.find((cv) => (cv.id || cv._id) === customValueId);
+  const existingCv = customValues.find(
+    cv => (cv.id || cv._id) === customValueId
+  );
   const displayName = String(existingCv?.name || "Mass SMS Message");
 
-  return doPutCustomValue(locationId, accessToken, customValueId, displayName, message);
+  return doPutCustomValue(
+    locationId,
+    accessToken,
+    customValueId,
+    displayName,
+    message
+  );
 }
 
 async function doPutCustomValue(
@@ -254,7 +297,9 @@ async function doPutCustomValue(
 
   if (!resp.ok) {
     const body = await resp.text();
-    console.error(`[QuickSend] Failed to update custom value: ${resp.status} ${body}`);
+    console.error(
+      `[QuickSend] Failed to update custom value: ${resp.status} ${body}`
+    );
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: `Failed to save message to GHL. Error: ${resp.status}`,
@@ -276,11 +321,16 @@ async function tagAllContacts(
   // Paginate through all contacts
   while (true) {
     const url = `${GHL_BASE_URL}/contacts/?locationId=${encodeURIComponent(locationId)}&page=${page}&limit=${pageSize}`;
-    const resp = await fetch(url, { method: "GET", headers: ghlHeaders(accessToken) });
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: ghlHeaders(accessToken),
+    });
 
     if (!resp.ok) {
       const body = await resp.text();
-      console.error(`[QuickSend] Failed to fetch contacts page ${page}: ${resp.status} ${body}`);
+      console.error(
+        `[QuickSend] Failed to fetch contacts page ${page}: ${resp.status} ${body}`
+      );
       break;
     }
 
@@ -315,7 +365,7 @@ async function tagContactsByIds(
 
     // Rate limiting: wait 200ms between tag requests
     if (i < contactIds.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
 

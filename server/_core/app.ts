@@ -16,17 +16,26 @@ export function createApp(options?: { serveClient?: boolean }): Express {
   // endpoints (e.g. server/routes/contactsCustomField.ts) verify an
   // HMAC-SHA256 signature over the exact raw bytes, so the unmodified body
   // is preserved on req.rawBody.
-  app.use(express.json({ limit: "50mb", verify: (req, _res, buf) => { (req as any).rawBody = buf.toString("utf8"); } }));
+  app.use(
+    express.json({
+      limit: "50mb",
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = buf.toString("utf8");
+      },
+    })
+  );
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // CORS configuration: allow explicit origins and enable credentials
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
     .split(",")
-    .map((s) => s.trim())
+    .map(s => s.trim())
     .filter(Boolean);
 
   if (allowedOrigins.length === 0) {
-    console.warn("[CORS] No ALLOWED_ORIGINS configured; allowing all origins (development only)");
+    console.warn(
+      "[CORS] No ALLOWED_ORIGINS configured; allowing all origins (development only)"
+    );
     app.use(
       cors({
         origin: true,

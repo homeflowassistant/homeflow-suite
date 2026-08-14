@@ -1,6 +1,7 @@
 # Deploy Express Backend to Render.com
 
 ## Prerequisites
+
 - Render.com account (free tier available)
 - GitHub repository with this code pushed
 - PostgreSQL database URL (from Supabase or similar)
@@ -70,28 +71,33 @@ ALLOWED_ORIGINS = https://addcontact-xi.vercel.app
 ## Troubleshooting
 
 ### "Network Error" in Browser
+
 - **Check**: Is Render deployment successful? (check Render Logs)
 - **Check**: Are environment variables set in Render?
 - **Check**: Is `VITE_API_URL` set in Vercel?
 - **Check**: CORS: Ensure `ALLOWED_ORIGINS` includes your Vercel domain
 
 ### "Cannot find module" on Render
+
 - Render uses `pnpm install` if `pnpm-lock.yaml` exists ✅
 - Ensure all dependencies are listed in `package.json`
 - Check build logs: `pnpm build` must succeed
 
 ### Cold Start / Slow Response
+
 - Free tier Render instances spin down after inactivity
 - First request after 15 min of inactivity may take 30-60 seconds
 - Upgrade to **Starter** plan ($7/mo) for always-on availability
 
 ## Free Tier Limits (Render)
+
 - Spins down after 15 minutes of inactivity (first request slow)
 - 0.5 CPU, 512MB RAM
 - Suitable for testing only
 - Upgrade to **Starter** for production
 
 ## Cost Estimate (Monthly)
+
 - **Render Starter**: $7/month (always-on server)
 - **Vercel**: Free (static client)
 - **PostgreSQL (Supabase)**: Free tier or $25+/month

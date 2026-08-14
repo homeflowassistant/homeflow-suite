@@ -24,7 +24,9 @@ export default function ContactTable({
         <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
           <AlertCircle className="h-7 w-7 text-red-500" />
         </div>
-        <p className="text-sm font-medium text-slate-800 mb-1">Failed to load contacts</p>
+        <p className="text-sm font-medium text-slate-800 mb-1">
+          Failed to load contacts
+        </p>
         <p className="text-xs text-slate-500 text-center max-w-sm">{error}</p>
       </div>
     );
@@ -47,7 +49,9 @@ export default function ContactTable({
         <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
           <Inbox className="h-7 w-7 text-slate-400" />
         </div>
-        <p className="text-sm font-medium text-slate-700 mb-1">No contacts found</p>
+        <p className="text-sm font-medium text-slate-700 mb-1">
+          No contacts found
+        </p>
         <p className="text-xs text-slate-500 text-center max-w-sm">
           Add contacts to your GoHighLevel account or try a different search.
         </p>

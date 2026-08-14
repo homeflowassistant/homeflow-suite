@@ -11,9 +11,25 @@ const EXAMPLE_CUSTOM_QUOTE = "/custom.png";
 import "./RequestScheduling.css";
 
 // Order: Lite → S&G Link → Custom Quote & Link
-const LEAD_FOLLOW_UP_OPTIONS = ["Lite", "S&G Link", "Custom Quote & Link"] as const;
-const TIMING_LABELS = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
-const TIMING_CUSTOM_VALUES = ["Immediately", "Next Day", "48 Hours Later", "72 Hours Later", "One Week from Now"] as const;
+const LEAD_FOLLOW_UP_OPTIONS = [
+  "Lite",
+  "S&G Link",
+  "Custom Quote & Link",
+] as const;
+const TIMING_LABELS = [
+  "Immediately",
+  "Next Day",
+  "48 Hours Later",
+  "72 Hours Later",
+  "One Week from Now",
+] as const;
+const TIMING_CUSTOM_VALUES = [
+  "Immediately",
+  "Next Day",
+  "48 Hours Later",
+  "72 Hours Later",
+  "One Week from Now",
+] as const;
 
 const FOLLOWUP_CUSTOM_VALUES: Record<number, "0" | "1" | "2" | "3"> = {
   0: "0",
@@ -66,7 +82,13 @@ function timingCustomValueToIndex(value: string): number {
     "one week": 4,
   };
 
-  return lookup[normalized] ?? TIMING_CUSTOM_VALUES.findIndex((label) => normalizeTimingValue(label) === normalized) ?? 0;
+  return (
+    lookup[normalized] ??
+    TIMING_CUSTOM_VALUES.findIndex(
+      label => normalizeTimingValue(label) === normalized
+    ) ??
+    0
+  );
 }
 
 // ─── Timeline Data ───────────────────────────────────────────────────
@@ -93,8 +115,14 @@ const SECOND_ROW = TIMELINE_STEPS.slice(6);
 // ─── Main RequestScheduling Page ─────────────────────────────────────
 
 export default function RequestScheduling() {
-  const { locationId, leadFollowUpOption, initialRequestScheduling, followUpLimit } = useLocationAndParams();
-  const [selectedOption, setSelectedOption] = useState<(typeof LEAD_FOLLOW_UP_OPTIONS)[number]>("Lite");
+  const {
+    locationId,
+    leadFollowUpOption,
+    initialRequestScheduling,
+    followUpLimit,
+  } = useLocationAndParams();
+  const [selectedOption, setSelectedOption] =
+    useState<(typeof LEAD_FOLLOW_UP_OPTIONS)[number]>("Lite");
   const [initialTiming, setInitialTiming] = useState(3);
   const [followUpCount, setFollowUpCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
@@ -102,22 +130,36 @@ export default function RequestScheduling() {
   const [sgLinkPopupOpen, setSgLinkPopupOpen] = useState(false);
 
   // Query saved location-level custom values from GHL
-  const locationSettingsQuery = trpc.requestScheduling.getLocationSettings.useQuery(
-    { locationId },
-    { enabled: !!locationId }
-  );
+  const locationSettingsQuery =
+    trpc.requestScheduling.getLocationSettings.useQuery(
+      { locationId },
+      { enabled: !!locationId }
+    );
 
-  const saveCustomValuesMutation = trpc.requestScheduling.saveCustomValuesSettings.useMutation();
+  const saveCustomValuesMutation =
+    trpc.requestScheduling.saveCustomValuesSettings.useMutation();
 
   const showToast = useCallback((message: string, isError = false) => {
-    toast(message, { style: isError ? { background: "var(--destructive)", color: "var(--destructive-foreground)" } : undefined });
+    toast(message, {
+      style: isError
+        ? {
+            background: "var(--destructive)",
+            color: "var(--destructive-foreground)",
+          }
+        : undefined,
+    });
   }, []);
 
   // Update state when URL params or fetched location settings change
   useEffect(() => {
     // Priority 1: URL query params (if provided)
-    if (leadFollowUpOption && LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as any)) {
-      setSelectedOption(leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]);
+    if (
+      leadFollowUpOption &&
+      LEAD_FOLLOW_UP_OPTIONS.includes(leadFollowUpOption as any)
+    ) {
+      setSelectedOption(
+        leadFollowUpOption as (typeof LEAD_FOLLOW_UP_OPTIONS)[number]
+      );
     } else if (locationSettingsQuery.data?.leadFollowUpOption) {
       setSelectedOption(locationSettingsQuery.data.leadFollowUpOption);
     }
@@ -125,7 +167,11 @@ export default function RequestScheduling() {
     if (initialRequestScheduling) {
       setInitialTiming(timingCustomValueToIndex(initialRequestScheduling));
     } else if (locationSettingsQuery.data?.initialRequestScheduling) {
-      setInitialTiming(timingCustomValueToIndex(locationSettingsQuery.data.initialRequestScheduling));
+      setInitialTiming(
+        timingCustomValueToIndex(
+          locationSettingsQuery.data.initialRequestScheduling
+        )
+      );
     }
 
     if (followUpLimit) {
@@ -135,7 +181,12 @@ export default function RequestScheduling() {
       const val = parseInt(locationSettingsQuery.data.followUpLimit, 10);
       if (!isNaN(val) && val >= 0 && val <= 3) setFollowUpCount(val);
     }
-  }, [leadFollowUpOption, initialRequestScheduling, followUpLimit, locationSettingsQuery.data]);
+  }, [
+    leadFollowUpOption,
+    initialRequestScheduling,
+    followUpLimit,
+    locationSettingsQuery.data,
+  ]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -184,9 +235,15 @@ export default function RequestScheduling() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <Link2 className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Request Scheduling</h1>
+          <h1 className="text-xl font-semibold text-foreground">
+            Request Scheduling
+          </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Add this page as a GHL custom menu link with the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/request-scheduling?locationId=YOUR_LOCATION_ID</code> URL.
+            Add this page as a GHL custom menu link with the{" "}
+            <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">
+              /request-scheduling?locationId=YOUR_LOCATION_ID
+            </code>{" "}
+            URL.
           </p>
         </div>
       </div>
@@ -195,7 +252,7 @@ export default function RequestScheduling() {
 
   // Example images map for each campaign option
   const exampleImages: Record<string, string> = {
-    "Lite": EXAMPLE_EMAIL,
+    Lite: EXAMPLE_EMAIL,
     "S&G Link": EXAMPLE_SG_ONBOARDING,
     "Custom Quote & Link": EXAMPLE_CUSTOM_QUOTE,
   };
@@ -208,9 +265,13 @@ export default function RequestScheduling() {
             <p className="rs-page-label">Lead Follow-Up Options</p>
             <h1 className="rs-page-title">How it works</h1>
             <div className="rs-page-copy">
-              <p className="rs-how-step">1. Add Contacts manually or via Facebook form.</p>
+              <p className="rs-how-step">
+                1. Add Contacts manually or via Facebook form.
+              </p>
               <p className="rs-how-step">2. We reach out with a message.</p>
-              <p className="rs-how-step">3. They approve a quote and you schedule a scope.</p>
+              <p className="rs-how-step">
+                3. They approve a quote and you schedule a scope.
+              </p>
             </div>
           </div>
           <div className="rs-page-icon">
@@ -247,21 +308,23 @@ export default function RequestScheduling() {
                       </div>
                     )}
                     <div className="rs-option-card-header">
-                      <span className="rs-option-name">{option.toUpperCase()}</span>
+                      <span className="rs-option-name">
+                        {option.toUpperCase()}
+                      </span>
                     </div>
                     <p className="rs-option-text">
                       {option === "Lite"
                         ? "Lite includes simple text and email follow-up for new leads so you stay connected without extra work. When someone reaches out, automatic messages help build trust, answer questions, and keep your business top of mind."
                         : option === "Custom Quote & Link"
-                        ? "Custom Quote & Link lets you send a personalized quote with a scheduling link. Customers receive your custom quote, click the link to approve services, and schedule themselves — combining personalization with self-service convenience."
-                        : "Leads in the Sweep & Go Link campaign are automatically added to a text and email follow-up sequence with a self-onboarding link. Customers can simply click the link to view pricing, approve services, and schedule themselves, eliminating 90% of the back and forth."}
+                          ? "Custom Quote & Link lets you send a personalized quote with a scheduling link. Customers receive your custom quote, click the link to approve services, and schedule themselves — combining personalization with self-service convenience."
+                          : "Leads in the Sweep & Go Link campaign are automatically added to a text and email follow-up sequence with a self-onboarding link. Customers can simply click the link to view pricing, approve services, and schedule themselves, eliminating 90% of the back and forth."}
                     </p>
                     <p className="rs-option-text">
                       {option === "Lite"
                         ? "If you'd rather get distracted, or choose someone else, your phone number and email are included so customers feel comfortable reaching out when they are ready."
                         : option === "Custom Quote & Link"
-                        ? "Send custom quotes, keep your business top of mind, and let customers approve and schedule on their own time. No back-and-forth needed."
-                        : "Automate follow-up, keep your business top of mind, build trust over time, and help more leads sign up before they forget, get busy, or choose someone else."}
+                          ? "Send custom quotes, keep your business top of mind, and let customers approve and schedule on their own time. No back-and-forth needed."
+                          : "Automate follow-up, keep your business top of mind, build trust over time, and help more leads sign up before they forget, get busy, or choose someone else."}
                     </p>
                     <div className="rs-example-box">
                       <div className="rs-example-label">Example</div>
@@ -286,7 +349,7 @@ export default function RequestScheduling() {
                         name="leadFollowUp"
                         checked={selectedOption === option}
                         onChange={() => setSelectedOption(option)}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
                         style={{
                           width: "22px",
                           height: "22px",
@@ -305,9 +368,14 @@ export default function RequestScheduling() {
           <div className="rs-section-heading">
             <div>
               <h2 className="rs-title">Initial Outreach Scheduling</h2>
-              <p className="rs-subtitle">Choose when you want to start your initial outreach for Lead Follow-Ups.</p>
+              <p className="rs-subtitle">
+                Choose when you want to start your initial outreach for Lead
+                Follow-Ups.
+              </p>
             </div>
-            <span className="rs-current-selection">{TIMING_LABELS[initialTiming]}</span>
+            <span className="rs-current-selection">
+              {TIMING_LABELS[initialTiming]}
+            </span>
           </div>
 
           <div className="rs-slider-panel">
@@ -317,13 +385,15 @@ export default function RequestScheduling() {
               max={TIMING_LABELS.length - 1}
               step={1}
               value={initialTiming}
-              onChange={(event) => setInitialTiming(Number.parseInt(event.target.value, 10))}
+              onChange={event =>
+                setInitialTiming(Number.parseInt(event.target.value, 10))
+              }
               style={{ background: sliderBackground(initialTiming) }}
               className="rs-slider"
               aria-label="Initial outreach timing"
             />
             <div className="rs-slider-labels rs-slider-labels-wide">
-              {TIMING_LABELS.map((label) => (
+              {TIMING_LABELS.map(label => (
                 <span key={label}>{label}</span>
               ))}
             </div>
@@ -338,8 +408,20 @@ export default function RequestScheduling() {
               <span className="rs-info-title">Important Notes</span>
             </div>
             <ul className="rs-info-list">
-              <li><strong>8:00 AM – 9:00 PM (Local Time)</strong><br /><em>Please reach out to customer support if you need to reschedule outside this outreach window.</em></li>
-              <li><strong>Texts are sent at a controlled rate, ensuring reliable delivery.</strong></li>
+              <li>
+                <strong>8:00 AM – 9:00 PM (Local Time)</strong>
+                <br />
+                <em>
+                  Please reach out to customer support if you need to reschedule
+                  outside this outreach window.
+                </em>
+              </li>
+              <li>
+                <strong>
+                  Texts are sent at a controlled rate, ensuring reliable
+                  delivery.
+                </strong>
+              </li>
             </ul>
           </div>
         </section>
@@ -357,9 +439,26 @@ export default function RequestScheduling() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < FIRST_ROW.length - 1 && (
-                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    <svg
+                      className="rs-dashed-arrow"
+                      viewBox="0 0 200 30"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="0"
+                        y1="15"
+                        x2="160"
+                        y2="15"
+                        stroke="#2563eb"
+                        strokeWidth="4"
+                        strokeDasharray="16 8"
+                        opacity="0.4"
+                      />
+                      <polygon
+                        points="170,8 195,15 170,22"
+                        fill="#2563eb"
+                        opacity="0.4"
+                      />
                     </svg>
                   )}
                 </div>
@@ -375,9 +474,26 @@ export default function RequestScheduling() {
                     <span className="rs-timeline-step-label">{step.label}</span>
                   </div>
                   {idx < SECOND_ROW.length - 1 && (
-                    <svg className="rs-dashed-arrow" viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="0" y1="15" x2="160" y2="15" stroke="#2563eb" strokeWidth="4" strokeDasharray="16 8" opacity="0.4" />
-                      <polygon points="170,8 195,15 170,22" fill="#2563eb" opacity="0.4" />
+                    <svg
+                      className="rs-dashed-arrow"
+                      viewBox="0 0 200 30"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="0"
+                        y1="15"
+                        x2="160"
+                        y2="15"
+                        stroke="#2563eb"
+                        strokeWidth="4"
+                        strokeDasharray="16 8"
+                        opacity="0.4"
+                      />
+                      <polygon
+                        points="170,8 195,15 170,22"
+                        fill="#2563eb"
+                        opacity="0.4"
+                      />
                     </svg>
                   )}
                 </div>
@@ -390,8 +506,10 @@ export default function RequestScheduling() {
         <section className="rs-card rs-templates-section">
           <div className="rs-templates-content">
             <p className="rs-templates-text">
-              Would you like to view your workflow templates?<br />
-              You will be redirected to a new page. Please save any changes on this page before continuing.
+              Would you like to view your workflow templates?
+              <br />
+              You will be redirected to a new page. Please save any changes on
+              this page before continuing.
             </p>
             <div className="rs-templates-buttons">
               <button
@@ -413,7 +531,12 @@ export default function RequestScheduling() {
         </section>
 
         <div className="rs-save-bar">
-          <button type="button" className="rs-save-btn" onClick={handleSave} disabled={isSaving}>
+          <button
+            type="button"
+            className="rs-save-btn"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
             {isSaving ? "Saving..." : "Save settings"}
           </button>
         </div>
