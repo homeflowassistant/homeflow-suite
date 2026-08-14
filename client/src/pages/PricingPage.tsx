@@ -292,6 +292,10 @@ export default function PricingPage() {
               <h2 className="pricing-section-title required">
                 Initial Service Pricing
               </h2>
+              <p className="pricing-section-instruction">
+                If this service is provided, replace the X's with your service
+                pricing. Please contact support if you need assistance.
+              </p>
               <div className="pricing-grid-3">
                 {dogBoxes.map(dog => (
                   <div className="pricing-dog-block" key={`init-${dog}`}>
@@ -323,6 +327,10 @@ export default function PricingPage() {
               <h2 className="pricing-section-title required">
                 One-Time Service Pricing
               </h2>
+              <p className="pricing-section-instruction">
+                If this service is provided, replace the X's with your service
+                pricing. Please contact support if you need assistance.
+              </p>
               <div className="pricing-grid-3">
                 {dogBoxes.map(dog => (
                   <div className="pricing-dog-block" key={`ot-${dog}`}>
@@ -356,6 +364,11 @@ export default function PricingPage() {
                   <h2 className="pricing-section-title required">
                     Recurring Service Pricing: Regular Zip Codes
                   </h2>
+                  <p className="pricing-section-instruction">
+                    If this service is provided, replace the X's with your
+                    service pricing. Please contact support if you need
+                    assistance.
+                  </p>
                   <input
                     type="text"
                     className="pricing-zip-input"
@@ -371,6 +384,11 @@ export default function PricingPage() {
                   <h2 className="pricing-section-title">
                     Recurring Service Pricing: Premium Zip Codes
                   </h2>
+                  <p className="pricing-section-instruction">
+                    If this service is provided, replace the X's with your
+                    service pricing. Please contact support if you need
+                    assistance.
+                  </p>
                   <input
                     type="text"
                     className="pricing-zip-input"
@@ -392,6 +410,10 @@ export default function PricingPage() {
               <h2 className="pricing-section-title required">
                 Recurring Service Pricing: Regular Zip Codes
               </h2>
+              <p className="pricing-section-instruction">
+                If this service is provided, replace the X's with your service
+                pricing. Please contact support if you need assistance.
+              </p>
               <div className="pricing-grid-3">
                 {regularRecurringPricing.map((reg, rowIndex) => {
                   if (!reg) return null;
@@ -425,6 +447,10 @@ export default function PricingPage() {
               <h2 className="pricing-section-title">
                 Recurring Service Pricing: Premium Zip Codes
               </h2>
+              <p className="pricing-section-instruction">
+                If this service is provided, replace the X's with your service
+                pricing. Please contact support if you need assistance.
+              </p>
               <div className="pricing-grid-3">
                 {premiumRecurringPricing.map((prem, rowIndex) => {
                   if (!prem) return null;

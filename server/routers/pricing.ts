@@ -63,9 +63,11 @@ interface RecurringEntry {
 
 const DOG_COUNTS = [1, 2, 3, 4, 5, 6];
 
-// ─── Instruction copy shown in every field default ─────────────────────
-// Client instruction (verbatim from the client's request).
-const FIELD_INSTRUCTION =
+// ─── Instruction copy shown as a subheading under each section ────────
+// Client instruction (verbatim from the client's request). It is rendered
+// by the UI as a section subheading — it is intentionally NOT part of any
+// field's default value.
+export const FIELD_INSTRUCTION =
   "If this service is provided, replace the X's with your service pricing.  Please contact support if you need assistance.";
 
 // ─── Default values (shown when GHL returns nothing) ──────────────────
@@ -75,14 +77,16 @@ const FIELD_INSTRUCTION =
 function makeInitialDefault(dogs: number): FaqEntry {
   return {
     dogLabel: dogs === 6 ? "6+ Dogs" : `${dogs} Dog${dogs > 1 ? "s" : ""}`,
-    value: `${FIELD_INSTRUCTION}\nInitial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.`,
+    value:
+      "Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
   };
 }
 
 function makeOneTimeDefault(dogs: number): FaqEntry {
   return {
     dogLabel: `${dogs} Dog${dogs > 1 ? "s" : ""}`,
-    value: `${FIELD_INSTRUCTION}\nOne-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each.`,
+    value:
+      "One-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each.",
   };
 }
 
@@ -113,8 +117,47 @@ function buildDefaults() {
     regularRecurringPricing: DOG_COUNTS.map(makeRecurringDefault),
     premiumZipCodes: "",
     premiumRecurringPricing: DOG_COUNTS.map(makeRecurringDefault),
-    crossSells: `${FIELD_INSTRUCTION}\nAdd-on name: $XX per visit`,
+    crossSells: "Add-on name: $XX per visit",
   };
+}
+
+// ─── Single-line \n-escaped storage (GHL custom values) ──────────────
+// GHL stores custom values as a single line. Real line breaks must be
+// written as the two-character escape sequence "\n" (backslash + n) so
+// that n8n's JSON parsing renders them as real breaks in the payload.
+//
+// Encode (save): "Line 1\nLine 2" -> "Line 1\\nLine 2"
+// Decode (load): "Line 1\\nLine 2" -> "Line 1\nLine 2"
+// Backward compatible: values already containing "\\n" are left intact,
+// and values stored with real newlines (legacy saves) are converted to
+// the escaped form so round-trips stay consistent.
+
+/** Encode a multi-line value into a single line with literal \n breaks. */
+export function singleLineEncode(text: string): string {
+  if (!text) return "";
+  // Guard against double-encoding: if the text already contains the
+  // literal two-character "\n" pair, it has been encoded before.
+  const alreadyEncoded = /\\n/.test(text);
+  const realNewlines = /\n/.test(text);
+  if (alreadyEncoded && realNewlines) {
+    // Mixed case (rare): keep the literal "\n" pairs and only escape the
+    // remaining real newlines.
+    return text
+      .split("\n")
+      .map(line => line.replace(/\\n/g, "\\n"))
+      .join("\\n");
+  }
+  if (alreadyEncoded) return text;
+  return text.replace(/\n/g, "\\n");
+}
+
+/** Decode a single-line value with literal \n breaks into real newlines. */
+export function singleLineDecode(text: string): string {
+  if (!text) return "";
+  // Decode the literal "\n" pairs into real newlines. This is the reverse
+  // of singleLineEncode and works regardless of how the value was stored
+  // (escaped or legacy multi-line).
+  return text.replace(/\\n/g, "\n");
 }
 
 // ─── Composed block templates (n8n FAQ_PriceList / FAQ_OneTimeQuotes) ──
@@ -485,9 +528,17 @@ export const pricingRouter = router({
 
         const defaults = buildDefaults();
 
-        if (rawInitialAndRecurring) {
+        // Decode single-line "\n"-escaped storage into real newlines
+        // before parsing. Legacy multi-line values pass through unchanged.
+        const decodedInitial = singleLineDecode(rawInitialAndRecurring);
+        const decodedOneTime = singleLineDecode(rawOneTime);
+        const decodedAddOns = rawAddOns
+          ? singleLineDecode(rawAddOns)
+          : rawAddOns;
+
+        if (decodedInitial) {
           // Parse composed FAQ_PriceList-style block back into fields.
-          const sections = rawInitialAndRecurring.split(/\n+/);
+          const sections = decodedInitial.split(/\n+/);
 
           const readInitialSection = (dogs: number): string | undefined => {
             const label = `${dogs} Dog${dogs > 1 ? "s" : ""}`;
@@ -576,7 +627,7 @@ export const pricingRouter = router({
           return {
             initialPricing,
             oneTimePricing: parseOneTimeEntries(
-              rawOneTime,
+              decodedOneTime,
               defaults.oneTimePricing
             ),
             regularZipCodes,
@@ -584,7 +635,9 @@ export const pricingRouter = router({
             premiumZipCodes,
             premiumRecurringPricing: readRecurringBlocks("Premium"),
             crossSells:
-              rawAddOns !== undefined ? rawAddOns : defaults.crossSells,
+              decodedAddOns !== undefined && decodedAddOns !== ""
+                ? decodedAddOns
+                : defaults.crossSells,
           };
         }
 
@@ -592,7 +645,7 @@ export const pricingRouter = router({
         // (rawOneTime may exist as the primary key even without the
         // initial-and-recurring block)
         const oneTimePricingRaw =
-          rawOneTime ||
+          decodedOneTime ||
           // Legacy fallback (one-time legacy key)
           getValueForKeys([
             PRICING_KEYS.legacyFaqOneTimeQuotes,
@@ -692,9 +745,11 @@ export const pricingRouter = router({
             true
           ),
           crossSells:
-            rawAddOns !== undefined && rawAddOns !== ""
-              ? rawAddOns
-              : (legacyCrossSells ?? defaults.crossSells),
+            decodedAddOns !== undefined && decodedAddOns !== ""
+              ? decodedAddOns
+              : legacyCrossSells
+                ? singleLineDecode(legacyCrossSells)
+                : defaults.crossSells,
         };
       } catch (err) {
         console.warn(
@@ -817,6 +872,12 @@ export const pricingRouter = router({
           premiumRecurringPricing: input.premiumRecurringPricing,
         });
         const oneTimeText = composeOneTime(input.oneTimePricing);
+        const addOnsText = input.crossSells.trim();
+
+        // ── Encode to single-line "\n"-escaped form for GHL storage ──
+        const encodedInitial = singleLineEncode(initialAndRecurringText);
+        const encodedOneTime = singleLineEncode(oneTimeText);
+        const encodedAddOns = singleLineEncode(addOnsText);
 
         // ── Payload: primary key + display-name aliases ──────────────
         // Mirrors the alertsNotifications save flow: write under the
@@ -825,13 +886,13 @@ export const pricingRouter = router({
         // are updated. updateExistingCustomValuesOnly only touches
         // custom values that already exist — it never creates fields.
         const customValuePayload: Record<string, string> = {
-          [PRICING_KEYS.initialAndRecurring]: initialAndRecurringText,
-          [PRICING_KEYS.onetime]: oneTimeText,
-          [PRICING_KEYS.addOns]: input.crossSells.trim(),
+          [PRICING_KEYS.initialAndRecurring]: encodedInitial,
+          [PRICING_KEYS.onetime]: encodedOneTime,
+          [PRICING_KEYS.addOns]: encodedAddOns,
           // Display-name aliases for dual-write coverage
-          "Initial And Recurring Pricing": initialAndRecurringText,
-          "OneTime Pricing": oneTimeText,
-          "Add On Pricing": input.crossSells.trim(),
+          "Initial And Recurring Pricing": encodedInitial,
+          "OneTime Pricing": encodedOneTime,
+          "Add On Pricing": encodedAddOns,
         };
 
         // Step 1: Update existing custom values only (never creates).
@@ -839,9 +900,9 @@ export const pricingRouter = router({
 
         // Step 2: Re-attempt primary keys for full sub-account coverage.
         const primaryEntries: [string, string][] = [
-          [PRICING_KEYS.initialAndRecurring, initialAndRecurringText],
-          [PRICING_KEYS.onetime, oneTimeText],
-          [PRICING_KEYS.addOns, input.crossSells.trim()],
+          [PRICING_KEYS.initialAndRecurring, encodedInitial],
+          [PRICING_KEYS.onetime, encodedOneTime],
+          [PRICING_KEYS.addOns, encodedAddOns],
         ];
 
         for (const [key, val] of primaryEntries) {

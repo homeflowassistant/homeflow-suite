@@ -101,6 +101,15 @@
   color: #17204a;
 }
 
+/* ── Per-section instruction subheading ────────────────────────────── */
+
+.pricing-section-instruction {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
 /* ── Cards ─────────────────────────────────────────────────────────── */
 
 .pricing-card {
