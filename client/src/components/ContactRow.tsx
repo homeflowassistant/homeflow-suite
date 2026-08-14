@@ -10,13 +10,19 @@ interface ContactRowProps {
   onFullRefresh: () => void;
 }
 
+function capitalizeName(name: string): string {
+  return name.replace(/\S+/g, word =>
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  );
+}
+
 function formatDisplayName(contact: ContactWithStatus): string {
   const first = contact.firstName?.trim();
   const last = contact.lastName?.trim();
-  if (first && last) return `${first} ${last}`;
-  if (first) return first;
-  if (last) return last;
-  return contact.name || "Unknown";
+  if (first && last) return capitalizeName(`${first} ${last}`);
+  if (first) return capitalizeName(first);
+  if (last) return capitalizeName(last);
+  return contact.name ? capitalizeName(contact.name) : "Unknown";
 }
 
 function formatDate(dateStr: string | null): string {
