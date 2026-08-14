@@ -40,7 +40,6 @@ interface QuoteOffer {
 
 interface QuoteFormData {
   companyLogo: string | null;
-  companyName: string;
   teamPhoto: string | null;
   bioTitle: string;
   bioDescription: string;
@@ -92,7 +91,6 @@ const DEFAULT_DOG_PHOTO = "/dog-photo.webp";
 
 const DEFAULT_FORM: QuoteFormData = {
   companyLogo: DEFAULT_SCOOPING_LOGO,
-  companyName: "[company name]",
   teamPhoto: DEFAULT_DOG_PHOTO,
   bioTitle: "[service area]'s Highest Rated Pooper Scooper Service",
   bioDescription:
@@ -831,23 +829,6 @@ function QuoteFormFields({
         />
       </div>
 
-      {/* ── Company Name Field (defaults to GHL company_name custom value) ── */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[11px] text-slate-500 font-medium">
-            Company Name
-          </label>
-        </div>
-        <Input
-          value={formData.companyName}
-          onChange={e =>
-            setFormData({ ...formData, companyName: e.target.value })
-          }
-          className="mt-1 text-xs h-8"
-          placeholder="[company name]"
-        />
-      </div>
-
       {/* ── Quote Title Field ── */}
       <div className="px-2">
         <div className="flex items-center justify-between mb-1">
@@ -1284,7 +1265,6 @@ export default function CustomQuoteLinkPopup({
     // fall back to the existing/default value when the GHL value is
     // empty or unavailable.
     setFormData(prev => ({
-      companyName: ghl.companyName || prev.companyName || DEFAULT_FORM.companyName,
       companyLogo: ghl.companyLogo || prev.companyLogo,
       teamPhoto: ghl.companyImage || prev.teamPhoto,
       bioTitle: ghl.quoteTitle || prev.bioTitle,
