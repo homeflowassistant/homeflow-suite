@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, Sparkles, X, Star } from "lucide-react";
+import { Link2, Clock3, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -125,7 +125,6 @@ export default function RequestScheduling() {
     useState<(typeof LEAD_FOLLOW_UP_OPTIONS)[number]>("Lite");
   const [initialTiming, setInitialTiming] = useState(3);
   const [followUpCount, setFollowUpCount] = useState(3);
-  const [isSaving, setIsSaving] = useState(false);
   const [quotePopupOpen, setQuotePopupOpen] = useState(false);
   const [sgLinkPopupOpen, setSgLinkPopupOpen] = useState(false);
 
@@ -136,8 +135,29 @@ export default function RequestScheduling() {
       { enabled: !!locationId }
     );
 
-  const saveCustomValuesMutation =
-    trpc.requestScheduling.saveCustomValuesSettings.useMutation();
+
+  // Auto-save mutation: persists ONLY the Lead Follow-Up option to the GHL
+  // subaccount's `lead_followup_options` custom value immediately whenever
+  // the user selects or changes an option — no manual Save button needed.
+  const autoSaveLeadOptionMutation =
+    trpc.requestScheduling.saveLeadFollowUpOption.useMutation({
+      onSuccess: () => {
+        showToast("Lead Follow-Up option saved.");
+        // Re-fetch the subaccount's custom values so the UI always reflects
+        // the value currently stored in GHL.
+        locationSettingsQuery.refetch();
+      },
+      onError: error => {
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+        showToast(`Error saving Lead Follow-Up option: ${errorMsg}`, true);
+        // Restore the previously saved option from GHL so the UI stays in
+        // sync with the subaccount when a save fails.
+        if (locationSettingsQuery.data?.leadFollowUpOption) {
+          setSelectedOption(locationSettingsQuery.data.leadFollowUpOption);
+        }
+      },
+    });
 
   const showToast = useCallback((message: string, isError = false) => {
     toast(message, {
@@ -150,7 +170,13 @@ export default function RequestScheduling() {
     });
   }, []);
 
-  // Update state when URL params or fetched location settings change
+  // Update state when URL params or fetched location settings change.
+  // Load behavior on page open:
+  //   1. URL query params take priority when provided.
+  //   2. Otherwise the subaccount's `lead_followup_options` custom value
+  //      fetched from GHL (via getLocationSettings) determines the option
+  //      displayed, so the UI always reflects the value stored in the
+  //      subaccount.
   useEffect(() => {
     // Priority 1: URL query params (if provided)
     if (
@@ -188,23 +214,34 @@ export default function RequestScheduling() {
     locationSettingsQuery.data,
   ]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveCustomValuesMutation.mutateAsync({
-        locationId,
-        leadFollowUpOption: selectedOption,
-        initialRequestScheduling: TIMING_LABELS[initialTiming],
-        followUpLimit: FOLLOWUP_CUSTOM_VALUES[followUpCount],
-      });
-      showToast("Settings saved successfully.");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      showToast(`Error saving settings: ${errorMsg}`, true);
-    } finally {
-      setIsSaving(false);
+  // Auto-save: persist the Lead Follow-Up option to the GHL subaccount's
+  // `lead_followup_options` custom value immediately whenever the user
+  // selects or changes an option. Skips no-op updates and saves only after
+  // GHL has finished loading so a fetch failure cannot overwrite the
+  // stored value with an uninitialized default.
+  useEffect(() => {
+    if (!locationId) return;
+    if (
+      locationSettingsQuery.data?.leadFollowUpOption === selectedOption &&
+      !autoSaveLeadOptionMutation.isPending &&
+      !autoSaveLeadOptionMutation.isError
+    ) {
+      return;
     }
-  };
+    // If the settings query is still loading, wait for it to resolve first
+    // so the initial page-open value takes precedence over the default.
+    if (locationSettingsQuery.isLoading) return;
+    // A failed GHL fetch would leave the query without data — in that case
+    // keep the default selection in the UI but do NOT auto-save, as the
+    // stored value could not be verified.
+    if (locationSettingsQuery.isError) return;
+
+    autoSaveLeadOptionMutation.mutate({
+      locationId,
+      leadFollowUpOption: selectedOption,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, locationId]);
 
   // Redirect handlers for Email / SMS template buttons
   const handleGoToEmailTemplates = () => {
@@ -288,6 +325,10 @@ export default function RequestScheduling() {
                   <button
                     type="button"
                     className={`rs-option-card ${isSelected ? "rs-option-selected" : ""}`}
+                    disabled={
+                      autoSaveLeadOptionMutation.isPending &&
+                      selectedOption !== option
+                    }
                     onClick={() => {
                       setSelectedOption(option);
                       // Open popup when Custom Quote & Link card is clicked
@@ -350,6 +391,10 @@ export default function RequestScheduling() {
                         checked={selectedOption === option}
                         onChange={() => setSelectedOption(option)}
                         onClick={e => e.stopPropagation()}
+                        disabled={
+                          autoSaveLeadOptionMutation.isPending &&
+                          selectedOption !== option
+                        }
                         style={{
                           width: "22px",
                           height: "22px",
@@ -508,8 +553,8 @@ export default function RequestScheduling() {
             <p className="rs-templates-text">
               Would you like to view your workflow templates?
               <br />
-              You will be redirected to a new page. Please save any changes on
-              this page before continuing.
+              You will be redirected to a new page. Any Lead Follow-Up option
+              you selected on this page is saved automatically.
             </p>
             <div className="rs-templates-buttons">
               <button
@@ -530,16 +575,6 @@ export default function RequestScheduling() {
           </div>
         </section>
 
-        <div className="rs-save-bar">
-          <button
-            type="button"
-            className="rs-save-btn"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save settings"}
-          </button>
-        </div>
       </div>
 
       {/* Custom Quote & Link Popup */}

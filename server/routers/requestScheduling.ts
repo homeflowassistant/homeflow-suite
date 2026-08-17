@@ -580,6 +580,55 @@ export const requestSchedulingRouter = router({
     }),
 
   saveSettings: saveSettingsProcedure,
+
+  /**
+   * Save ONLY the Lead Follow-Up option to the GHL subaccount's
+   * `lead_followup_options` custom value.
+   *
+   * Used by the Request Scheduling page for auto-save: whenever the user
+   * selects or changes an option under "Lead Follow-Up Options", the client
+   * calls this endpoint immediately — no separate Save button is needed.
+   * STRICT UPDATE ONLY: it updates the existing custom value in place and
+   * never creates a new one (same discipline as saveCustomValuesSettings).
+   */
+  saveLeadFollowUpOption: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        leadFollowUpOption: z.enum([
+          "Lite",
+          "S&G Link",
+          "Custom Quote & Link",
+        ] as const),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      if (!locationId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Location ID cannot be empty",
+        });
+      }
+
+      await updateExistingCustomValuesOnly(locationId, {
+        [CV.leadFollowupOptions]: input.leadFollowUpOption,
+      });
+
+      return {
+        success: true,
+        saved: {
+          lead_followup_options: input.leadFollowUpOption,
+        },
+        results: {
+          lead_followup_options: {
+            action: "created_or_updated",
+            id: "updated",
+          },
+        },
+      };
+    }),
+
   // Backwards-compatible alias used by the client bundle and older builds
   saveCustomValuesSettings: publicProcedure
     .input(
