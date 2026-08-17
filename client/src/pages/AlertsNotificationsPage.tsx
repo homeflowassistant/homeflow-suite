@@ -164,7 +164,6 @@ function ChatBubble({
   return (
     <div className="alerts-chat-bubble-wrapper relative" onClick={onStartEditing}>
       <div className="alerts-chat-bubble pr-10">
-        <span className="alerts-bubble-edit-hint">Click to edit</span>
         {value}
       </div>
       <button

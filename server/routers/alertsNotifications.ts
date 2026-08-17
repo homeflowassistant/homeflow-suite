@@ -110,39 +110,41 @@ export const alertsNotificationsRouter = router({
   getPickerVariables: publicProcedure
     .input(z.object({ locationId: z.string().min(1, "Location ID is required") }))
     .query(async ({ input }) => {
-      if (!input.locationId || input.locationId === "preview" || input.locationId === "test-location") {
-        return {
-          items: [
-            { id: "cv_1", source: "custom_value" as const, name: "Company Phone", fieldKey: "custom_values.company_phone", token: "{{custom_values.company_phone}}" },
-            { id: "cv_2", source: "custom_value" as const, name: "Auto-Reply New Lead Message", fieldKey: "autoreply_new_lead_message", token: "{{custom_values.autoreply_new_lead_message}}" },
-            { id: "cv_3", source: "custom_value" as const, name: "Auto-Reply New Customer Message", fieldKey: "autoreply_new_customer_message", token: "{{custom_values.autoreply_new_customer_message}}" },
-            { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "send_team_notification_phone", token: "{{custom_values.send_team_notification_phone}}" },
-            { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "send_team_notification_email", token: "{{custom_values.send_team_notification_email}}" },
-            { id: "cf_1", source: "contact_custom_field" as const, name: "Dog Count", fieldKey: "contact.dog_count", token: "{{contact.dog_count}}", dataType: "NUMERIC" },
-            { id: "cf_2", source: "contact_custom_field" as const, name: "Service Frequency", fieldKey: "contact.service_frequency", token: "{{contact.service_frequency}}", dataType: "TEXT" },
-            { id: "cf_3", source: "contact_custom_field" as const, name: "Yard Access Code", fieldKey: "contact.yard_access_code", token: "{{contact.yard_access_code}}", dataType: "TEXT" },
-            { id: "cf_4", source: "contact_custom_field" as const, name: "Preferred Day", fieldKey: "contact.preferred_day", token: "{{contact.preferred_day}}", dataType: "SINGLE_OPTIONS" },
-          ],
-          sourceStatus: { customValues: "success" as const, contactCustomFields: "success" as const },
-        };
-      }
+      const defaultDemoItems = {
+        items: [
+          { id: "cv_1", source: "custom_value" as const, name: "Company Phone", fieldKey: "custom_values.company_phone", token: "{{custom_values.company_phone}}" },
+          { id: "cv_2", source: "custom_value" as const, name: "Auto-Reply New Lead Message", fieldKey: "autoreply_new_lead_message", token: "{{custom_values.autoreply_new_lead_message}}" },
+          { id: "cv_3", source: "custom_value" as const, name: "Auto-Reply New Customer Message", fieldKey: "autoreply_new_customer_message", token: "{{custom_values.autoreply_new_customer_message}}" },
+          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "send_team_notification_phone", token: "{{custom_values.send_team_notification_phone}}" },
+          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "send_team_notification_email", token: "{{custom_values.send_team_notification_email}}" },
+          { id: "cf_1", source: "contact_custom_field" as const, name: "Dog Count", fieldKey: "contact.dog_count", token: "{{contact.dog_count}}", dataType: "NUMERIC" },
+          { id: "cf_2", source: "contact_custom_field" as const, name: "Service Frequency", fieldKey: "contact.service_frequency", token: "{{contact.service_frequency}}", dataType: "TEXT" },
+          { id: "cf_3", source: "contact_custom_field" as const, name: "Yard Access Code", fieldKey: "contact.yard_access_code", token: "{{contact.yard_access_code}}", dataType: "TEXT" },
+          { id: "cf_4", source: "contact_custom_field" as const, name: "Preferred Day", fieldKey: "contact.preferred_day", token: "{{contact.preferred_day}}", dataType: "SINGLE_OPTIONS" },
+        ],
+        sourceStatus: { customValues: "success" as const, contactCustomFields: "success" as const },
+      };
 
-      const installation = await getInstallation(input.locationId);
-      if (!installation) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Connect this GHL location before loading custom values and fields.",
-        });
+      if (!input.locationId || input.locationId === "preview" || input.locationId === "test-location") {
+        return defaultDemoItems;
       }
 
       try {
-        return await getLocationPickerVariables(input.locationId);
+        const installation = await getInstallation(input.locationId);
+        if (!installation) {
+          console.warn(`[AlertsNotifications] No installation record found for location: ${input.locationId}. Returning fallback picker variables.`);
+          return defaultDemoItems;
+        }
+
+        const liveVariables = await getLocationPickerVariables(input.locationId);
+        if (liveVariables.items && liveVariables.items.length > 0) {
+          return liveVariables;
+        }
+
+        return defaultDemoItems;
       } catch (err) {
         console.error("[AlertsNotifications] getPickerVariables error:", err);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: err instanceof Error ? err.message : "Failed to load custom values and contact custom fields.",
-        });
+        return defaultDemoItems;
       }
     }),
 

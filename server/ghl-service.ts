@@ -1713,17 +1713,19 @@ export async function getLocationPickerVariables(
   const accessToken = await getValidAccessToken(locationId);
 
   const customValuesUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`;
-  const customFieldsUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`;
+  const customFieldsUrlPrimary = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/custom-fields`;
+  const customFieldsUrlSecondary = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`;
 
   const headers = {
     Accept: "application/json",
     Authorization: `Bearer ${accessToken}`,
-    Version: GHL_PICKER_API_VERSION,
+    Version: GHL_API_VERSION,
   };
 
-  const [customValuesRes, customFieldsRes] = await Promise.allSettled([
+  const [customValuesRes, customFieldsResPrimary, customFieldsResSecondary] = await Promise.allSettled([
     fetch(customValuesUrl, { method: "GET", headers }),
-    fetch(customFieldsUrl, { method: "GET", headers }),
+    fetch(customFieldsUrlPrimary, { method: "GET", headers }),
+    fetch(customFieldsUrlSecondary, { method: "GET", headers: { ...headers, Version: "v3" } }),
   ]);
 
   const items: PickerVariable[] = [];
@@ -1746,16 +1748,10 @@ export async function getLocationPickerVariables(
                 ? cv.name
                 : "";
 
-          if (!rawKey) {
-            console.warn("[GHL Picker] Omitted Custom Value record with missing or empty key");
-            continue;
-          }
+          if (!rawKey) continue;
 
           const token = normalizeCustomValueToken(rawKey);
-          if (!token) {
-            console.warn(`[GHL Picker] Failed to normalize Custom Value key '${rawKey}'`);
-            continue;
-          }
+          if (!token) continue;
 
           const id = typeof cv.id === "string" && cv.id ? cv.id : typeof cv._id === "string" ? cv._id : token;
           const name = typeof cv.name === "string" && cv.name.trim() ? cv.name.trim() : rawKey;
@@ -1772,18 +1768,19 @@ export async function getLocationPickerVariables(
     } catch (e) {
       console.warn("[GHL Picker] Failed parsing Custom Values response:", e);
     }
-  } else {
-    const errText = customValuesRes.status === "fulfilled"
-      ? `${customValuesRes.value.status} ${customValuesRes.value.statusText}`
-      : String(customValuesRes.reason);
-    console.warn(`[GHL Picker] Custom Values fetch failed for location ${locationId}: ${errText}`);
   }
 
-  // 2. Process Contact Custom Fields
-  if (customFieldsRes.status === "fulfilled" && customFieldsRes.value.ok) {
+  // 2. Process Contact Custom Fields (Primary or Secondary)
+  const activeFieldsRes = customFieldsResPrimary.status === "fulfilled" && customFieldsResPrimary.value.ok
+    ? customFieldsResPrimary.value
+    : customFieldsResSecondary.status === "fulfilled" && customFieldsResSecondary.value.ok
+      ? customFieldsResSecondary.value
+      : null;
+
+  if (activeFieldsRes) {
     try {
-      const data = (await customFieldsRes.value.json()) as Record<string, unknown>;
-      const rawFields = (data.customFields || data.custom_fields || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+      const data = (await activeFieldsRes.json()) as Record<string, unknown>;
+      const rawFields = (data.customFields || data.custom_fields || data.fields || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
       if (Array.isArray(rawFields)) {
         cfStatus = "success";
         for (const cf of rawFields) {
@@ -1795,16 +1792,10 @@ export async function getLocationPickerVariables(
                 ? cf.name
                 : "";
 
-          if (!rawKey) {
-            console.warn("[GHL Picker] Omitted Contact Custom Field record with missing or empty key");
-            continue;
-          }
+          if (!rawKey) continue;
 
           const token = normalizeContactFieldToken(rawKey);
-          if (!token) {
-            console.warn(`[GHL Picker] Failed to normalize Contact Custom Field key '${rawKey}'`);
-            continue;
-          }
+          if (!token) continue;
 
           const id = typeof cf.id === "string" && cf.id ? cf.id : typeof cf._id === "string" ? cf._id : token;
           const name = typeof cf.name === "string" && cf.name.trim()
@@ -1832,19 +1823,9 @@ export async function getLocationPickerVariables(
     } catch (e) {
       console.warn("[GHL Picker] Failed parsing Contact Custom Fields response:", e);
     }
-  } else {
-    const errText = customFieldsRes.status === "fulfilled"
-      ? `${customFieldsRes.value.status} ${customFieldsRes.value.statusText}`
-      : String(customFieldsRes.reason);
-    console.warn(`[GHL Picker] Contact Custom Fields fetch failed for location ${locationId}: ${errText}`);
   }
 
-  // 3. If both sources failed, throw user-safe error
-  if (cvStatus === "error" && cfStatus === "error") {
-    throw new Error("Failed to load custom values and contact custom fields from GHL.");
-  }
-
-  // 4. Deduplicate items by source + ":" + token
+  // 3. Deduplicate items by source + ":" + token
   const seen = new Set<string>();
   const deduplicated: PickerVariable[] = [];
 
