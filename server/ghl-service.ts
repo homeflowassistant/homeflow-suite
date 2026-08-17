@@ -1625,3 +1625,250 @@ export async function processContact(
 
   return { contactId, enrolledInWorkflow };
 }
+
+// ─── GHL Custom Variable & Field Picker Metadata ─────────────────────
+
+const GHL_PICKER_API_VERSION = "v3";
+
+export type PickerVariable = {
+  id: string;
+  source: "custom_value" | "contact_custom_field";
+  name: string;
+  fieldKey: string;
+  token: string;
+  dataType?: string;
+};
+
+export type PickerVariablesResult = {
+  items: PickerVariable[];
+  sourceStatus: {
+    customValues: "success" | "error";
+    contactCustomFields: "success" | "error";
+  };
+};
+
+/**
+ * Normalizes a raw Custom Value fieldKey into standard GHL merge-token format.
+ * Examples:
+ * - "{{custom_values.office_phone}}" -> "{{custom_values.office_phone}}"
+ * - "custom_values.office_phone"     -> "{{custom_values.office_phone}}"
+ * - "office_phone"                   -> "{{custom_values.office_phone}}"
+ */
+export function normalizeCustomValueToken(rawKey: string): string | null {
+  if (!rawKey || typeof rawKey !== "string" || !rawKey.trim()) {
+    return null;
+  }
+
+  let cleaned = rawKey.trim();
+  if (cleaned.startsWith("{{") && cleaned.endsWith("}}")) {
+    cleaned = cleaned.slice(2, -2).trim();
+  }
+
+  if (cleaned.startsWith("custom_values.")) {
+    const keyPart = cleaned.slice("custom_values.".length).trim();
+    if (!keyPart) return null;
+    return `{{custom_values.${keyPart}}}`;
+  }
+
+  if (!cleaned) return null;
+  return `{{custom_values.${cleaned}}}`;
+}
+
+/**
+ * Normalizes a raw Contact Custom Field fieldKey into standard GHL merge-token format.
+ * Examples:
+ * - "contact.dog_count"     -> "{{contact.dog_count}}"
+ * - "dog_count"             -> "{{contact.dog_count}}"
+ * - "{{contact.dog_count}}" -> "{{contact.dog_count}}"
+ */
+export function normalizeContactFieldToken(rawKey: string): string | null {
+  if (!rawKey || typeof rawKey !== "string" || !rawKey.trim()) {
+    return null;
+  }
+
+  let cleaned = rawKey.trim();
+  if (cleaned.startsWith("{{") && cleaned.endsWith("}}")) {
+    cleaned = cleaned.slice(2, -2).trim();
+  }
+
+  if (cleaned.startsWith("contact.")) {
+    const keyPart = cleaned.slice("contact.".length).trim();
+    if (!keyPart) return null;
+    return `{{contact.${keyPart}}}`;
+  }
+
+  if (!cleaned) return null;
+  return `{{contact.${cleaned}}}`;
+}
+
+/**
+ * Fetches and normalizes live GHL Custom Values and Contact Custom Fields for a location.
+ * Uses GHL API Version v3 for metadata list calls.
+ * Performs requests in parallel with Promise.allSettled.
+ * Does NOT return custom value contents or sensitive secrets to the client.
+ */
+export async function getLocationPickerVariables(
+  locationId: string
+): Promise<PickerVariablesResult> {
+  const accessToken = await getValidAccessToken(locationId);
+
+  const customValuesUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`;
+  const customFieldsUrl = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`;
+
+  const headers = {
+    Accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    Version: GHL_PICKER_API_VERSION,
+  };
+
+  const [customValuesRes, customFieldsRes] = await Promise.allSettled([
+    fetch(customValuesUrl, { method: "GET", headers }),
+    fetch(customFieldsUrl, { method: "GET", headers }),
+  ]);
+
+  const items: PickerVariable[] = [];
+  let cvStatus: "success" | "error" = "error";
+  let cfStatus: "success" | "error" = "error";
+
+  // 1. Process Custom Values
+  if (customValuesRes.status === "fulfilled" && customValuesRes.value.ok) {
+    try {
+      const data = (await customValuesRes.value.json()) as Record<string, unknown>;
+      const rawValues = (data.customValues || data.custom_values || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+      if (Array.isArray(rawValues)) {
+        cvStatus = "success";
+        for (const cv of rawValues) {
+          const rawKey = typeof cv.fieldKey === "string" && cv.fieldKey.trim()
+            ? cv.fieldKey
+            : typeof cv.key === "string" && cv.key.trim()
+              ? cv.key
+              : typeof cv.name === "string" && cv.name.trim()
+                ? cv.name
+                : "";
+
+          if (!rawKey) {
+            console.warn("[GHL Picker] Omitted Custom Value record with missing or empty key");
+            continue;
+          }
+
+          const token = normalizeCustomValueToken(rawKey);
+          if (!token) {
+            console.warn(`[GHL Picker] Failed to normalize Custom Value key '${rawKey}'`);
+            continue;
+          }
+
+          const id = typeof cv.id === "string" && cv.id ? cv.id : typeof cv._id === "string" ? cv._id : token;
+          const name = typeof cv.name === "string" && cv.name.trim() ? cv.name.trim() : rawKey;
+
+          items.push({
+            id: `cv_${id}`,
+            source: "custom_value",
+            name,
+            fieldKey: rawKey,
+            token,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[GHL Picker] Failed parsing Custom Values response:", e);
+    }
+  } else {
+    const errText = customValuesRes.status === "fulfilled"
+      ? `${customValuesRes.value.status} ${customValuesRes.value.statusText}`
+      : String(customValuesRes.reason);
+    console.warn(`[GHL Picker] Custom Values fetch failed for location ${locationId}: ${errText}`);
+  }
+
+  // 2. Process Contact Custom Fields
+  if (customFieldsRes.status === "fulfilled" && customFieldsRes.value.ok) {
+    try {
+      const data = (await customFieldsRes.value.json()) as Record<string, unknown>;
+      const rawFields = (data.customFields || data.custom_fields || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+      if (Array.isArray(rawFields)) {
+        cfStatus = "success";
+        for (const cf of rawFields) {
+          const rawKey = typeof cf.fieldKey === "string" && cf.fieldKey.trim()
+            ? cf.fieldKey
+            : typeof cf.key === "string" && cf.key.trim()
+              ? cf.key
+              : typeof cf.name === "string" && cf.name.trim()
+                ? cf.name
+                : "";
+
+          if (!rawKey) {
+            console.warn("[GHL Picker] Omitted Contact Custom Field record with missing or empty key");
+            continue;
+          }
+
+          const token = normalizeContactFieldToken(rawKey);
+          if (!token) {
+            console.warn(`[GHL Picker] Failed to normalize Contact Custom Field key '${rawKey}'`);
+            continue;
+          }
+
+          const id = typeof cf.id === "string" && cf.id ? cf.id : typeof cf._id === "string" ? cf._id : token;
+          const name = typeof cf.name === "string" && cf.name.trim()
+            ? cf.name.trim()
+            : typeof cf.displayName === "string" && cf.displayName.trim()
+              ? cf.displayName.trim()
+              : rawKey;
+
+          const dataType = typeof cf.dataType === "string" && cf.dataType
+            ? cf.dataType
+            : typeof cf.fieldType === "string" && cf.fieldType
+              ? cf.fieldType
+              : undefined;
+
+          items.push({
+            id: `cf_${id}`,
+            source: "contact_custom_field",
+            name,
+            fieldKey: rawKey,
+            token,
+            dataType,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[GHL Picker] Failed parsing Contact Custom Fields response:", e);
+    }
+  } else {
+    const errText = customFieldsRes.status === "fulfilled"
+      ? `${customFieldsRes.value.status} ${customFieldsRes.value.statusText}`
+      : String(customFieldsRes.reason);
+    console.warn(`[GHL Picker] Contact Custom Fields fetch failed for location ${locationId}: ${errText}`);
+  }
+
+  // 3. If both sources failed, throw user-safe error
+  if (cvStatus === "error" && cfStatus === "error") {
+    throw new Error("Failed to load custom values and contact custom fields from GHL.");
+  }
+
+  // 4. Deduplicate items by source + ":" + token
+  const seen = new Set<string>();
+  const deduplicated: PickerVariable[] = [];
+
+  for (const item of items) {
+    const dedupKey = `${item.source}:${item.token}`;
+    if (!seen.has(dedupKey)) {
+      seen.add(dedupKey);
+      deduplicated.push(item);
+    }
+  }
+
+  // 5. Sort: first by source ("custom_value" before "contact_custom_field"), then by name (localeCompare)
+  deduplicated.sort((a, b) => {
+    if (a.source !== b.source) {
+      return a.source === "custom_value" ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+
+  return {
+    items: deduplicated,
+    sourceStatus: {
+      customValues: cvStatus,
+      contactCustomFields: cfStatus,
+    },
+  };
+}
