@@ -72,9 +72,26 @@ export default function SGLinkPopup({
 
   // Prefill the field whenever the popup opens: use the latest saved value
   // from the GHL custom value if present, otherwise keep the default value.
+  //
+  // Display-only cleanup: if the stored value ends with the GHL contact
+  // merge field `/{{contact.sg_quote_slug}}`, strip ONLY that portion for
+  // display in the popup. The stored custom value in GoHighLevel is NEVER
+  // modified — this only affects what is shown in this popup.
+  const stripQuoteSlugMergeField = (url: string): string => {
+    const trimmed = url.trimEnd();
+    const slugSuffix = "/{{contact.sg_quote_slug}}";
+    if (trimmed.endsWith(slugSuffix)) {
+      return trimmed.slice(0, -slugSuffix.length);
+    }
+    return trimmed;
+  };
+
   useEffect(() => {
     if (open) {
-      const saved = settingsQuery.data?.baseOnboardingLink?.trim() ?? "";
+      const saved =
+        stripQuoteSlugMergeField(
+          settingsQuery.data?.baseOnboardingLink ?? ""
+        ) ?? "";
       setBaseLink(saved);
     }
   }, [open, settingsQuery.data?.baseOnboardingLink]);
