@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link2, Clock3, Sparkles, Star } from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -127,6 +127,13 @@ export default function RequestScheduling() {
   const [followUpCount, setFollowUpCount] = useState(3);
   const [quotePopupOpen, setQuotePopupOpen] = useState(false);
   const [sgLinkPopupOpen, setSgLinkPopupOpen] = useState(false);
+  // Status shown next to the Initial Outreach Scheduling selection:
+  // "saved" persists until the next slider change, then shows "Saving..."
+  // while the backend update is in flight, and "Saved ✓" / an error toast
+  // afterwards.
+  const [timingSaveStatus, setTimingSaveStatus] = useState<
+    "saved" | "saving" | "error"
+  >("saved");
 
   // Query saved location-level custom values from GHL
   const locationSettingsQuery =
@@ -155,6 +162,41 @@ export default function RequestScheduling() {
         // sync with the subaccount when a save fails.
         if (locationSettingsQuery.data?.leadFollowUpOption) {
           setSelectedOption(locationSettingsQuery.data.leadFollowUpOption);
+        }
+      },
+    });
+
+  // Auto-save mutation: persists ONLY the Initial Outreach Scheduling
+  // timing to the GHL subaccount's `initial_request_scheduling` custom
+  // value immediately whenever the slider value changes — no manual Save
+  // button needed. `setTimingSaveStatus` drives the inline status chip.
+  const autoSaveTimingMutation =
+    trpc.requestScheduling.saveInitialRequestScheduling.useMutation({
+      onSuccess: data => {
+        setTimingSaveStatus("saved");
+        showToast(
+          `Initial outreach timing saved: ${data.saved.initial_request_scheduling}.`
+        );
+        // Re-fetch the subaccount's custom values so the UI always reflects
+        // the value currently stored in GHL.
+        locationSettingsQuery.refetch();
+      },
+      onError: error => {
+        setTimingSaveStatus("error");
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+        showToast(
+          `Error saving Initial Outreach Scheduling: ${errorMsg}`,
+          true
+        );
+        // Restore the previously saved timing from GHL so the UI stays in
+        // sync with the subaccount when a save fails.
+        if (locationSettingsQuery.data?.initialRequestScheduling) {
+          setInitialTiming(
+            timingCustomValueToIndex(
+              locationSettingsQuery.data.initialRequestScheduling
+            )
+          );
         }
       },
     });
@@ -242,6 +284,39 @@ export default function RequestScheduling() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOption, locationId]);
+
+  // Auto-save: persist the Initial Outreach Scheduling timing to the GHL
+  // subaccount's `initial_request_scheduling` custom value immediately
+  // whenever the slider value changes. Skips no-op updates and saves only
+  // after GHL has finished loading so a fetch failure cannot overwrite the
+  // stored value with an uninitialized default. Updates the inline status
+  // chip (Saving... → Saved ✓) while the update is in flight.
+  useEffect(() => {
+    if (!locationId) return;
+    if (
+      locationSettingsQuery.data?.initialRequestScheduling &&
+      TIMING_LABELS[initialTiming] ===
+        locationSettingsQuery.data.initialRequestScheduling &&
+      !autoSaveTimingMutation.isPending &&
+      !autoSaveTimingMutation.isError
+    ) {
+      return;
+    }
+    // If the settings query is still loading, wait for it to resolve first
+    // so the initial page-open value takes precedence over the default.
+    if (locationSettingsQuery.isLoading) return;
+    // A failed GHL fetch would leave the query without data — in that case
+    // keep the default timing in the UI but do NOT auto-save, as the stored
+    // value could not be verified.
+    if (locationSettingsQuery.isError) return;
+
+    setTimingSaveStatus("saving");
+    autoSaveTimingMutation.mutate({
+      locationId,
+      initialRequestScheduling: TIMING_LABELS[initialTiming],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTiming, locationId]);
 
   // Redirect handlers for Email / SMS template buttons
   const handleGoToEmailTemplates = () => {
@@ -420,6 +495,20 @@ export default function RequestScheduling() {
             </div>
             <span className="rs-current-selection">
               {TIMING_LABELS[initialTiming]}
+              {/* Inline save status for the auto-saved timing selection */}
+              {timingSaveStatus === "saving" ? (
+                <span className="rs-status-chip rs-status-saving">
+                  Saving...
+                </span>
+              ) : timingSaveStatus === "error" ? (
+                <span className="rs-status-chip rs-status-error">
+                  Save failed — click again to retry
+                </span>
+              ) : (
+                <span className="rs-status-chip rs-status-saved">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                </span>
+              )}
             </span>
           </div>
 

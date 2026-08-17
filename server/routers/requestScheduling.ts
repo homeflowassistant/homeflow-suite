@@ -629,6 +629,56 @@ export const requestSchedulingRouter = router({
       };
     }),
 
+  /**
+   * Save ONLY the Initial Outreach Scheduling timing to the GHL subaccount's
+   * `initial_request_scheduling` custom value.
+   *
+   * Used by the Request Scheduling page for auto-save: whenever the user
+   * moves the outreach timing slider, the client calls this endpoint
+   * immediately — no separate Save button is needed.
+   * STRICT UPDATE ONLY: it updates the existing custom value in place and
+   * never creates a new one (same discipline as saveCustomValuesSettings).
+   */
+  saveInitialRequestScheduling: publicProcedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        initialRequestScheduling: z.enum([
+          "Immediately",
+          "Next Day",
+          "48 Hours Later",
+          "72 Hours Later",
+          "One Week from Now",
+        ] as const),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const locationId = input.locationId.trim();
+      if (!locationId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Location ID cannot be empty",
+        });
+      }
+
+      await updateExistingCustomValuesOnly(locationId, {
+        initial_request_scheduling: input.initialRequestScheduling,
+      });
+
+      return {
+        success: true,
+        saved: {
+          initial_request_scheduling: input.initialRequestScheduling,
+        },
+        results: {
+          initial_request_scheduling: {
+            action: "created_or_updated",
+            id: "updated",
+          },
+        },
+      };
+    }),
+
   // Backwards-compatible alias used by the client bundle and older builds
   saveCustomValuesSettings: publicProcedure
     .input(
