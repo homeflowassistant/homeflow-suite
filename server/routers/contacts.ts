@@ -28,10 +28,14 @@ export const CAMPAIGN_TAGS = {
   ADDON_COMPLETE: "add-on-campaign finished",
 } as const;
 
-function ghlHeaders(accessToken: string, contentType = "application/json") {
+function ghlHeaders(
+  accessToken: string,
+  contentType = "application/json",
+  apiVersion: string = GHL_API_VERSION
+) {
   return {
     Authorization: `Bearer ${accessToken}`,
-    Version: GHL_API_VERSION,
+    Version: apiVersion,
     Accept: "application/json",
     "Content-Type": contentType,
   };
@@ -221,31 +225,36 @@ async function searchContacts(
   page: number;
   pageSize: number;
 }> {
-  // GHL search endpoint supports multiple fields. We search by query across
-  // all searchable fields. The API supports case-insensitive matching.
+  // GHL advanced search endpoint: POST /contacts/search (Version header v3).
+  // Per the official docs:
+  // - `pageLimit` (required) controls results per page; `limit` is not a valid
+  //   parameter and would be silently dropped / cause unexpected behaviour
+  // - `email` and `name` do not support the `contains` operator; name lookups
+  //   must use `firstNameLowerCase` / `lastNameLowerCase` for `contains`
+  // - Unsupported fields/operators in the payload make GHL return 400, which
+  //   is what broke searching on the contacts page
   const url = `${GHL_BASE_URL}/contacts/search`;
 
   const resp = await fetch(url, {
     method: "POST",
-    headers: ghlHeaders(accessToken),
+    headers: ghlHeaders(accessToken, undefined, "v3"),
     body: JSON.stringify({
-      query: { locationId },
-      type: "contact",
+      locationId,
+      query,
       filters: [
         {
           group: "OR",
           filters: [
-            { field: "email", operator: "contains", value: query },
-            { field: "name", operator: "contains", value: query },
-            { field: "phone", operator: "contains", value: query },
-            { field: "firstName", operator: "contains", value: query },
-            { field: "lastName", operator: "contains", value: query },
+            { field: "email", operator: "eq", value: query },
+            { field: "firstNameLowerCase", operator: "contains", value: query.toLowerCase() },
+            { field: "lastNameLowerCase", operator: "contains", value: query.toLowerCase() },
+            { field: "phone", operator: "eq", value: query },
           ],
         },
       ],
       sort: [{ field: "dateAdded", direction: "desc" }],
       page,
-      limit: pageSize,
+      pageLimit: pageSize,
     }),
   });
 
