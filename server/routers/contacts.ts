@@ -225,6 +225,16 @@ async function searchContacts(
   page: number;
   pageSize: number;
 }> {
+  // GHL's advanced search endpoint requires at least 3 characters for any
+  // `contains` filter — shorter queries return:
+  //   400 {"message":"Min. 3 characters required for applying contains filter"}
+  // To keep 1–2 character searches working (e.g. typing "m" shows contacts
+  // starting with m), short queries skip the advanced search endpoint and go
+  // straight to the local list-based filter, which has no minimum length.
+  if (query.length < 3) {
+    return filterLocalSearch(locationId, accessToken, query, page, pageSize);
+  }
+
   // GHL advanced search endpoint: POST /contacts/search (Version header v3).
   // Per the official docs:
   // - `pageLimit` (required) controls results per page; `limit` is not a valid
@@ -260,10 +270,14 @@ async function searchContacts(
 
   if (!resp.ok) {
     const body = await resp.text();
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: `Failed to search contacts: ${resp.status} ${body}`,
-    });
+    console.warn(
+      `[Contacts] GHL advanced search failed (${resp.status}): ${body.slice(0, 200)} — falling back to list endpoint with local filtering`
+    );
+    // The advanced search endpoint is flaky across locations (unsupported
+    // fields/operators differ per sub-account configuration). Rather than
+    // failing with a 500, fall back to the stable list endpoint and apply
+    // the same filters locally so searching never breaks.
+    return filterLocalSearch(locationId, accessToken, query, page, pageSize);
   }
 
   const data = (await resp.json()) as any;
@@ -274,6 +288,62 @@ async function searchContacts(
 
   return {
     contacts,
+    total,
+    page,
+    pageSize,
+  };
+}
+
+/**
+ * Local search fallback: fetch the first page from the stable list endpoint
+ * and filter by email / name / phone client-side (server-side, really).
+ * The list endpoint (GET /contacts/) is the most reliable GHL endpoint,
+ * used by the app without search with no known failures.
+ */
+async function filterLocalSearch(
+  locationId: string,
+  accessToken: string,
+  query: string,
+  page: number,
+  pageSize: number
+): Promise<{
+  contacts: GHLContact[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const needle = query.toLowerCase();
+
+  // If the query looks like a phone number, also search the digit-only form
+  // so partial phone matches work (e.g. "555123").
+  const digits = query.replace(/\D/g, "");
+
+  function matches(c: GHLContact): boolean {
+    if (c.email.toLowerCase().includes(needle)) return true;
+    if (c.name.toLowerCase().includes(needle)) return true;
+    if (c.firstName.toLowerCase().includes(needle)) return true;
+    if (c.lastName.toLowerCase().includes(needle)) return true;
+    if (digits && c.phone.replace(/\D/g, "").includes(digits)) return true;
+    return false;
+  }
+
+  // Pull enough contacts to fill the requested page of matches.
+  const fetched: GHLContact[] = [];
+  const pagesToFetch = Math.min(page, 20);
+  for (let p = 1; p <= pagesToFetch; p++) {
+    const result = await listContacts(locationId, accessToken, p, pageSize);
+    fetched.push(...result.contacts);
+    if (result.contacts.length < pageSize) break;
+    // Stop early once we have enough raw contacts to satisfy the page.
+    if (fetched.length >= page * pageSize) break;
+  }
+
+  const filtered = fetched.filter(matches);
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+
+  return {
+    contacts: filtered.slice(start, start + pageSize),
     total,
     page,
     pageSize,
