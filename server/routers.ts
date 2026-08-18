@@ -9,6 +9,7 @@ import { addOnCampaignRouter } from "./routers/addOnCampaign";
 import { quickSendRouter } from "./routers/quickSend";
 import { contactsRouter } from "./routers/contacts";
 import { alertsNotificationsRouter } from "./routers/alertsNotifications";
+import { accountSetupRouter } from "./routers/accountSetup";
 import { pricingRouter } from "./routers/pricing";
 
 export const appRouter = router({
@@ -32,6 +33,7 @@ export const appRouter = router({
   quickSend: quickSendRouter,
   contacts: contactsRouter,
   alertsNotifications: alertsNotificationsRouter,
+  accountSetup: accountSetupRouter,
   pricing: pricingRouter,
 });
 

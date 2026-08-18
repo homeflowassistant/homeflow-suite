@@ -11,6 +11,7 @@ import QuickSendPage from "./pages/QuickSendPage";
 import ContactsPage from "./pages/ContactsPage";
 import AlertsNotificationsPage from "./pages/AlertsNotificationsPage";
 import PricingPage from "./pages/PricingPage";
+import AccountSetupPage from "./pages/AccountSetupPage";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
         component={AlertsNotificationsPage}
       />
       <Route path={"/pricing"} component={PricingPage} />
+      <Route path={"/account-setup"} component={AccountSetupPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />
       </Route>
