@@ -204,6 +204,12 @@ export default function AccountSetupPage() {
         setStoredLogo(data.saved.value);
         setTypedLogo(data.saved.value);
       }
+      // When the cleared (empty) logo value was just saved, immediately
+      // reveal the upload option instead of waiting for the refetch to finish.
+      if (data.saved.field === "businessLogo" && !data.saved.value) {
+        setStoredLogo("");
+        setTypedLogo("");
+      }
       // Re-fetch so the UI always reflects what is currently in GHL.
       settingsQuery.refetch();
     },
@@ -242,8 +248,10 @@ export default function AccountSetupPage() {
       reengagementOffer: s.reengagementOffer,
     });
     setStoredLogo(s.businessLogo);
-    // Keep the typed tracker in sync with what GHL currently holds.
-    if (!s.businessLogo) setTypedLogo("");
+    // Keep the typed tracker in sync with what GHL currently holds so the
+    // upload box (re)appears when the logo was cleared and that empty value
+    // was saved.
+    if (loadedOnce && !s.businessLogo) setTypedLogo("");
     setLoadedOnce(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsQuery.data]);
@@ -274,6 +282,15 @@ export default function AccountSetupPage() {
 
       if (debounceTimers.current[field]) {
         clearTimeout(debounceTimers.current[field]!);
+      }
+
+      // Special handling for the Business Logo: when the user clears the
+      // logo URL, the upload option must show immediately — update the
+      // trackers right away (the debounced save below will push the empty
+      // value to GHL) so the upload box is never gated on the refetch.
+      if (field === "businessLogo") {
+        setTypedLogo(newValue);
+        if (!newValue) setStoredLogo("");
       }
 
       debounceTimers.current[field] = setTimeout(() => {
@@ -401,8 +418,7 @@ export default function AccountSetupPage() {
               )}
               {meta.isImage &&
               meta.key === "businessLogo" &&
-              !storedLogo &&
-              typedLogo === "" &&
+              (!storedLogo || typedLogo === "") &&
               !logoUploading ? (
                 /* File upload option — only visible while the custom value
                    is empty. The chosen image is uploaded to the GHL Media
