@@ -65,6 +65,7 @@ interface FieldMeta {
   placeholder: string;
   icon: React.ReactNode;
   isUrl?: boolean;
+  isImage?: boolean;
   help?: string;
 }
 
@@ -89,7 +90,8 @@ const FIELDS: FieldMeta[] = [
     placeholder: "https://... (paste your logo URL)",
     icon: <ImageIcon size={15} />,
     isUrl: true,
-    help: "Updates both homeflow_business_logo and company_logo. Paste an image URL (or a base64 image, which will be uploaded to GHL automatically).",
+    isImage: true,
+    help: "Updates both homeflow_business_logo and company_logo.",
   },
   {
     key: "paymentLink",
@@ -130,6 +132,15 @@ function useLocationId() {
 
 const DEBOUNCE_MS = 700;
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AccountSetupPage() {
   const locationId = useLocationId();
 
@@ -143,6 +154,14 @@ export default function AccountSetupPage() {
     leadCampaignOffer: "",
     reengagementOffer: "",
   });
+  // Drives the conditional upload UI for the Business Logo field:
+  // the file upload option appears whenever the logo custom value is
+  // currently EMPTY — both on page open (when nothing has been saved yet)
+  // AND when the user clears a previously saved logo and re-saves, so they
+  // can always upload a replacement.
+  const [storedLogo, setStoredLogo] = useState<string>("");
+  const [logoUploading, setLogoUploading] = useState(false);
+
   const [saveStatus, setSaveStatus] = useState<
     Record<AccountField, "idle" | "saving" | "saved" | "error">
   >({
@@ -181,6 +200,10 @@ export default function AccountSetupPage() {
           Saved — the value was stored in your sub-account.
         </span>
       );
+      if (data.saved.field === "businessLogo") {
+        setStoredLogo(data.saved.value);
+        setTypedLogo(data.saved.value);
+      }
       // Re-fetch so the UI always reflects what is currently in GHL.
       settingsQuery.refetch();
     },
@@ -218,9 +241,17 @@ export default function AccountSetupPage() {
       leadCampaignOffer: s.leadCampaignOffer,
       reengagementOffer: s.reengagementOffer,
     });
+    setStoredLogo(s.businessLogo);
+    // Keep the typed tracker in sync with what GHL currently holds.
+    if (!s.businessLogo) setTypedLogo("");
     setLoadedOnce(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsQuery.data]);
+
+  // When the user clears the logo field and re-saves, the upload box must
+  // re-appear. Track the currently typed logo value so the visibility
+  // check reflects the latest in-progress value, not just the last fetch.
+  const [typedLogo, setTypedLogo] = useState<string>("");
 
   // ── Auto-save on input with debounce ────────────────────────────────
   // Each keystroke restarts a timer; when the user pauses for 700ms the
@@ -368,15 +399,70 @@ export default function AccountSetupPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Input
-                id={meta.key}
-                type={meta.isUrl ? "url" : "text"}
-                value={values[meta.key]}
-                onChange={e => handleValueChange(meta.key, e.target.value)}
-                disabled={saveFieldMutation.isPending || settingsQuery.isLoading}
-                className="mt-1 h-9"
-                placeholder={meta.placeholder}
-              />
+              {meta.isImage &&
+              meta.key === "businessLogo" &&
+              !storedLogo &&
+              typedLogo === "" &&
+              !logoUploading ? (
+                /* File upload option — only visible while the custom value
+                   is empty. The chosen image is uploaded to the GHL Media
+                   Library first, then the hosted URL is stored in BOTH
+                   homeflow_business_logo and company_logo. */
+                <LogoUploadBox
+                  onUpload={async base64 => {
+                    if (!locationId) return;
+                    if (settingsQuery.isLoading || settingsQuery.isError) {
+                      toast.error(
+                        "Unable to verify your saved settings right now — please try again in a moment."
+                      );
+                      return;
+                    }
+                    setLogoUploading(true);
+                    dataSavedFieldRef.current = "businessLogo";
+                    setSaveStatus(prev => ({ ...prev, businessLogo: "saving" }));
+                    try {
+                      const res = await saveFieldMutation.mutateAsync({
+                        locationId,
+                        field: "businessLogo",
+                        value: base64,
+                      });
+                      setStoredLogo(res.saved.value);
+                      setSaveStatus(prev => ({ ...prev, businessLogo: "saved" }));
+                      toast.success(
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 size={14} />
+                          Logo uploaded and saved — it will be used by your campaigns.
+                        </span>
+                      );
+                      settingsQuery.refetch();
+                    } catch (error) {
+                      const errorMsg =
+                        error instanceof Error ? error.message : "Unknown error";
+                      toast.error(`Error saving logo: ${errorMsg}`);
+                      setSaveStatus(prev => ({ ...prev, businessLogo: "error" }));
+                    } finally {
+                      setLogoUploading(false);
+                    }
+                  }}
+                />
+              ) : (
+                <Input
+                  id={meta.key}
+                  type={meta.isUrl ? "url" : "text"}
+                  value={values[meta.key]}
+                  onChange={e => {
+                    if (meta.key === "businessLogo") setTypedLogo(e.target.value);
+                    handleValueChange(meta.key, e.target.value);
+                  }}
+                  disabled={
+                    saveFieldMutation.isPending ||
+                    settingsQuery.isLoading ||
+                    logoUploading
+                  }
+                  className="mt-1 h-9"
+                  placeholder={meta.placeholder}
+                />
+              )}
             </div>
           );
         })}
@@ -420,4 +506,54 @@ function StatusChip({
     );
   }
   return null;
+}
+
+/**
+ * Logo file upload box — shown for the Business Logo field only while the
+ * custom value is empty. The selected image is converted to base64 and
+ * uploaded to the GHL Media Library by the server (same workflow as the
+ * Custom Quote popup); the resulting hosted URL is then written to both
+ * `homeflow_business_logo` and `company_logo`.
+ */
+function LogoUploadBox({
+  onUpload,
+}: {
+  onUpload: (base64: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, WebP, GIF, SVG).");
+      return;
+    }
+    const base64 = await fileToBase64(file);
+    onUpload(base64);
+    // Allow re-selecting the same file next time.
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  return (
+    <div
+      className="mt-1 flex flex-col items-center gap-2 border-2 border-dashed border-slate-300 rounded-lg px-4 py-6 bg-slate-50 cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+      onClick={() => inputRef.current?.click()}
+    >
+      <ImageIcon size={22} className="text-slate-400" />
+      <span className="text-xs text-slate-500 font-medium">
+        Click to upload your logo
+      </span>
+      <span className="text-[10px] text-slate-400">
+        It will be uploaded to your media library automatically
+      </span>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSelect}
+      />
+    </div>
+  );
 }
