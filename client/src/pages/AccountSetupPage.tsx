@@ -294,7 +294,7 @@ export default function AccountSetupPage() {
 
   if (!locationId) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-lg text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <Building2 className="h-7 w-7 text-primary" />
@@ -315,8 +315,8 @@ export default function AccountSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
+      <div className="w-full max-w-none sm:max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200">
           <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
