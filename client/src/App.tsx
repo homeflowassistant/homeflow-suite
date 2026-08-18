@@ -12,6 +12,7 @@ import ContactsPage from "./pages/ContactsPage";
 import AlertsNotificationsPage from "./pages/AlertsNotificationsPage";
 import PricingPage from "./pages/PricingPage";
 import AccountSetupPage from "./pages/AccountSetupPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       />
       <Route path={"/pricing"} component={PricingPage} />
       <Route path={"/account-setup"} component={AccountSetupPage} />
+      <Route path={"/integrations"} component={IntegrationsPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />
       </Route>
