@@ -92,7 +92,7 @@ const FIELDS: FieldMeta[] = [
   {
     key: "businessLogo",
     label: "Business Logo",
-    placeholder: "https://... (paste your logo URL )",
+    placeholder: "https://... (paste your logo URL)",
     icon: <ImageIcon size={15} />,
     isUrl: true,
     isImage: true,
@@ -101,7 +101,7 @@ const FIELDS: FieldMeta[] = [
   {
     key: "paymentLink",
     label: "Payment Link",
-    placeholder: "https://... (Stripe, PayPal, etc. )",
+    placeholder: "https://... (Stripe, PayPal, etc.)",
     icon: <CreditCard size={15} />,
     isUrl: true,
     help: "(S&G Only) Link sent to customers with failed payments.",
@@ -123,7 +123,7 @@ const FIELDS: FieldMeta[] = [
   },
   {
     key: "reengagementOffer",
-    label: "Discount / Free Offer for Reactivation Campaigns (Reactivation NOT reengagement )",
+    label: "Discount / Free Offer for Reactivation Campaigns (Reactivation NOT reengagement)",
     placeholder: "Your offer is: ...",
     icon: <Tag size={15} />,
     help: "Offer Used in Lite/Custom Reactivation Campaigns.",
@@ -335,6 +335,23 @@ export default function AccountSetupPage() {
     };
   }, []);
 
+  // Map UI field → the primary GHL key it reads from, used for the no-op skip
+  // and for the manual Save button's unsaved-changes detection. Defined here
+  // (before the Save hook wiring) because hoisted `const` declarations are
+  // not accessible before their declaration line — placing them above any
+  // `useMemo`/`useCallback` that references them avoids a runtime
+  // "Cannot access before initialization" error.
+  const mapFieldToGhlKey = (field: AccountField): string =>
+    ({
+      businessName: "businessName",
+      businessOwnerName: "businessOwnerName",
+      businessLogo: "businessLogo",
+      paymentLink: "paymentLink",
+      facebookPageLink: "facebookPageLink",
+      leadCampaignOffer: "leadCampaignOffer",
+      reengagementOffer: "reengagementOffer",
+    } as const)[field];
+
   // ── Manual Save button (same explicit-Save pattern as the other
   //    settings pages) ────────────────────────────────────────────────
   // The debounced auto-save on each field is kept as-is, so nothing is
@@ -416,18 +433,6 @@ export default function AccountSetupPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId, values, savedValues]);
-
-  // Map UI field → the primary GHL key it reads from, used for the no-op skip.
-  const mapFieldToGhlKey = (field: AccountField): string =>
-    ({
-      businessName: "businessName",
-      businessOwnerName: "businessOwnerName",
-      businessLogo: "businessLogo",
-      paymentLink: "paymentLink",
-      facebookPageLink: "facebookPageLink",
-      leadCampaignOffer: "leadCampaignOffer",
-      reengagementOffer: "reengagementOffer",
-    } as const)[field];
 
   if (!locationId) {
     return (
