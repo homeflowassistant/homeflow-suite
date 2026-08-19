@@ -5,6 +5,7 @@ import type { Express } from "express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerGHLOAuthRoutes } from "../ghl-oauth";
 import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField";
+import { registerCustomValuesRoutes } from "../routes/customValues";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic } from "./vite";
@@ -58,6 +59,7 @@ export function createApp(options?: { serveClient?: boolean }): Express {
   registerOAuthRoutes(app);
   registerGHLOAuthRoutes(app);
   registerContactsCustomFieldRoutes(app);
+  registerCustomValuesRoutes(app);
 
   app.use(
     "/api/trpc",
