@@ -607,11 +607,7 @@ export default function AccountSetupPage() {
           </button>
         </div>
 
-        {/* Footer note */}
-        <p className="text-center text-[11px] text-slate-400 pb-4">
-          All values sync to your GHL sub-account as custom values and are
-          used by your lead, reengagement, and quote campaigns.
-        </p>
+        
       </div>
     </div>
   );
