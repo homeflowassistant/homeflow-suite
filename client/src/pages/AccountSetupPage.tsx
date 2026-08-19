@@ -101,7 +101,7 @@ const FIELDS: FieldMeta[] = [
   {
     key: "paymentLink",
     label: "Payment Link",
-    placeholder: "https://... (Stripe, PayPal, etc.)",
+    placeholder: "https://client.sweepandgo.com/login/...",
     icon: <CreditCard size={15} />,
     isUrl: true,
     help: "(S&G Only) Link sent to customers with failed payments.",
