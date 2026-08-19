@@ -23,20 +23,23 @@ import { ENV } from "../_core/env";
 import {
   getInstallation,
   getValidAccessToken,
-  fetchAllCustomValues,
-  resolveCustomValue,
 } from "../ghl-service";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 
 /**
- * Internal helper shared by this module's routes — fetch the raw custom-values
+ * Internal helper shared by this module's routes — fetch the custom-values
  * list for a scoped location (handles token resolution + failure logging).
+ *
+ * Returns GHL's EXACT raw JSON response, untouched — identical in shape to
+ * calling GET https://services.leadconnectorhq.com/locations/{locationId}/customValues
+ * directly with the location's Bearer token. Merge-field fieldKey syntax
+ * (e.g. "{{ custom_values.lead_followup_options }}") is preserved as-is.
  */
 async function fetchCustomValuesForLocation(
   locationId: string
-): Promise<Record<string, unknown>[]> {
+): Promise<unknown> {
   const installation = await getInstallation(locationId);
   if (!installation) {
     const err = new Error(
@@ -47,25 +50,27 @@ async function fetchCustomValuesForLocation(
   }
 
   const accessToken = await getValidAccessToken(locationId);
-  const values = await fetchAllCustomValues(locationId, accessToken);
+  const url = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`;
 
-  // Unwrap GHL's merge-field fieldKey syntax on every entry, so callers
-  // receive plain keys (e.g. "lead_followup_options" instead of
-  // "{{ custom_values.lead_followup_options }}").
-  return values.map(c => {
-    const rawFieldKey =
-      typeof c.fieldKey === "string" ? c.fieldKey : undefined;
-    const fieldKey = rawFieldKey
-      ? rawFieldKey.replace(/\{\{\s*custom_values\.([^}]+?)\s*\}\}/g, "$1").trim()
-      : rawFieldKey;
-    return {
-      id: c.id ?? c._id ?? "",
-      name: typeof c.name === "string" && c.name ? c.name : "",
-      key: typeof c.key === "string" && c.key ? c.key : (fieldKey ?? ""),
-      fieldKey: fieldKey ?? "",
-      value: c.value !== null && c.value !== undefined ? String(c.value) : "",
-    };
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      Version: GHL_API_VERSION,
+    },
   });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const err = new Error(
+      `GHL customValues request failed: ${response.status} ${errorBody}`
+    );
+    throw Object.assign(err, { code: "GHL_OPERATION_FAILED", status: response.status });
+  }
+
+  // Return GHL's raw JSON body exactly as received — no transformation.
+  return response.json();
 }
 
 /**
@@ -76,12 +81,6 @@ function findValue(
   values: Record<string, unknown>[],
   key: string
 ): { id: string; name: string; key: string; fieldKey: string; value: string } | null {
-  for (const v of values) {
-    if (resolveCustomValue(values, key) === (v.value === "" ? "" : String(v.value))) {
-      // resolveCustomValue matches; return the matched entry — prefer an
-      // entry whose key/name matches the lookup key directly.
-    }
-  }
   const loKey = key.toLowerCase();
   const match = values.find(v => {
     const candidates = [
@@ -154,17 +153,19 @@ export function registerCustomValuesRoutes(app: Express): void {
     console.log(`[custom-values][INCOMING] locationId=${locationId}`);
 
     try {
-      const values = await fetchCustomValuesForLocation(locationId);
+      const rawGhlBody = await fetchCustomValuesForLocation(locationId);
+
+      // Extract the raw custom-values array for logging convenience, but
+      // respond with GHL's EXACT raw JSON (passthrough — same shape as
+      // GET /locations/{id}/customValues on services.leadconnectorhq.com).
+      const rawEntries = Array.isArray(rawGhlBody)
+        ? rawGhlBody
+        : ((rawGhlBody as Record<string, unknown>)?.customValues ?? []) as unknown[];
       console.log(
         `[custom-values][OUTCOME] outcome=success status=200 code=OK ` +
-          `locationId=${locationId} count=${values.length}`
+          `locationId=${locationId} count=${rawEntries.length}`
       );
-      return res.status(200).json({
-        success: true,
-        locationId,
-        count: values.length,
-        customValues: values,
-      });
+      return res.status(200).send(rawGhlBody);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const code = (err as { code?: string })?.code ?? "GHL_OPERATION_FAILED";
@@ -245,7 +246,24 @@ export function registerCustomValuesRoutes(app: Express): void {
     console.log(`[custom-values][INCOMING] locationId=${locationId} key=${key}`);
 
     try {
-      const values = await fetchCustomValuesForLocation(locationId);
+      const rawGhlBody = await fetchCustomValuesForLocation(locationId);
+      let values: Record<string, unknown>[] = Array.isArray(rawGhlBody)
+        ? rawGhlBody
+        : ((rawGhlBody as Record<string, unknown>).customValues ?? []) as Record<string, unknown>[];
+
+      // Unwrap GHL's merge-field fieldKey syntax ({{ custom_values.xxx }} →
+      // xxx) for the lookup only — the list response below stays a raw
+      // passthrough of GHL's original JSON, but resolving by plain key
+      // (e.g. "lead_followup_options") must work against the stored keys.
+      values = values.map(v => ({
+        ...v,
+        fieldKey:
+          typeof v.fieldKey === "string"
+            ? v.fieldKey
+                .replace(/\{\{\s*custom_values\.([^}]+?)\s*\}\}/g, "$1")
+                .trim()
+            : v.fieldKey,
+      }));
       const matched = findValue(values, key);
 
       if (!matched) {
