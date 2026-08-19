@@ -13,12 +13,15 @@
  *   Payment Link             → {{custom_values.add_payment_link}}
  *   Facebook Page Link       → {{custom_values.facebook_page_link}}
  *   Lead Campaign Offer      → {{custom_values.discountfree_offer_for_lead_campaigns}}
- *   Reengagement Offer       → {{custom_values.discountfree_offer_for_reengagement_campaigns}}
+ *   Reactivation Offer       → {{custom_values.discountfree_offer_for_reengagement_campaigns}}
  *
  * Behavior (as requested in the account setup spec):
  *   - Fields are shown in the order listed above.
- *   - Auto-save on input (debounced): no manual Save button.
- *   - A confirmation pop-up (toast) appears whenever a value is saved.
+ *   - Auto-save on input (debounced) AND a manual Save button (consistent
+ *     with the other settings pages): clicking Save pushes every field whose
+ *     value has changed since the last load/save to GHL.
+ *   - A confirmation pop-up (toast) appears whenever a value is saved —
+ *     after each auto-save and again after a manual Save.
  *   - Images are entered as a URL (paste an image link). If a base64
  *     data URI is pasted instead, it is uploaded to the GHL Media Library
  *     and the hosted URL is stored — the same workflow the Custom Quote
@@ -40,6 +43,7 @@ import {
   CheckCircle2,
   Loader2,
   BadgeCheck,
+  Save,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,29 +80,31 @@ const FIELDS: FieldMeta[] = [
     label: "Business Name",
     placeholder: "e.g. Scooping R Us",
     icon: <Building2 size={15} />,
-    help: "Updates both homeflow_business_name and company_name.",
+    help: "The business name you want to use in emails and sms messages",
   },
   {
     key: "businessOwnerName",
     label: "Business Owner Name",
     placeholder: "e.g. Jane Doe",
     icon: <UserRound size={15} />,
+    help: "The name you want to use use to introduce yourself in emails and sms messages.",
   },
   {
     key: "businessLogo",
     label: "Business Logo",
-    placeholder: "https://... (paste your logo URL)",
+    placeholder: "https://... (paste your logo URL )",
     icon: <ImageIcon size={15} />,
     isUrl: true,
     isImage: true,
-    help: "Updates both homeflow_business_logo and company_logo.",
+    help: "Used in emails and sms messages.",
   },
   {
     key: "paymentLink",
     label: "Payment Link",
-    placeholder: "https://... (Stripe, PayPal, etc.)",
+    placeholder: "https://... (Stripe, PayPal, etc. )",
     icon: <CreditCard size={15} />,
     isUrl: true,
+    help: "(S&G Only) Link sent to customers with failed payments.",
   },
   {
     key: "facebookPageLink",
@@ -106,20 +112,21 @@ const FIELDS: FieldMeta[] = [
     placeholder: "https://www.facebook.com/yourpage",
     icon: <Facebook size={15} />,
     isUrl: true,
+    help: "Link to Facebook Page added to some emails.",
   },
   {
     key: "leadCampaignOffer",
     label: "Discount / Free Offer for Lead Campaigns",
     placeholder: "Your offer is: ...",
     icon: <Tag size={15} />,
-    help: "Texts/emails only — appended after \u201cYour offer is:\u201d in lead campaigns.",
+    help: "Offer Used in Lite/Custom Follow-up Campaigns.",
   },
   {
     key: "reengagementOffer",
-    label: "Discount / Free Offer for Reengagement Campaigns",
+    label: "Discount / Free Offer for Reactivation Campaigns (Reactivation NOT reengagement )",
     placeholder: "Your offer is: ...",
     icon: <Tag size={15} />,
-    help: "Texts/emails only — appended after \u201cYour offer is:\u201d in reengagement campaigns.",
+    help: "Offer Used in Lite/Custom Reactivation Campaigns.",
   },
 ];
 
@@ -328,6 +335,88 @@ export default function AccountSetupPage() {
     };
   }, []);
 
+  // ── Manual Save button (same explicit-Save pattern as the other
+  //    settings pages) ────────────────────────────────────────────────
+  // The debounced auto-save on each field is kept as-is, so nothing is
+  // lost if the user closes the page. The button additionally pushes every
+  // field whose typed value differs from the last known stored value, so a
+  // single click guarantees everything is in GHL. A confirmation pop-up
+  // appears once the batch completes (each field also toasts individually
+  // if its auto-save already fired).
+  const [isSavingAll, setIsSavingAll] = useState(false);
+
+  const savedValues = useMemo(
+    () => (settingsQuery.data as Record<string, string> | undefined) ?? null,
+    [settingsQuery.data]
+  );
+
+  const unsavedFields = useMemo(() => {
+    // Nothing is unsaved until the initial GHL load has completed — until
+    // then we don't know the stored baseline.
+    if (!savedValues) return [] as AccountField[];
+    return FIELDS.filter(
+      meta =>
+        (values[meta.key] ?? "") !== (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
+    ).map(meta => meta.key);
+  }, [values, savedValues]);
+
+  const handleSaveAll = useCallback(async () => {
+    if (!locationId) return;
+    if (saveFieldMutation.isPending || logoUploading) return;
+    // Re-derive in case of rapid successive clicks.
+    const toSave = savedValues
+      ? FIELDS.filter(
+          meta =>
+            (values[meta.key] ?? "") !==
+            (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
+        )
+      : FIELDS;
+    if (toSave.length === 0) {
+      toast("Your settings are already up to date.");
+      return;
+    }
+
+    setIsSavingAll(true);
+    let savedCount = 0;
+    let failedCount = 0;
+    try {
+      for (const meta of toSave) {
+        try {
+          const res = await saveFieldMutation.mutateAsync({
+            locationId,
+            field: meta.key,
+            value: values[meta.key],
+          });
+          savedCount += 1;
+          setSaveStatus(prev => ({ ...prev, [res.saved.field]: "saved" }));
+          if (res.saved.field === "businessLogo") {
+            setStoredLogo(res.saved.value);
+            setTypedLogo(res.saved.value);
+          }
+        } catch {
+          failedCount += 1;
+          setSaveStatus(prev => ({ ...prev, [meta.key]: "error" }));
+        }
+      }
+      if (failedCount === 0) {
+        toast.success(
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 size={14} />
+            Saved — your business details were stored in your sub-account.
+          </span>
+        );
+      } else {
+        toast.error(
+          `Saved ${savedCount} field${savedCount === 1 ? "" : "s"} but ${failedCount} field${failedCount === 1 ? "" : "s"} failed — check the failed field(s) and try again.`
+        );
+      }
+      await settingsQuery.refetch();
+    } finally {
+      setIsSavingAll(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationId, values, savedValues]);
+
   // Map UI field → the primary GHL key it reads from, used for the no-op skip.
   const mapFieldToGhlKey = (field: AccountField): string =>
     ({
@@ -371,9 +460,7 @@ export default function AccountSetupPage() {
             Account Set Up
           </h1>
           <p className="text-[12px] text-slate-500 mt-1 px-4">
-            Fill in your business details below — each field is saved
-            automatically as you type and synced to your sub-account's custom
-            values.
+            Fill in your business details below.
           </p>
         </div>
 
@@ -482,6 +569,38 @@ export default function AccountSetupPage() {
             </div>
           );
         })}
+
+        {/* Manual Save button — bottom action area, same pattern as the
+            other settings pages (e.g. Integrations). Auto-save on typing is
+            still active, so the button is a convenience / consistency
+            affordance: one click guarantees every field is in GHL. */}
+        <div className="flex flex-col items-center gap-2 py-3">
+          {unsavedFields.length > 0 && !isSavingAll && (
+            <p className="text-[11px] text-amber-600">
+              You have unsaved changes in {unsavedFields.length} field
+              {unsavedFields.length === 1 ? "" : "s"}. Click Save to sync
+              them to your sub-account.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            disabled={isSavingAll || saveFieldMutation.isPending || logoUploading}
+            className="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingAll ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Save
+              </>
+            )}
+          </button>
+        </div>
 
         {/* Footer note */}
         <p className="text-center text-[11px] text-slate-400 pb-4">
