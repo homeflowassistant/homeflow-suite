@@ -5,6 +5,7 @@ import type { Express } from "express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerGHLOAuthRoutes } from "../ghl-oauth";
 import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField";
+import { registerZapierRoutes } from "../routes/zapier";
 import { registerCustomValuesRoutes } from "../routes/customValues";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -60,6 +61,7 @@ export function createApp(options?: { serveClient?: boolean }): Express {
   registerGHLOAuthRoutes(app);
   registerContactsCustomFieldRoutes(app);
   registerCustomValuesRoutes(app);
+  registerZapierRoutes(app);
 
   app.use(
     "/api/trpc",
