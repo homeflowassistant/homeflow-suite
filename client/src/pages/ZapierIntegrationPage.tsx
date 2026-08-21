@@ -361,39 +361,7 @@ export default function ZapierIntegrationPage() {
               </Card>
             </div>
 
-            <Card className="contact-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-slate-900">Mapped fields</CardTitle>
-                <CardDescription>
-                  The Zap action maps every field from the Add Contact page into the CRM contact.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-1.5 text-sm sm:grid-cols-2">
-                  {[
-                    ["First Name", "firstName"],
-                    ["Last Name", "lastName"],
-                    ["Email", "email"],
-                    ["Phone Number", "phone"],
-                    ["Service Address", "address1"],
-                    ["City", "city"],
-                    ["State", "state"],
-                    ["Zip Code", "postalCode"],
-                    ["No. of Dogs", "number_of_dogs"],
-                    ["Last Scooped", "last_time_yard_was_thoroughly_cleaned"],
-                    ["Frequency", "clean_up_frequency"],
-                    ["Marketing Allowed", "marketingAllowed"],
-                    ["Campaign Tag", "tagName"],
-                    ["Do Not Disturb", "dnd"],
-                  ].map(([label, key]) => (
-                    <div key={key} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
-                      <span className="text-slate-700">{label}</span>
-                      <code className="text-xs font-mono text-slate-500">{key}</code>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            
           </section>
 
           <Card className="contact-card h-fit">
