@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
-import { ENV } from "../_core/env";
-import { getInstallation } from "../ghl-service";
+import { ENV } from "../_core/env.js";
+import { getInstallation } from "../ghl-service.js";
 import {
   createOrGetZapierConnection,
   normalizeZapierError,
@@ -10,8 +10,8 @@ import {
   upsertZapierContact,
   validateZapierConnectionKey,
   ZapierHttpError,
-} from "../services/zapier-service";
-import { processContact } from "../ghl-service";
+} from "../services/zapier-service.js";
+import { processContact } from "../ghl-service.js";
 
 function getHeaderValue(req: Request, headerName: string): string {
   const value = req.headers[headerName.toLowerCase()];

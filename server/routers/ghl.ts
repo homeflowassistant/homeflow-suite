@@ -9,12 +9,12 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getInstallation,
   processContact,
   type GHLContactData,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 // Contact data schema
 const contactSchema = z.object({

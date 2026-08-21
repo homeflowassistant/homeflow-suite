@@ -1,17 +1,17 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
-import { ghlRouter } from "./routers/ghl";
-import { requestSchedulingRouter } from "./routers/requestScheduling";
-import { reactivationRouter } from "./routers/reactivation";
-import { addOnCampaignRouter } from "./routers/addOnCampaign";
-import { quickSendRouter } from "./routers/quickSend";
-import { contactsRouter } from "./routers/contacts";
-import { alertsNotificationsRouter } from "./routers/alertsNotifications";
-import { accountSetupRouter } from "./routers/accountSetup";
-import { pricingRouter } from "./routers/pricing";
-import { integrationsRouter } from "./routers/integrations";
+import { COOKIE_NAME } from "../shared/const.js";
+import { getSessionCookieOptions } from "./_core/cookies.js";
+import { systemRouter } from "./_core/systemRouter.js";
+import { publicProcedure, router } from "./_core/trpc.js";
+import { ghlRouter } from "./routers/ghl.js";
+import { requestSchedulingRouter } from "./routers/requestScheduling.js";
+import { reactivationRouter } from "./routers/reactivation.js";
+import { addOnCampaignRouter } from "./routers/addOnCampaign.js";
+import { quickSendRouter } from "./routers/quickSend.js";
+import { contactsRouter } from "./routers/contacts.js";
+import { alertsNotificationsRouter } from "./routers/alertsNotifications.js";
+import { accountSetupRouter } from "./routers/accountSetup.js";
+import { pricingRouter } from "./routers/pricing.js";
+import { integrationsRouter } from "./routers/integrations.js";
 
 export const appRouter = router({
   system: systemRouter,

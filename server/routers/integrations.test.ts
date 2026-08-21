@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { INTEGRATION_CV_KEYS, integrationsSchema } from "./integrations";
+import { INTEGRATION_CV_KEYS, integrationsSchema } from "./integrations.js";
 
 describe("Integrations Router Schema & Key Mappings", () => {
   it("defines exact GHL custom value keys matching user specification", () => {

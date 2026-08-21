@@ -9,9 +9,9 @@
  */
 
 import { eq, or } from "drizzle-orm";
-import { getDb } from "./db";
-import { ENV } from "./_core/env";
-import { ghlInstallations, type GHLInstallation } from "../drizzle/schema";
+import { getDb } from "./db.js";
+import { ENV } from "./_core/env.js";
+import { ghlInstallations, type GHLInstallation } from "../drizzle/schema.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   normalizeCustomValueToken,
   normalizeContactFieldToken,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 describe("GHL Picker Variable Normalization", () => {
   it("normalizes raw custom value keys correctly", () => {

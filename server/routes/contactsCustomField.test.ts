@@ -46,7 +46,7 @@ vi.mock("../ghl-service", async importOriginal => {
 const INTERNAL_API_KEY = "test-internal-key";
 process.env.INTERNAL_API_KEY = INTERNAL_API_KEY;
 
-import { registerContactsCustomFieldRoutes } from "./contactsCustomField";
+import { registerContactsCustomFieldRoutes } from "./contactsCustomField.js";
 
 const BASE_URL = `http://127.0.0.1`;
 

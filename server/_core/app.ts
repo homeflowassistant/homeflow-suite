@@ -2,13 +2,13 @@ import express from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import type { Express } from "express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerGHLOAuthRoutes } from "../ghl-oauth";
-import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField";
-import { registerZapierRoutes } from "../routes/zapier";
-import { registerCustomValuesRoutes } from "../routes/customValues";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
+import { registerOAuthRoutes } from "./oauth.js";
+import { registerGHLOAuthRoutes } from "../ghl-oauth.js";
+import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField.js";
+import { registerZapierRoutes } from "../routes/zapier.js";
+import { registerCustomValuesRoutes } from "../routes/customValues.js";
+import { appRouter } from "../routers.js";
+import { createContext } from "./context.js";
 
 export async function createApp(options?: { serveClient?: boolean }): Promise<Express> {
   const app = express();

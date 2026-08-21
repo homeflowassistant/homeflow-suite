@@ -11,9 +11,9 @@ import {
   getLocationCustomValueMap,
   updateExistingCustomValuesOnly,
   upsertGhlCustomValue,
-} from "../ghl-service";
-import { appRouter } from "../routers";
-import type { AppRouter } from "../routers";
+} from "../ghl-service.js";
+import { appRouter } from "../routers.js";
+import type { AppRouter } from "../routers.js";
 
 const mockedGetMap = vi.mocked(getLocationCustomValueMap);
 const mockedUpdate = vi.mocked(updateExistingCustomValuesOnly);

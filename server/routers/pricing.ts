@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
   updateExistingCustomValuesOnly,
   upsertGhlCustomValue,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 // ─── GHL custom value keys ────────────────────────────────────────────
 // The Pricing page consolidates all of its data into three custom values

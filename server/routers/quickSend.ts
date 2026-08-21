@@ -8,13 +8,13 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getValidAccessToken,
   findCustomValueId,
   fetchAllCustomValues,
   addTagToContact,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";

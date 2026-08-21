@@ -1,14 +1,14 @@
 import { and, desc, eq } from "drizzle-orm";
 import { createHmac, randomBytes } from "crypto";
-import { getDb } from "../db";
-import { ENV } from "../_core/env";
-import { zapierConnections } from "../../drizzle/schema";
+import { getDb } from "../db.js";
+import { ENV } from "../_core/env.js";
+import { zapierConnections } from "../../drizzle/schema.js";
 import {
   getValidAccessToken,
   getInstallation,
   processContact,
   type GHLContactData,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 /**
  * Trigger tag applied to every contact created through the Zapier integration,

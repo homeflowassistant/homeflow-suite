@@ -20,8 +20,8 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { ENV } from "../_core/env";
-import { getValidAccessToken, getInstallation } from "../ghl-service";
+import { ENV } from "../_core/env.js";
+import { getValidAccessToken, getInstallation } from "../ghl-service.js";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════

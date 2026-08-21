@@ -19,7 +19,7 @@ import {
   upsertInstallation,
   updateCustomValuesOnInstall,
   getValidAccessToken,
-} from "./ghl-service";
+} from "./ghl-service.js";
 
 async function delay(ms: number): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, ms));

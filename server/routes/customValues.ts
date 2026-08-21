@@ -19,11 +19,11 @@
  */
 
 import type { Express } from "express";
-import { ENV } from "../_core/env";
+import { ENV } from "../_core/env.js";
 import {
   getInstallation,
   getValidAccessToken,
-} from "../ghl-service";
+} from "../ghl-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
