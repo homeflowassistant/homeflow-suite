@@ -24,7 +24,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  const app = createApp({
+  const app = await createApp({
     serveClient: process.env.NODE_ENV !== "development",
   });
   const server = createServer(app);

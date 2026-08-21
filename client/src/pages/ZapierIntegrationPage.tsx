@@ -277,7 +277,7 @@ export default function ZapierIntegrationPage() {
                 Generate a secure connection key, open the private Zapier app, and keep contact
                 upserts flowing through your account connection. Every field mapped on the Add
                 Contact page — name, email, phone, service address, number of dogs, last time
-                scooped, clean-up frequency, and marketing consent — is available in the Zap.
+                scooped, clean-up frequency, campaign tag, and marketing consent — is available in the Zap.
               </p>
             </div>
 
@@ -382,7 +382,8 @@ export default function ZapierIntegrationPage() {
                     ["No. of Dogs", "number_of_dogs"],
                     ["Last Scooped", "last_time_yard_was_thoroughly_cleaned"],
                     ["Frequency", "clean_up_frequency"],
-                    ["Marketing Allowed", "marketing_allowed"],
+                    ["Marketing Allowed", "marketingAllowed"],
+                    ["Campaign Tag", "tagName"],
                     ["Do Not Disturb", "dnd"],
                   ].map(([label, key]) => (
                     <div key={key} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">

@@ -11,6 +11,9 @@ export const ENV = {
   // GHL Marketplace OAuth
   ghlClientId: process.env.GHL_CLIENT_ID ?? "",
   ghlClientSecret: process.env.GHL_CLIENT_SECRET ?? "",
+  // Zapier private app integration
+  zapierInviteUrl: process.env.ZAPIER_INVITE_URL ?? "",
+  zapierKeyPrefix: process.env.ZAPIER_KEY_PREFIX ?? "zap_live_",
   n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
   appDomain:
     process.env.APP_DOMAIN ??

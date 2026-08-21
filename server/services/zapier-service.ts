@@ -31,6 +31,7 @@ type ZapierContactPayload = {
   frequency?: string;
   marketingAllowed?: boolean;
   dnd?: boolean;
+  tagName?: string;
   source?: string;
   tags?: string[];
 };
@@ -267,12 +268,12 @@ export async function upsertZapierContact(rawKey: string, payload: ZapierContact
     throw new ZapierHttpError(400, "At least one of email or phone is required.");
   }
 
-  const tags = new Set<string>([ZAPIER_TRIGGER_TAG]);
-  (payload.tags ?? []).forEach((tag) => {
-    const normalizedTag = normalizeText(tag);
-    if (normalizedTag) tags.add(normalizedTag);
-  });
-
+  const requestedTags = (payload.tags ?? [])
+    .map((tag) => normalizeText(tag))
+    .filter((tag): tag is string => Boolean(tag));
+  const selectedTag =
+    normalizeText(payload.tagName) ??
+    requestedTags.find((tag) => tag !== ZAPIER_TRIGGER_TAG);
   const source = normalizeText(payload.source) ?? "Zapier";
 
   // Build the full field payload used by the Add Contact page, so Zapier-sourced
@@ -284,6 +285,7 @@ export async function upsertZapierContact(rawKey: string, payload: ZapierContact
     email: email ?? "",
     phone: phone ?? "",
     dnd: payload.dnd === true,
+    tagName: selectedTag,
     ...(normalizeText(payload.address1) ? { address1: normalizeText(payload.address1) } : {}),
     ...(normalizeText(payload.city) ? { city: normalizeText(payload.city) } : {}),
     ...(normalizeText(payload.state) ? { state: normalizeText(payload.state) } : {}),

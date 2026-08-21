@@ -45,6 +45,7 @@ const upsertSchema = z
     frequency: z.string().optional(),
     marketingAllowed: z.union([z.boolean(), z.string()]).optional(),
     dnd: z.union([z.boolean(), z.string()]).optional(),
+    tagName: z.string().optional(),
     source: z.string().optional(),
     tags: z.array(z.string()).optional(),
   })
@@ -299,6 +300,7 @@ export function registerZapierRoutes(app: Express): void {
         frequency: payload.frequency,
         marketingAllowed: normalizeBoolean(payload.marketingAllowed),
         dnd: normalizeBoolean(payload.dnd),
+        tagName: payload.tagName,
         source: payload.source,
         tags: payload.tags,
       });

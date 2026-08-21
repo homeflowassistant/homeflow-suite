@@ -9,9 +9,8 @@ import { registerZapierRoutes } from "../routes/zapier";
 import { registerCustomValuesRoutes } from "../routes/customValues";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic } from "./vite";
 
-export function createApp(options?: { serveClient?: boolean }): Express {
+export async function createApp(options?: { serveClient?: boolean }): Promise<Express> {
   const app = express();
 
   // Capture the raw request body while parsing JSON. The internal-machine
@@ -72,6 +71,7 @@ export function createApp(options?: { serveClient?: boolean }): Express {
   );
 
   if (options?.serveClient) {
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
   }
 
