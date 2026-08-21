@@ -11,6 +11,7 @@ import {
   validateZapierConnectionKey,
   ZapierHttpError,
 } from "../services/zapier-service";
+import { processContact } from "../ghl-service";
 
 function getHeaderValue(req: Request, headerName: string): string {
   const value = req.headers[headerName.toLowerCase()];
@@ -383,8 +384,6 @@ async function upsertContactForInternalApi(
     source?: string;
   }
 ): Promise<{ contactId: string; isNew: boolean; contact: Record<string, unknown> }> {
-  const { processContact } = await import("../ghl-service.js");
-
   let firstName = input.firstName;
   let lastName = input.lastName;
   if (!firstName && input.name) {

@@ -65,10 +65,10 @@ export type InsertGHLInstallation = typeof ghlInstallations.$inferInsert;
  */
 export const zapierConnections = pgTable("zapier_connections", {
   id: serial("id").primaryKey(),
-  locationId: varchar("locationId", { length: 128 }).notNull(),
-  connectionKeyHash: varchar("connectionKeyHash", { length: 128 }).notNull().unique(),
-  connectionKeyPreview: varchar("connectionKeyPreview", { length: 16 }).notNull(),
-  connectionKeyRaw: text("connectionKeyRaw").notNull(), // Raw key for copying (stored for user convenience)
+  locationId: varchar("locationId", { length: 255 }).notNull(),
+  connectionKeyHash: varchar("connectionKeyHash", { length: 255 }).notNull().unique(),
+  connectionKeyPreview: varchar("connectionKeyPreview", { length: 255 }).notNull(),
+  connectionKeyRaw: text("connectionKeyRaw"), // Raw key for copying (stored for user convenience)
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   rotatedAt: timestamp("rotatedAt"),
