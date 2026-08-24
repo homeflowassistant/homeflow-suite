@@ -1,0 +1,220 @@
+/* ── Integrations Page Layout & Design System ────────────────────────── */
+
+.integrations-page-shell {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 32px 24px 60px 24px;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Bounded Page Container for Cohesive Centered Alignment */
+.integrations-page-container {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+@media (max-width: 640px) {
+  .integrations-page-shell {
+    padding: 16px 14px 40px 14px;
+  }
+}
+
+/* Page Header */
+.integrations-page-header {
+  margin-bottom: 4px;
+}
+
+.integrations-page-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* Cards */
+.integrations-card-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  width: 100%;
+}
+
+.integrations-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.integrations-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.15);
+}
+
+.integrations-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.integrations-card-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 3px 0 0 0;
+  line-height: 1.4;
+}
+
+/* Video Player Card */
+.integrations-video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #090d16;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.16);
+}
+
+.integrations-video-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Form Items */
+.integrations-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.integrations-item-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.integrations-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.integrations-item-label {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.integrations-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.integrations-input-field {
+  width: 100%;
+  height: 50px;
+  padding: 12px 18px;
+  font-size: 14.5px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.integrations-input-field.has-pw-toggle {
+  padding-right: 50px;
+}
+
+.integrations-input-field:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+}
+
+.integrations-input-field::placeholder {
+  color: #94a3b8;
+}
+
+.integrations-toggle-pw-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.integrations-toggle-pw-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+/* Bottom Action Bar */
+.integrations-bottom-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.integrations-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.integrations-save-btn:hover:not(:disabled) {
+  background: #0369a1;
+  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.35);
+  transform: translateY(-1px);
+}
+
+.integrations-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

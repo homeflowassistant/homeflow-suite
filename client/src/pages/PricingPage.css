@@ -1,0 +1,348 @@
+/* ── Pricing Setup page — reproduces the client's Canva design ────────
+   Navy section headings, white cards with navy borders, periwinkle
+   sub-boxes, paw labels on dog blocks. Follows the app design system
+   (Inter, rounded-md, indigo primary) where the design is silent. */
+
+.pricing-page-shell {
+  min-height: 100vh;
+  background: #f5f6fa;
+  color: #1e293b;
+  padding: 0;
+}
+
+/* ── Page header ───────────────────────────────────────────────────── */
+
+.pricing-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.pricing-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.pricing-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #17204a;
+  letter-spacing: -0.01em;
+}
+
+.pricing-required-hint {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #64748b;
+}
+
+.pricing-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: #4f46e5;
+  border: 1px solid #4338ca;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pricing-save-btn:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.pricing-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Content ───────────────────────────────────────────────────────── */
+
+.pricing-page-content {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pricing-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: #64748b;
+}
+
+.pricing-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #17204a;
+  margin-bottom: 0.9rem;
+}
+
+.pricing-section-title.required::after {
+  content: "*";
+  color: #17204a;
+}
+
+/* ── Per-section instruction subheading ────────────────────────────── */
+
+.pricing-section-instruction {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+
+.pricing-card {
+  background: #ffffff;
+  border: 2px solid #17204a;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+/* ── 2-column × 3-row dog grid (left col: 1,2,3 / right col: 4,5,6) ─── */
+
+.pricing-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.pricing-dog-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pricing-dog-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #17204a;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pricing-paw {
+  font-size: 0.85rem;
+}
+
+/* ── Price sub-boxes (periwinkle outline, like the design) ─────────── */
+
+.pricing-price-box {
+  border: 1.5px solid #c7d2fe;
+  border-radius: 0.5rem;
+  background: #f8f9ff;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pricing-price-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pricing-line-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.pricing-line-label {
+  white-space: nowrap;
+  color: #334155;
+}
+
+.pricing-money-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.pricing-money-prefix {
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.pricing-money-input,
+.pricing-rate-input {
+  border: 1px solid #c7d2fe;
+  border-radius: 0.35rem;
+  background: #ffffff;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.78rem;
+  color: #1e293b;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pricing-money-input {
+  width: 4.5rem;
+  text-align: right;
+}
+
+.pricing-rate-input {
+  width: 11rem;
+  text-align: right;
+}
+
+.pricing-money-input:focus,
+.pricing-rate-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+
+/* ── FAQ / cross-sell textareas ────────────────────────────────────── */
+
+.pricing-faq-textarea {
+  width: 100%;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 0.5rem;
+  background: #f8f9ff;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #1e293b;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pricing-faq-textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+
+/* Recurring pricing textarea (one free-text block per dog) */
+
+.pricing-recurring-textarea {
+  width: 100%;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 0.5rem;
+  background: #f8f9ff;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #1e293b;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pricing-recurring-textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+
+/* ── ZIP code tier inputs ──────────────────────────────────────────── */
+
+.pricing-zip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.pricing-zip-input {
+  width: 100%;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 0.5rem;
+  background: #f8f9ff;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.85rem;
+  color: #1e293b;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pricing-zip-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .pricing-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-zip-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .pricing-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .pricing-save-btn {
+    align-self: flex-end;
+  }
+
+  .pricing-rate-input {
+    width: 9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pricing-page-content {
+    padding: 1rem 0.75rem 4rem;
+  }
+
+  .pricing-card {
+    padding: 1rem;
+  }
+
+  .pricing-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-rate-input {
+    width: 100%;
+  }
+
+  .pricing-line-row {
+    flex-wrap: wrap;
+  }
+
+  .pricing-money-field {
+    margin-left: 0;
+  }
+}

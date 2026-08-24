@@ -48,6 +48,9 @@ const upsertSchema = z
     tagName: z.string().optional(),
     source: z.string().optional(),
     tags: z.array(z.string()).optional(),
+    customFields: z
+      .array(z.object({ key: z.string().min(1), value: z.unknown().optional() }))
+      .optional(),
   })
   .refine((value) => Boolean(value.email || value.phone), {
     message: "At least one of email or phone is required.",
@@ -303,6 +306,7 @@ export function registerZapierRoutes(app: Express): void {
         tagName: payload.tagName,
         source: payload.source,
         tags: payload.tags,
+        customFields: payload.customFields,
       });
 
       return res.json({

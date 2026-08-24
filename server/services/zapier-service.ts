@@ -34,6 +34,7 @@ type ZapierContactPayload = {
   tagName?: string;
   source?: string;
   tags?: string[];
+  customFields?: Array<{ key: string; value?: unknown }>;
 };
 
 export class ZapierHttpError extends Error {
@@ -70,6 +71,15 @@ function normalizePhone(phone?: string): string | undefined {
   const value = normalizeText(phone);
   if (!value) return undefined;
   return value.replace(/[\s\-()]/g, "");
+}
+
+function normalizeCustomFields(
+  fields?: Array<{ key: string; value?: unknown }>
+): Array<{ fieldKey: string; fieldValue?: unknown }> {
+  return (fields ?? []).flatMap(field => {
+    const fieldKey = normalizeText(field.key);
+    return fieldKey ? [{ fieldKey, fieldValue: field.value }] : [];
+  });
 }
 
 export function generateZapierConnectionKey(): string {
@@ -305,9 +315,10 @@ export async function upsertZapierContact(rawKey: string, payload: ZapierContact
       ...(normalizeText(payload.frequency)
         ? [{ fieldKey: "clean_up_frequency", fieldValue: normalizeText(payload.frequency) }]
         : []),
-      ...(payload.marketingAllowed === true
-        ? [{ fieldKey: "marketing_allowed", fieldValue: "Yes" }]
+      ...(payload.marketingAllowed !== undefined
+        ? [{ fieldKey: "marketing_allowed", fieldValue: payload.marketingAllowed ? "Yes" : "No" }]
         : []),
+      ...normalizeCustomFields(payload.customFields),
     ],
   };
 

@@ -71,7 +71,7 @@ export async function createApp(options?: { serveClient?: boolean }): Promise<Ex
   );
 
   if (options?.serveClient) {
-    const { serveStatic } = await import("./vite");
+    const { serveStatic } = await import("./vite.js");
     serveStatic(app);
   }
 
