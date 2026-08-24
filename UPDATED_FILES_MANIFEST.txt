@@ -8,6 +8,7 @@ A	DEPLOY_VERCEL.md
 A	N8N_INTEGRATION_GUIDE.md
 A	REDEPLOY.md
 A	TAG_BASED_STATUS_REFERENCE.md
+A	UPDATED_FILES_MANIFEST.txt
 A	ZAPIER_INTEGRATION_REPAIR_REPORT.md
 A	client/index.html
 A	client/public/.gitkeep
@@ -104,6 +105,7 @@ A	ideas.md
 A	local-n8n-server.ts
 A	mock-ghl-service-loader.ts
 A	mock-ghl-service.ts
+M	package.json
 A	patches/wouter@3.7.1.patch
 A	pnpm-lock.yaml
 A	render.yaml
