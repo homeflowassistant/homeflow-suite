@@ -43,6 +43,11 @@ function getInviteUrl(): string {
   return import.meta.env.VITE_ZAPIER_INVITE_URL || DEFAULT_INVITE_URL;
 }
 
+function getApiUrl(path: string): string {
+  const apiBase = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  return `${apiBase}${path}`;
+}
+
 function buildZapCreateUrl(locationId: string): string {
   const cliName = getZapierCliName().trim();
   if (!cliName) return "";
@@ -98,7 +103,7 @@ export default function ZapierIntegrationPage() {
     }
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/zapier/connection?locationId=${encodeURIComponent(locationId)}`, {
+      const response = await fetch(getApiUrl(`/api/zapier/connection?locationId=${encodeURIComponent(locationId)}`), {
         method: "GET",
         credentials: "include",
       });
@@ -168,7 +173,7 @@ export default function ZapierIntegrationPage() {
     if (!locationId) return;
     setIsRotating(true);
     try {
-      const response = await fetch("/api/zapier/connection/rotate", {
+      const response = await fetch(getApiUrl("/api/zapier/connection/rotate"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -217,7 +222,7 @@ export default function ZapierIntegrationPage() {
 
     setIsRevoking(true);
     try {
-      const response = await fetch("/api/zapier/connection/revoke", {
+      const response = await fetch(getApiUrl("/api/zapier/connection/revoke"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

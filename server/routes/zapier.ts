@@ -112,7 +112,35 @@ function normalizeBoolean(value: unknown): boolean | undefined {
 }
 
 async function requireInstalledLocation(locationId: string, res: Response): Promise<boolean> {
-  const installation = await getInstallation(locationId);
+  if (!ENV.databaseUrl.trim()) {
+    console.error("[Zapier] DATABASE_URL is not configured; cannot query ghl_installations", {
+      locationId,
+    });
+    res.status(503).json({
+      success: false,
+      code: "DATABASE_NOT_CONFIGURED",
+      locationId,
+      message: "The HomeFlow database is not configured. Set DATABASE_URL to the Supabase PostgreSQL connection string.",
+    });
+    return false;
+  }
+
+  let installation;
+  try {
+    installation = await getInstallation(locationId);
+  } catch (error) {
+    console.error("[Zapier] Installation lookup failed", {
+      locationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(503).json({
+      success: false,
+      code: "INSTALLATION_LOOKUP_FAILED",
+      locationId,
+      message: "HomeFlow could not query the Supabase installation table. Verify DATABASE_URL and the public.ghl_installations table.",
+    });
+    return false;
+  }
   if (!installation) {
     console.warn("[Zapier] No installation record for location", { locationId });
     res.status(403).json({
