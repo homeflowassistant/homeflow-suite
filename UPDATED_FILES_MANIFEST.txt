@@ -5,6 +5,7 @@ A	.prettierignore
 A	.prettierrc
 A	DEPLOY_RENDER.md
 A	DEPLOY_VERCEL.md
+A	LOCATION_INSTALLATION_FIX.md
 A	N8N_INTEGRATION_GUIDE.md
 A	REDEPLOY.md
 A	TAG_BASED_STATUS_REFERENCE.md
@@ -99,6 +100,7 @@ A	client/src/pages/ReactivationPage.css
 A	client/src/pages/ReactivationPage.tsx
 A	client/src/pages/RequestScheduling.css
 A	client/src/pages/RequestScheduling.tsx
+M	client/src/pages/ZapierIntegrationPage.tsx
 A	components.json
 A	drizzle.config.ts
 A	ideas.md
@@ -110,6 +112,7 @@ A	patches/wouter@3.7.1.patch
 A	pnpm-lock.yaml
 A	render.yaml
 M	server/_core/app.ts
+M	server/ghl-oauth.ts
 M	server/routes/zapier.ts
 M	server/services/zapier-service.ts
 A	todo.md
