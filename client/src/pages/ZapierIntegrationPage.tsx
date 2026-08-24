@@ -58,7 +58,17 @@ function buildZapCreateUrl(locationId: string): string {
 function useLocationId() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("locationId")?.trim() || "";
+    const fromQuery =
+      params.get("locationId") ||
+      params.get("location_id") ||
+      params.get("location.id") ||
+      params.get("subAccountId");
+
+    return (
+      fromQuery?.trim() ||
+      window.localStorage.getItem(LOCATION_STORAGE_KEY)?.trim() ||
+      ""
+    );
   }, []);
 }
 
@@ -83,7 +93,7 @@ export default function ZapierIntegrationPage() {
 
   const loadConnection = async () => {
     if (!locationId) {
-      toast.error("Missing locationId in the page URL.");
+      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
       return;
     }
     setIsLoading(true);
@@ -147,7 +157,7 @@ export default function ZapierIntegrationPage() {
 
   const handleRotateKey = async () => {
     if (!locationId) {
-      toast.error("Missing locationId in the page URL.");
+      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
       return;
     }
     // Show confirmation modal first
@@ -201,7 +211,7 @@ export default function ZapierIntegrationPage() {
 
   const handleRevoke = async () => {
     if (!locationId) {
-      toast.error("Missing locationId in the page URL.");
+      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
       return;
     }
 

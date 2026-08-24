@@ -276,15 +276,33 @@ export function registerGHLOAuthRoutes(app: Express): void {
    */
   app.post("/api/ghl/webhook", async (req: Request, res: Response) => {
     try {
-      const payload = req.body;
+      const payload = req.body ?? {};
       console.log("[GHL Webhook] Received:", JSON.stringify(payload));
 
-      if (payload.type === "INSTALL" && payload.locationId) {
-        const { locationId, companyId, installType } = payload as {
-          locationId?: string;
-          companyId?: string;
-          installType?: string;
-        };
+      const locationId =
+        typeof payload.locationId === "string"
+          ? payload.locationId.trim()
+          : typeof payload.location_id === "string"
+            ? payload.location_id.trim()
+            : typeof payload.location?.id === "string"
+              ? payload.location.id.trim()
+              : "";
+      const companyId =
+        typeof payload.companyId === "string"
+          ? payload.companyId.trim()
+          : typeof payload.company_id === "string"
+            ? payload.company_id.trim()
+            : typeof payload.company?.id === "string"
+              ? payload.company.id.trim()
+              : "";
+      const installType =
+        typeof payload.installType === "string"
+          ? payload.installType
+          : typeof payload.install_type === "string"
+            ? payload.install_type
+            : undefined;
+
+      if (payload.type === "INSTALL" && locationId) {
 
         console.log(
           "[GHL Webhook] ========== INSTALL EVENT RECEIVED ==========",
@@ -403,18 +421,18 @@ export function registerGHLOAuthRoutes(app: Express): void {
             }
           );
         }
-      } else if (payload.type === "UNINSTALL" && payload.locationId) {
+      } else if (payload.type === "UNINSTALL" && locationId) {
         console.log(
           "[GHL Webhook] ========== UNINSTALL EVENT RECEIVED ==========",
           {
             type: payload.type,
-            locationId: payload.locationId,
+            locationId,
             timestamp: new Date().toISOString(),
           }
         );
-        await removeInstallation(payload.locationId);
+        await removeInstallation(locationId);
         console.log("[GHL Webhook] ========== UNINSTALL SUCCESS ==========", {
-          locationId: payload.locationId,
+          locationId,
           status: "SUCCESS",
           timestamp: new Date().toISOString(),
         });

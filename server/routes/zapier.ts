@@ -24,6 +24,21 @@ function normalizeText(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function getLocationId(req: Request): string | undefined {
+  const query = req.query ?? {};
+  const body = req.body ?? {};
+  return (
+    normalizeText(query.locationId) ||
+    normalizeText(query.location_id) ||
+    normalizeText(query["location.id"]) ||
+    normalizeText(query.subAccountId) ||
+    normalizeText(body.locationId) ||
+    normalizeText(body.location_id) ||
+    normalizeText(body["location.id"]) ||
+    normalizeText(body.subAccountId)
+  );
+}
+
 /**
  * Upsert payload mirrors the Add Contact page field mapping exactly:
  * firstName, lastName, email, phone, address1, city, state, postalCode
@@ -99,8 +114,10 @@ function normalizeBoolean(value: unknown): boolean | undefined {
 async function requireInstalledLocation(locationId: string, res: Response): Promise<boolean> {
   const installation = await getInstallation(locationId);
   if (!installation) {
+    console.warn("[Zapier] No installation record for location", { locationId });
     res.status(403).json({
       success: false,
+      locationId,
       message: "The HomeFlow app is not installed or active for this location.",
     });
     return false;
@@ -176,7 +193,7 @@ async function handleZapierAuthTest(req: Request, res: Response): Promise<void> 
 export function registerZapierRoutes(app: Express): void {
   app.get("/api/zapier/connection", async (req: Request, res: Response) => {
     try {
-      const locationId = normalizeText(req.query.locationId);
+      const locationId = getLocationId(req);
       if (!locationId) {
         return res.status(400).json({
           success: false,
@@ -206,7 +223,7 @@ export function registerZapierRoutes(app: Express): void {
 
   app.post("/api/zapier/connection/rotate", async (req: Request, res: Response) => {
     try {
-      const locationId = normalizeText(req.body?.locationId);
+      const locationId = getLocationId(req);
       if (!locationId) {
         return res.status(400).json({
           success: false,
@@ -231,7 +248,7 @@ export function registerZapierRoutes(app: Express): void {
 
   app.post("/api/zapier/connection/revoke", async (req: Request, res: Response) => {
     try {
-      const locationId = normalizeText(req.body?.locationId);
+      const locationId = getLocationId(req);
       if (!locationId) {
         return res.status(400).json({
           success: false,
@@ -339,7 +356,7 @@ export function registerZapierRoutes(app: Express): void {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const locationId = normalizeText(req.body?.locationId);
+      const locationId = getLocationId(req);
       if (!locationId) {
         return res.status(400).json({ error: "locationId is required" });
       }
