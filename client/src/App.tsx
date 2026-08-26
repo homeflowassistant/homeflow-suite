@@ -30,7 +30,7 @@ function Router() {
       />
       <Route path={"/pricing"} component={PricingPage} />
       <Route path={"/account-setup"} component={AccountSetupPage} />
-      <Route path={"/integrations"} component={IntegrationsPage} />
+      <Route path={"/integrations"} component={ZapierIntegrationPage} />
       <Route path={"/integrate"} component={ZapierIntegrationPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />

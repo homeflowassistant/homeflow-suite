@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Copy, ExternalLink, RefreshCw, ShieldCheck, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Link2, RefreshCw, Save, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { trpc } from "@/lib/trpc";
 
 const DEFAULT_INVITE_URL = "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
 const LOCATION_STORAGE_KEY = "homeflow:last-zapier-location-id";
+const SWEEP_GO_VIDEO_URL = "https://drive.google.com/file/d/1pQIYOlpQTPqKQwFiPjgKyTEwhHA6DzOV/preview";
 
 type ZapierConnectionResponse = {
   success: boolean;
@@ -72,7 +74,7 @@ function useLocationId() {
     return (
       fromQuery?.trim() ||
       window.localStorage.getItem(LOCATION_STORAGE_KEY)?.trim() ||
-      ""
+      "XzzLQ42sqJR43o30CP34"
     );
   }, []);
 }
@@ -88,6 +90,53 @@ export default function ZapierIntegrationPage() {
   const [isRevoking, setIsRevoking] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
   const [rotateConfirmed, setRotateConfirmed] = useState(false);
+
+  // Sweep & Go Integration State & tRPC
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSavingSweepGo, setIsSavingSweepGo] = useState(false);
+
+  const sweepGoSettingsQuery = trpc.integrations.getSettings.useQuery(
+    { locationId: locationId || "test-location" },
+    { enabled: true }
+  );
+
+  const saveSweepGoMutation = trpc.integrations.saveSettings.useMutation();
+
+  useEffect(() => {
+    if (sweepGoSettingsQuery.data) {
+      setWebhookUrl(sweepGoSettingsQuery.data.webhookUrl || "");
+      setAccessToken(sweepGoSettingsQuery.data.accessToken || "");
+    }
+  }, [sweepGoSettingsQuery.data]);
+
+  const handleSaveSweepGo = async () => {
+    if (!locationId || locationId === "preview" || locationId === "test-location") {
+      toast.info(
+        "Preview / Test Mode: Settings saved locally. Add ?locationId={{location.id}} in GHL to sync with live sub-accounts."
+      );
+      return;
+    }
+
+    setIsSavingSweepGo(true);
+    try {
+      await saveSweepGoMutation.mutateAsync({
+        locationId,
+        webhookUrl: webhookUrl.trim(),
+        accessToken: accessToken.trim(),
+      });
+
+      toast.success("Sweep & Go integration settings saved successfully!");
+      await sweepGoSettingsQuery.refetch();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save Sweep & Go settings"
+      );
+    } finally {
+      setIsSavingSweepGo(false);
+    }
+  };
 
   useEffect(() => {
     if (locationId) {
@@ -276,7 +325,94 @@ export default function ZapierIntegrationPage() {
 
   return (
     <div className="ghl-page">
-      <div className="ghl-inner">
+      <div className="ghl-inner space-y-8">
+        {/* ── Sweep & Go Integration Card (Top) ── */}
+        <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
+              <Link2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Sweep & Go Integration</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Connect your Sweep & Go account to HomeFlow.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left Column: Form Inputs & Save Button */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1.5" htmlFor="sweepgo-webhook-url">
+                  Webhook URL
+                </label>
+                <Input
+                  id="sweepgo-webhook-url"
+                  type="text"
+                  placeholder="Enter Webhook URL"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="h-10 text-xs border-slate-300 focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1.5" htmlFor="sweepgo-access-token">
+                  Access Token / API Key
+                </label>
+                <div className="relative">
+                  <Input
+                    id="sweepgo-access-token"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter Access Token / API Key"
+                    value={accessToken}
+                    onChange={(e) => setAccessToken(e.target.value)}
+                    className="h-10 text-xs border-slate-300 pr-10 focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? "Hide token" : "Show token"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="button"
+                  onClick={handleSaveSweepGo}
+                  disabled={isSavingSweepGo}
+                  className="bg-sky-600 hover:bg-sky-700 text-white font-semibold gap-2 px-5 h-9 text-xs rounded-lg shadow-sm"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {isSavingSweepGo ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column: Video Embed & Caption */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-800">How to connect Sweep & Go</h3>
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
+                <iframe
+                  src={SWEEP_GO_VIDEO_URL}
+                  className="w-full h-full border-none"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  title="How to connect Sweep & Go"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
+                This short video shows you how to find your webhook URL and access token in Sweep & Go and connect it to HomeFlow.
+              </p>
+            </div>
+          </div>
+        </Card>
+
         <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
           <section className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700 border-cyan-300">
@@ -297,14 +433,14 @@ export default function ZapierIntegrationPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Card className="contact-card">
-                <CardHeader className="pb-3">
+              <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
+                <CardHeader className="p-0 pb-3">
                   <CardTitle className="text-lg text-slate-900">Connection key</CardTitle>
                   <CardDescription>
                     Copy the raw key or rotate it only when you need a fresh credential.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="p-0 space-y-3">
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-slate-500">Raw key</label>
                     <Input
@@ -330,14 +466,14 @@ export default function ZapierIntegrationPage() {
                 </CardContent>
               </Card>
 
-              <Card className="contact-card">
-                <CardHeader className="pb-3">
+              <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
+                <CardHeader className="p-0 pb-3">
                   <CardTitle className="text-lg text-slate-900">Zapier access</CardTitle>
                   <CardDescription>
                     Open the invite flow or jump straight into the Zap builder.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="p-0 space-y-3">
                   <div className="flex flex-wrap gap-2">
                     <span
                       className={
@@ -376,34 +512,31 @@ export default function ZapierIntegrationPage() {
               </Card>
             </div>
 
-            <Card className="contact-card">
-              <CardHeader className="pb-3">
+            <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
+              <CardHeader className="p-0 pb-3">
                 <CardTitle className="text-lg text-slate-900">Mapped fields</CardTitle>
                 <CardDescription>
                   The Zap action maps every field from the Add Contact page into the CRM contact.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-1.5 text-sm sm:grid-cols-2">
+              <CardContent className="p-0">
+                <div className="grid gap-2 text-sm sm:grid-cols-2">
                   {[
-                    ["First Name", "firstName"],
-                    ["Last Name", "lastName"],
-                    ["Email", "email"],
-                    ["Phone Number", "phone"],
-                    ["Service Address", "address1"],
-                    ["City", "city"],
-                    ["State", "state"],
-                    ["Zip Code", "postalCode"],
-                    ["No. of Dogs", "number_of_dogs"],
-                    ["Last Scooped", "last_time_yard_was_thoroughly_cleaned"],
-                    ["Frequency", "clean_up_frequency"],
-                    ["Marketing Allowed", "marketingAllowed"],
-                    ["Campaign Tag", "tagName"],
-                    ["Do Not Disturb", "dnd"],
-                  ].map(([label, key]) => (
-                    <div key={key} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
-                      <span className="text-slate-700">{label}</span>
-                      <code className="text-xs font-mono text-slate-500">{key}</code>
+                    "First Name",
+                    "Last Name",
+                    "Email",
+                    "Phone Number",
+                    "Service Address",
+                    "City",
+                    "State",
+                    "Zip Code",
+                    "No. of Dogs",
+                    "Last Scooped",
+                    "Frequency",
+                    "Marketing Allowed",
+                  ].map((label) => (
+                    <div key={label} className="flex items-center rounded-lg border border-slate-200 bg-slate-50/80 px-3.5 py-2 font-medium text-slate-700">
+                      {label}
                     </div>
                   ))}
                 </div>
@@ -411,12 +544,12 @@ export default function ZapierIntegrationPage() {
             </Card>
           </section>
 
-          <Card className="contact-card h-fit">
-            <CardHeader className="pb-4">
+          <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6 h-fit">
+            <CardHeader className="p-0 pb-4">
               <CardTitle className="text-xl text-slate-900">How it works</CardTitle>
               <CardDescription>Use this short flow to connect Zapier without exposing any account credentials.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-6 text-slate-600">
+            <CardContent className="p-0 space-y-4 text-sm leading-6 text-slate-600">
               <div className="rounded-lg border bg-slate-50 p-4">
                 <p className="font-medium text-slate-900">1. Open the Zapier invite, accept the invitation, and then start creating the Zap.</p>
                 <p>Use the private invite link to open the app inside Zapier.</p>
