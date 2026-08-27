@@ -498,7 +498,8 @@ export default function AccountSetupPage() {
 
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4">
-      <div className="w-full max-w-none sm:max-w-3xl mx-auto space-y-6">
+      {/* Extra bottom clearance keeps the Save action fully reachable inside the GHL iframe. */}
+      <div className="w-full max-w-none sm:max-w-3xl mx-auto space-y-6 pb-20">
         {/* Header */}
         <div className="text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200">
           <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
