@@ -8,6 +8,8 @@
  *   Business Name            → {{custom_values.homeflow_business_name}}
  *                              + {{custom_values.company_name}} (both updated)
  *   Business Owner Name      → {{custom_values.homeflow_business_owner_name}}
+ *   Business Email           → {{custom_values.business_email}}
+ *   Business Phone           → {{custom_values.business_phone}}
  *   Business Logo            → {{custom_values.homeflow_business_logo}}
  *                              + {{custom_values.company_logo}} (both updated)
  *   Payment Link             → {{custom_values.add_payment_link}}
@@ -16,7 +18,8 @@
  *   Reactivation Offer       → {{custom_values.discountfree_offer_for_reengagement_campaigns}}
  *
  * Behavior (as requested in the account setup spec):
- *   - Fields are shown in the order listed above.
+ *   - Fields are shown in the order listed above, including Business Email and Business Phone.
+
  *   - Auto-save on input (debounced) AND a manual Save button (consistent
  *     with the other settings pages): clicking Save pushes every field whose
  *     value has changed since the last load/save to GHL.
@@ -36,6 +39,8 @@ import {
   Building2,
   Link2,
   Facebook,
+  Mail,
+  Phone,
   CreditCard,
   UserRound,
   Image as ImageIcon,
@@ -57,6 +62,8 @@ import { trpc } from "@/lib/trpc";
 type AccountField =
   | "businessName"
   | "businessOwnerName"
+  | "businessEmail"
+  | "businessPhone"
   | "businessLogo"
   | "paymentLink"
   | "facebookPageLink"
@@ -88,6 +95,20 @@ const FIELDS: FieldMeta[] = [
     placeholder: "e.g. Jane Doe",
     icon: <UserRound size={15} />,
     help: "The name you want to use use to introduce yourself in emails and sms messages.",
+  },
+  {
+    key: "businessEmail",
+    label: "Business Email",
+    placeholder: "you@yourbusiness.com",
+    icon: <Mail size={15} />,
+    help: "The business email address used in emails and notifications.",
+  },
+  {
+    key: "businessPhone",
+    label: "Business Phone",
+    placeholder: "e.g. (555) 123-4567",
+    icon: <Phone size={15} />,
+    help: "The business phone number used in emails and notifications.",
   },
   {
     key: "businessLogo",
@@ -123,7 +144,8 @@ const FIELDS: FieldMeta[] = [
   },
   {
     key: "reengagementOffer",
-    label: "Discount / Free Offer for Reactivation Campaigns (Reactivation NOT reengagement)",
+    label:
+      "Discount / Free Offer for Reactivation Campaigns (Reactivation NOT reengagement)",
     placeholder: "Your offer is: ...",
     icon: <Tag size={15} />,
     help: "Offer Used in Lite/Custom Reactivation Campaigns.",
@@ -155,6 +177,8 @@ export default function AccountSetupPage() {
   const [values, setValues] = useState<Record<AccountField, string>>({
     businessName: "",
     businessOwnerName: "",
+    businessEmail: "",
+    businessPhone: "",
     businessLogo: "",
     paymentLink: "",
     facebookPageLink: "",
@@ -174,6 +198,8 @@ export default function AccountSetupPage() {
   >({
     businessName: "idle",
     businessOwnerName: "idle",
+    businessEmail: "idle",
+    businessPhone: "idle",
     businessLogo: "idle",
     paymentLink: "idle",
     facebookPageLink: "idle",
@@ -248,6 +274,8 @@ export default function AccountSetupPage() {
     setValues({
       businessName: s.businessName,
       businessOwnerName: s.businessOwnerName,
+      businessEmail: s.businessEmail,
+      businessPhone: s.businessPhone,
       businessLogo: s.businessLogo,
       paymentLink: s.paymentLink,
       facebookPageLink: s.facebookPageLink,
@@ -273,9 +301,13 @@ export default function AccountSetupPage() {
   // value is pushed to GHL and a confirmation pop-up appears. No-op
   // updates are skipped, and saves wait until GHL has finished loading so
   // the freshly fetched value always wins on page open.
-  const debounceTimers = useRef<Record<AccountField, ReturnType<typeof setTimeout> | null>>({
+  const debounceTimers = useRef<
+    Record<AccountField, ReturnType<typeof setTimeout> | null>
+  >({
     businessName: null,
     businessOwnerName: null,
+    businessEmail: null,
+    businessPhone: null,
     businessLogo: null,
     paymentLink: null,
     facebookPageLink: null,
@@ -303,7 +335,10 @@ export default function AccountSetupPage() {
       debounceTimers.current[field] = setTimeout(() => {
         if (!locationId) return;
         // Skip no-op saves (value unchanged from what GHL already has).
-        const stored = (settingsQuery.data as Record<string, string> | undefined)?.[mapFieldToGhlKey(field)] ?? "";
+        const stored =
+          (settingsQuery.data as Record<string, string> | undefined)?.[
+            mapFieldToGhlKey(field)
+          ] ?? "";
         if (
           stored === newValue &&
           !saveFieldMutation.isPending &&
@@ -342,15 +377,19 @@ export default function AccountSetupPage() {
   // `useMemo`/`useCallback` that references them avoids a runtime
   // "Cannot access before initialization" error.
   const mapFieldToGhlKey = (field: AccountField): string =>
-    ({
-      businessName: "businessName",
-      businessOwnerName: "businessOwnerName",
-      businessLogo: "businessLogo",
-      paymentLink: "paymentLink",
-      facebookPageLink: "facebookPageLink",
-      leadCampaignOffer: "leadCampaignOffer",
-      reengagementOffer: "reengagementOffer",
-    } as const)[field];
+    (
+      ({
+        businessName: "businessName",
+        businessOwnerName: "businessOwnerName",
+        businessEmail: "businessEmail",
+        businessPhone: "businessPhone",
+        businessLogo: "businessLogo",
+        paymentLink: "paymentLink",
+        facebookPageLink: "facebookPageLink",
+        leadCampaignOffer: "leadCampaignOffer",
+        reengagementOffer: "reengagementOffer",
+      }) as const
+    )[field];
 
   // ── Manual Save button (same explicit-Save pattern as the other
   //    settings pages) ────────────────────────────────────────────────
@@ -373,7 +412,8 @@ export default function AccountSetupPage() {
     if (!savedValues) return [] as AccountField[];
     return FIELDS.filter(
       meta =>
-        (values[meta.key] ?? "") !== (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
+        (values[meta.key] ?? "") !==
+        (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
     ).map(meta => meta.key);
   }, [values, savedValues]);
 
@@ -527,7 +567,10 @@ export default function AccountSetupPage() {
                     }
                     setLogoUploading(true);
                     dataSavedFieldRef.current = "businessLogo";
-                    setSaveStatus(prev => ({ ...prev, businessLogo: "saving" }));
+                    setSaveStatus(prev => ({
+                      ...prev,
+                      businessLogo: "saving",
+                    }));
                     try {
                       const res = await saveFieldMutation.mutateAsync({
                         locationId,
@@ -535,19 +578,28 @@ export default function AccountSetupPage() {
                         value: base64,
                       });
                       setStoredLogo(res.saved.value);
-                      setSaveStatus(prev => ({ ...prev, businessLogo: "saved" }));
+                      setSaveStatus(prev => ({
+                        ...prev,
+                        businessLogo: "saved",
+                      }));
                       toast.success(
                         <span className="flex items-center gap-1.5">
                           <CheckCircle2 size={14} />
-                          Logo uploaded and saved — it will be used by your campaigns.
+                          Logo uploaded and saved — it will be used by your
+                          campaigns.
                         </span>
                       );
                       settingsQuery.refetch();
                     } catch (error) {
                       const errorMsg =
-                        error instanceof Error ? error.message : "Unknown error";
+                        error instanceof Error
+                          ? error.message
+                          : "Unknown error";
                       toast.error(`Error saving logo: ${errorMsg}`);
-                      setSaveStatus(prev => ({ ...prev, businessLogo: "error" }));
+                      setSaveStatus(prev => ({
+                        ...prev,
+                        businessLogo: "error",
+                      }));
                     } finally {
                       setLogoUploading(false);
                     }
@@ -559,7 +611,8 @@ export default function AccountSetupPage() {
                   type={meta.isUrl ? "url" : "text"}
                   value={values[meta.key]}
                   onChange={e => {
-                    if (meta.key === "businessLogo") setTypedLogo(e.target.value);
+                    if (meta.key === "businessLogo")
+                      setTypedLogo(e.target.value);
                     handleValueChange(meta.key, e.target.value);
                   }}
                   disabled={
@@ -583,14 +636,16 @@ export default function AccountSetupPage() {
           {unsavedFields.length > 0 && !isSavingAll && (
             <p className="text-[11px] text-amber-600">
               You have unsaved changes in {unsavedFields.length} field
-              {unsavedFields.length === 1 ? "" : "s"}. Click Save to sync
-              them to your sub-account.
+              {unsavedFields.length === 1 ? "" : "s"}. Click Save to sync them
+              to your sub-account.
             </p>
           )}
           <button
             type="button"
             onClick={handleSaveAll}
-            disabled={isSavingAll || saveFieldMutation.isPending || logoUploading}
+            disabled={
+              isSavingAll || saveFieldMutation.isPending || logoUploading
+            }
             className="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSavingAll ? (
@@ -606,8 +661,6 @@ export default function AccountSetupPage() {
             )}
           </button>
         </div>
-
-        
       </div>
     </div>
   );
@@ -651,11 +704,7 @@ function StatusChip({
  * Custom Quote popup); the resulting hosted URL is then written to both
  * `homeflow_business_logo` and `company_logo`.
  */
-function LogoUploadBox({
-  onUpload,
-}: {
-  onUpload: (base64: string) => void;
-}) {
+function LogoUploadBox({ onUpload }: { onUpload: (base64: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -25,6 +25,8 @@ import {
  * when two keys share a field, e.g. business name / logo):
  *   Business Name            → homeflow_business_name, company_name
  *   Business Owner Name      → homeflow_business_owner_name
+ *   Business Email           → {{custom_values.business_email}}
+ *   Business Phone           → {{custom_values.business_phone}}
  *   Business Logo (URL/base64) → homeflow_business_logo, company_logo
  *   Payment Link             → add_payment_link
  *   Facebook Page Link       → facebook_page_link
@@ -35,6 +37,8 @@ import {
 const accountSetupDataSchema = z.object({
   businessName: z.string().trim().max(500).optional(),
   businessOwnerName: z.string().trim().max(500).optional(),
+  businessEmail: z.string().trim().max(500).optional(),
+  businessPhone: z.string().trim().max(100).optional(),
   businessLogo: z.string().optional(), // URL or base64 data URI (goes to BOTH logo keys)
   paymentLink: z.string().trim().max(2000).optional(),
   facebookPageLink: z.string().trim().max(2000).optional(),
@@ -50,6 +54,8 @@ export type AccountSetupData = z.infer<typeof accountSetupDataSchema>;
 const FIELD_KEY_MAP: Record<keyof AccountSetupData, string[]> = {
   businessName: ["homeflow_business_name", "company_name"],
   businessOwnerName: ["homeflow_business_owner_name"],
+  businessEmail: ["business_email"],
+  businessPhone: ["business_phone"],
   businessLogo: ["homeflow_business_logo", "company_logo"],
   paymentLink: ["add_payment_link"],
   facebookPageLink: ["facebook_page_link"],
@@ -63,6 +69,8 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
   "businessLogo",
   "businessName",
   "businessOwnerName",
+  "businessEmail",
+  "businessPhone",
   "paymentLink",
   "facebookPageLink",
   "leadCampaignOffer",
@@ -164,6 +172,8 @@ const getAccountSetupSettingsProcedure = publicProcedure
         businessName: get("homeflow_business_name"),
         companyName: get("company_name"),
         businessOwnerName: get("homeflow_business_owner_name"),
+        businessEmail: get("business_email"),
+        businessPhone: get("business_phone"),
         businessLogo: get("homeflow_business_logo"),
         companyLogo: get("company_logo"),
         paymentLink: get("add_payment_link"),
@@ -180,6 +190,8 @@ const getAccountSetupSettingsProcedure = publicProcedure
         businessName: empty(),
         companyName: empty(),
         businessOwnerName: empty(),
+        businessEmail: empty(),
+        businessPhone: empty(),
         businessLogo: empty(),
         companyLogo: empty(),
         paymentLink: empty(),
