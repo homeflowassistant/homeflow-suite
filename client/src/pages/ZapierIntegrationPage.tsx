@@ -324,7 +324,7 @@ export default function ZapierIntegrationPage() {
   }
 
   return (
-    <div className="ghl-page">
+    <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
         {/* ── Sweep & Go Integration Card (Top) ── */}
         <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">
@@ -413,168 +413,211 @@ export default function ZapierIntegrationPage() {
           </div>
         </Card>
 
-        <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-          <section className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700 border-cyan-300">
-              <Zap className="h-3.5 w-3.5 text-cyan-600" />
-              HomeFlow Zapier Integration
+        {/* ── 2. Zapier Integration Outer Card ── */}
+        <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7 space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+              <Zap className="h-5 w-5 fill-orange-500 text-orange-500" />
             </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 leading-tight">Zapier Integration</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Use Zapier to send contacts into HomeFlow from other CRMs, forms, and lead sources.
+              </p>
+            </div>
+          </div>
 
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                Connect your account to Zapier.
-              </h1>
-              <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                Generate a secure connection key, open the private Zapier app, and keep contact
-                upserts flowing through your account connection. Every field mapped on the Add
-                Contact page — name, email, phone, service address, number of dogs, last time
-                scooped, clean-up frequency, campaign tag, and marketing consent — is available in the Zap.
+          {/* Row 1: Left Column (What is Zapier Video) | Right Column (Connection Key & Zapier Access) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* Left Column: Video */}
+            <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-900">What is Zapier + when to use it</h3>
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
+                  <iframe
+                    src={SWEEP_GO_VIDEO_URL}
+                    className="w-full h-full border-none"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    title="What is Zapier + when to use it"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                Learn how Zapier works, common use cases, and when to use it to send leads into HomeFlow.
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
-                <CardHeader className="p-0 pb-3">
-                  <CardTitle className="text-lg text-slate-900">Connection key</CardTitle>
-                  <CardDescription>
+            {/* Right Column: Connection Key & Zapier Access */}
+            <div className="space-y-4 flex flex-col justify-between">
+              {/* Connection Key */}
+              <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Connection Key</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Copy the raw key or rotate it only when you need a fresh credential.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 space-y-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-500">Raw key</label>
-                    <Input
-                      readOnly
-                      value={visibleConnectionKey || connection?.connectionKeyPreview || "No active key"}
-                      className="font-mono text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" className="gap-2" onClick={handleCopyConnectionKey}>
-                      {copiedKey ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copiedKey ? "Copied" : "Copy Key"}
-                    </Button>
-                    <Button type="button" variant="outline" className="gap-2" onClick={handleRotateKey} disabled={isRotating || !locationId}>
-                      <RefreshCw className={`h-4 w-4 ${isRotating ? "animate-spin" : ""}`} />
-                      {isRotating ? "Rotating..." : "Rotate Key"}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    The key is stored securely in hashed form for validation, and the raw value is
-                    kept so you can copy it later.
                   </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
-                <CardHeader className="p-0 pb-3">
-                  <CardTitle className="text-lg text-slate-900">Zapier access</CardTitle>
-                  <CardDescription>
-                    Open the invite flow or jump straight into the Zap builder.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <span
-                      className={
-                        connection?.zapierEnabled
-                          ? "inline-flex items-center rounded-full border border-cyan-300 bg-cyan-100 px-2.5 py-0.5 text-xs font-medium text-cyan-700"
-                          : "inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600"
-                      }
-                    >
-                      {connection?.zapierEnabled ? "Enabled" : "Disabled"}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                      Private app invite
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={handleIntegrate} className="gap-2" disabled={!locationId}>
-                      <ExternalLink className="h-4 w-4" />
-                      Open Zapier Invite
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleCreateZap} className="gap-2" disabled={!locationId || !zapCreateUrl}>
-                      <Zap className="h-4 w-4" />
-                      Create Zap
-                    </Button>
-                    <Button type="button" variant="outline" className="gap-2" disabled={isLoading || !locationId} onClick={() => void loadConnection()}>
-                      <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-                      Refresh
-                    </Button>
-                  </div>
-
-                  <Button type="button" variant="destructive" className="gap-2" onClick={handleRevoke} disabled={isRevoking || !locationId}>
-                    <AlertTriangle className="h-4 w-4" />
-                    {isRevoking ? "Revoking..." : "Revoke Access"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6">
-              <CardHeader className="p-0 pb-3">
-                <CardTitle className="text-lg text-slate-900">Mapped fields</CardTitle>
-                <CardDescription>
-                  The Zap action maps every field from the Add Contact page into the CRM contact.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
-                  {[
-                    "First Name",
-                    "Last Name",
-                    "Email",
-                    "Phone Number",
-                    "Service Address",
-                    "City",
-                    "State",
-                    "Zip Code",
-                    "No. of Dogs",
-                    "Last Scooped",
-                    "Frequency",
-                    "Marketing Allowed",
-                  ].map((label) => (
-                    <div key={label} className="flex items-center rounded-lg border border-slate-200 bg-slate-50/80 px-3.5 py-2 font-medium text-slate-700">
-                      {label}
-                    </div>
-                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl p-6 h-fit">
-            <CardHeader className="p-0 pb-4">
-              <CardTitle className="text-xl text-slate-900">How it works</CardTitle>
-              <CardDescription>Use this short flow to connect Zapier without exposing any account credentials.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 space-y-4 text-sm leading-6 text-slate-600">
-              <div className="rounded-lg border bg-slate-50 p-4">
-                <p className="font-medium text-slate-900">1. Open the Zapier invite, accept the invitation, and then start creating the Zap.</p>
-                <p>Use the private invite link to open the app inside Zapier.</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4">
-                <p className="font-medium text-slate-900">2. In Zapier, select the HomeFlow app in the Action step.</p>
-                <p>Choose the app action you want to use for the Zap.</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4">
-                <p className="font-medium text-slate-900">3. Connect your account by adding the connection key.</p>
-                <p>Zapier uses this connection key to access your account.</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4">
-                <p className="font-medium text-slate-900">4. Map the Zap trigger fields to the contact fields.</p>
-                <p>Every field mapped on the Add Contact page is available in the action, so Zapier-sourced contacts look exactly like manually added ones.</p>
-              </div>
-              <div className="rounded-lg border border-cyan-300/50 bg-cyan-50/50 p-4">
-                <p className="flex items-center gap-2 font-medium text-slate-900">
-                  <ShieldCheck className="h-4 w-4 text-cyan-600" />
-                  Security model
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-500">Raw key</label>
+                  <Input
+                    readOnly
+                    value={visibleConnectionKey || connection?.connectionKeyPreview || "No active key"}
+                    className="font-mono text-xs h-9"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" variant="outline" className="gap-2 h-8 text-xs px-3" onClick={handleCopyConnectionKey}>
+                    {copiedKey ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedKey ? "Copied" : "Copy Key"}
+                  </Button>
+                  <Button type="button" variant="outline" className="gap-2 h-8 text-xs px-3" onClick={handleRotateKey} disabled={isRotating || !locationId}>
+                    <RefreshCw className={`h-3.5 w-3.5 ${isRotating ? "animate-spin" : ""}`} />
+                    {isRotating ? "Rotating..." : "Rotate Key"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-slate-500 pt-0.5">
+                  The key is stored securely in hashed form for validation, and the raw value is kept so you can copy it later.
                 </p>
-                <p>Account credentials stay server-side. The key is hashed for validation, while the raw key is retained for user copying.</p>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Zapier Access */}
+              <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Zapier Access</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Open the invite flow or jump straight into the Zap builder.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className={connection?.zapierEnabled ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600"}>
+                    {connection?.zapierEnabled ? "Enabled" : "Disabled"}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                    Private app invite
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" onClick={handleIntegrate} className="gap-2 h-9 text-xs px-4 bg-sky-600 hover:bg-sky-700 text-white font-medium" disabled={!locationId}>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open Zapier Invite
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleCreateZap} className="gap-2 h-9 text-xs px-3" disabled={!locationId || !zapCreateUrl}>
+                    <Zap className="h-3.5 w-3.5" />
+                    Create Zap
+                  </Button>
+                  <Button type="button" variant="outline" className="gap-2 h-9 text-xs px-3" disabled={isLoading || !locationId} onClick={() => void loadConnection()}>
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+
+                <Button type="button" variant="destructive" className="gap-2 h-8 text-xs px-3" onClick={handleRevoke} disabled={isRevoking || !locationId}>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {isRevoking ? "Revoking..." : "Revoke Access"}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Steps to connect in Zapier */}
+          <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-4">
+            <h3 className="text-base font-bold text-slate-900">Steps to connect in Zapier</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                  <p className="font-semibold text-xs text-slate-900 leading-snug">
+                    Open the Zapier invite, accept the invitation, and then start creating the Zap.
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal pl-8">
+                  Use the private invite link to open the app inside Zapier.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                  <p className="font-semibold text-xs text-slate-900 leading-snug">
+                    In Zapier, select the HomeFlow app in the Action step.
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal pl-8">
+                  Choose the app action you want to use for the Zap.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                  <p className="font-semibold text-xs text-slate-900 leading-snug">
+                    Connect your account by adding the connection key.
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal pl-8">
+                  Zapier uses this connection key to access your account.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                  <p className="font-semibold text-xs text-slate-900 leading-snug">
+                    Map the Zap trigger fields to the contact fields.
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal pl-8">
+                  Every field mapped on the Add Contact page is available in the action.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Available Fields Grid */}
+          <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Available Fields</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                These are the fields available in HomeFlow. Use them when mapping your Zap in Zapier.
+              </p>
+            </div>
+            <div className="grid gap-2 text-xs sm:grid-cols-2">
+              {[
+                "First Name",
+                "Last Name",
+                "Email",
+                "Phone Number",
+                "Service Address",
+                "City",
+                "State",
+                "Zip Code",
+                "No. of Dogs",
+                "Last Scooped",
+                "Frequency",
+                "Marketing Allowed",
+              ].map((label) => (
+                <div key={label} className="flex items-center rounded-lg border border-slate-200 bg-slate-50/70 px-3.5 py-2 font-medium text-slate-700">
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* ── 3. Security Model Standalone Card (Bottom of Page) ── */}
+        <div className="border border-sky-200/90 bg-sky-50/60 shadow-sm rounded-2xl p-5 sm:p-6 mb-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-slate-900 leading-tight">Security model</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Account credentials stay server-side. The key is hashed for validation, while the raw key is retained for user copying.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
