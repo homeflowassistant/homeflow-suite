@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes }
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { getDb } from "../db.js";
 import { ENV } from "../_core/env.js";
-import { ensureGhlCustomValue } from "../ghl-service.js";
+import { ensureGhlCustomValue, getValidAccessToken } from "../ghl-service.js";
 import {
   customTriggerBindings,
   customTriggerWebhooks,
@@ -431,10 +431,12 @@ async function resolveWebhookToken(rawToken: string) {
   return rows[0];
 }
 
-function deliveryHeaders(): Record<string, string> {
+function deliveryHeaders(accessToken: string): Record<string, string> {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    Version: "2021-07-28",
     "User-Agent": "HomeFlow-CustomTrigger/1.0",
   };
 }
@@ -469,6 +471,19 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
     throw new CustomTriggerHttpError(409, "NO_ACTIVE_TRIGGER_BINDING", "The webhook URL is valid, but no active HighLevel workflow is currently bound to this custom trigger.");
   }
 
+  let accessToken: string;
+  try {
+    // HighLevel's generated Marketplace trigger execution URL requires the
+    // installed location's OAuth token for server-to-server delivery.
+    accessToken = await getValidAccessToken(webhook.locationId);
+  } catch {
+    throw new CustomTriggerHttpError(
+      401,
+      "LOCATION_AUTHENTICATION_FAILED",
+      "The HighLevel location connection is missing or expired. Reconnect the HomeFlow app before sending webhook payloads."
+    );
+  }
+
   const deliveryPayload = payload && typeof payload === "object" ? payload : { data: payload };
   const results = await Promise.all(
     bindings.map(async binding => {
@@ -476,7 +491,7 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
       try {
         const response = await fetch(targetUrl, {
           method: "POST",
-          headers: deliveryHeaders(),
+          headers: deliveryHeaders(accessToken),
           body: JSON.stringify(deliveryPayload),
           signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
         });
