@@ -20,6 +20,7 @@ import {
   updateCustomValuesOnInstall,
   getValidAccessToken,
 } from "./ghl-service.js";
+import { ensureCustomTriggerWebhook } from "./services/custom-trigger-service.js";
 
 async function delay(ms: number): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, ms));
@@ -137,6 +138,7 @@ async function processLocationInstall(
         locationTokenResponse as Parameters<typeof upsertInstallation>[0],
         locationId
       );
+      await ensureCustomTriggerWebhook(locationId, companyId);
       console.log(
         "[GHL Webhook] ========== LOCATION TOKEN EXCHANGE SUCCESS ==========",
         {

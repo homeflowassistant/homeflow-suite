@@ -22,3 +22,7 @@ services:
         scope: all
       - key: ALLOWED_ORIGINS
         value: https://addcontact-xi.vercel.app,https://homeflow-suite.vercel.app
+      - key: CUSTOM_TRIGGER_WEBHOOK_BASE_URL
+        scope: all
+      - key: CUSTOM_TRIGGER_SUBSCRIPTION_SECRET
+        scope: all

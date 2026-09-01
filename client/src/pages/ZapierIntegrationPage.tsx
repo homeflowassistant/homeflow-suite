@@ -23,6 +23,34 @@ type ZapierConnectionResponse = {
   message?: string;
 };
 
+type CustomTriggerBinding = {
+  id: number;
+  workflowId: string;
+  triggerId: string | null;
+  triggerKey: string;
+  triggerVersion: string | null;
+  targetUrl: string | null;
+  filters: unknown;
+  active: boolean;
+  lastEventType: string | null;
+  lastEventAt: string | null;
+  lastDeliveryAt: string | null;
+  lastDeliveryStatus: string | null;
+};
+
+type CustomTriggerWebhookResponse = {
+  success: boolean;
+  locationId: string;
+  companyId: string | null;
+  webhookUrl: string;
+  tokenPreview: string;
+  active: boolean;
+  status: "ready" | "waiting_for_workflow";
+  bindingCount: number;
+  bindings: CustomTriggerBinding[];
+  message?: string;
+};
+
 async function readResponseBody(response: Response): Promise<{ json?: unknown; text: string }> {
   const text = await response.text();
 
@@ -85,6 +113,9 @@ export default function ZapierIntegrationPage() {
   const [zapCreateUrl, setZapCreateUrl] = useState("");
   const [connection, setConnection] = useState<ZapierConnectionResponse | null>(null);
   const [visibleConnectionKey, setVisibleConnectionKey] = useState<string>("");
+  const [customTriggerWebhook, setCustomTriggerWebhook] = useState<CustomTriggerWebhookResponse | null>(null);
+  const [copiedCustomTriggerUrl, setCopiedCustomTriggerUrl] = useState(false);
+  const [isLoadingCustomTriggerWebhook, setIsLoadingCustomTriggerWebhook] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
@@ -174,6 +205,31 @@ export default function ZapierIntegrationPage() {
     void loadConnection();
   }, [locationId]);
 
+  const loadCustomTriggerWebhook = async () => {
+    if (!locationId) return;
+    setIsLoadingCustomTriggerWebhook(true);
+    try {
+      const response = await fetch(
+        getApiUrl(`/api/custom-trigger/webhook?locationId=${encodeURIComponent(locationId)}`),
+        { method: "GET", credentials: "include" }
+      );
+      const body = await readResponseBody(response);
+      const data = (body.json ?? {}) as CustomTriggerWebhookResponse;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || body.text || "Failed to load the custom-trigger webhook URL.");
+      }
+      setCustomTriggerWebhook(data);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load the custom-trigger webhook URL.");
+    } finally {
+      setIsLoadingCustomTriggerWebhook(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadCustomTriggerWebhook();
+  }, [locationId]);
+
   const inviteUrl = useMemo(() => {
     const baseInvite = connection?.zapierInviteUrl || getInviteUrl();
     if (!zapCreateUrl) return baseInvite;
@@ -193,6 +249,23 @@ export default function ZapierIntegrationPage() {
       window.setTimeout(() => setCopiedKey(false), 1800);
     } catch {
       toast.error("Unable to copy Zapier connection key.");
+    }
+  };
+
+  const handleCopyCustomTriggerUrl = async () => {
+    const url = customTriggerWebhook?.webhookUrl;
+    if (!url) {
+      toast.error("The custom-trigger webhook URL is not available yet.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedCustomTriggerUrl(true);
+      toast.success("Custom-trigger webhook URL copied.");
+      window.setTimeout(() => setCopiedCustomTriggerUrl(false), 1800);
+    } catch {
+      toast.error("Unable to copy the custom-trigger webhook URL.");
     }
   };
 
@@ -410,6 +483,58 @@ export default function ZapierIntegrationPage() {
                 This short video shows you how to find your webhook URL and access token in Sweep & Go and connect it to HomeFlow.
               </p>
             </div>
+          </div>
+        </Card>
+
+        {/* ── Custom Marketplace Trigger Webhook Card ── */}
+        <Card className="border border-emerald-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Link2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Custom Trigger Webhook</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Send the complete onboarding event payload into the workflow configured for this sub-account.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-slate-800">Public webhook URL</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  This URL is unique to the current GHL sub-account. No external Authorization header is required.
+                </p>
+              </div>
+              <span className={customTriggerWebhook?.status === "ready" ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"}>
+                {customTriggerWebhook?.status === "ready" ? "Workflow connected" : "Waiting for workflow"}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                readOnly
+                value={customTriggerWebhook?.webhookUrl || (isLoadingCustomTriggerWebhook ? "Generating webhook URL…" : "Webhook URL unavailable")}
+                className="font-mono text-xs h-10 bg-white border-emerald-200"
+                aria-label="Custom trigger public webhook URL"
+              />
+              <Button type="button" variant="outline" onClick={handleCopyCustomTriggerUrl} disabled={!customTriggerWebhook?.webhookUrl} className="gap-2 h-10 text-xs px-4 whitespace-nowrap border-emerald-300 hover:bg-emerald-100">
+                {copiedCustomTriggerUrl ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copiedCustomTriggerUrl ? "Copied" : "Copy URL"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void loadCustomTriggerWebhook()} disabled={isLoadingCustomTriggerWebhook} className="gap-2 h-10 text-xs px-4 whitespace-nowrap">
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingCustomTriggerWebhook ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
+
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              {customTriggerWebhook?.status === "ready"
+                ? `${customTriggerWebhook.bindingCount} HighLevel workflow binding${customTriggerWebhook.bindingCount === 1 ? "" : "s"} found. Send POST JSON payloads to this URL.`
+                : "The URL has been provisioned. It becomes deliverable after the published Marketplace custom trigger is attached to a workflow in the snapshot."}
+            </p>
           </div>
         </Card>
 

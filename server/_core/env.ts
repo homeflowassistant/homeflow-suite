@@ -15,6 +15,13 @@ export const ENV = {
   zapierInviteUrl: process.env.ZAPIER_INVITE_URL ?? "",
   zapierKeyPrefix: process.env.ZAPIER_KEY_PREFIX ?? "zap_live_",
   n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
+  customTriggerWebhookBaseUrl:
+    process.env.CUSTOM_TRIGGER_WEBHOOK_BASE_URL ??
+    process.env.APP_DOMAIN ??
+    process.env.VITE_API_URL ??
+    "https://homeflow-suite.vercel.app",
+  customTriggerSubscriptionSecret:
+    process.env.CUSTOM_TRIGGER_SUBSCRIPTION_SECRET ?? "",
   appDomain:
     process.env.APP_DOMAIN ??
     process.env.VITE_API_URL ??

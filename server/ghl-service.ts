@@ -768,6 +768,60 @@ export async function upsertGhlCustomValue(
   return { id: existingId, name, value };
 }
 
+/**
+ * Create or update a location custom value. Most existing HomeFlow settings
+ * intentionally use update-only semantics, but the generated custom-trigger
+ * webhook must be guaranteed to exist because new locations may not yet have
+ * `homeflow_webhook` in their snapshot.
+ *
+ * HighLevel documents POST /locations/:locationId/customValues with the v3
+ * header and locations/customValues.write scope for this operation.
+ */
+export async function ensureGhlCustomValue(
+  locationId: string,
+  name: string,
+  value: string
+): Promise<{ id: string; name: string; value: string }> {
+  const existing = await upsertGhlCustomValue(locationId, name, value);
+  if (existing.id !== "skipped_not_found") return existing;
+
+  const accessToken = await getValidAccessToken(locationId);
+  const response = await fetch(
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: "v3",
+      },
+      body: JSON.stringify({ name, value }),
+    }
+  );
+
+  if (response.ok) {
+    const data = (await response.json()) as Record<string, unknown>;
+    const customValue = (data.customValue ?? data) as Record<string, unknown>;
+    return {
+      id: typeof customValue.id === "string" ? customValue.id : "created",
+      name: typeof customValue.name === "string" ? customValue.name : name,
+      value: typeof customValue.value === "string" ? customValue.value : value,
+    };
+  }
+
+  // A concurrent installer may have created the value between the initial GET
+  // and this POST. Re-read/update once on conflict; otherwise preserve the
+  // existing update-only contract and return a non-throwing result for callers.
+  if (response.status === 409) {
+    return upsertGhlCustomValue(locationId, name, value);
+  }
+
+  const errorBody = await response.text();
+  console.error(`[GHL] POST failed for custom value '${name}': ${response.status} ${errorBody}`);
+  return { id: "create_failed", name, value };
+}
+
 // ─── Token Exchange ──────────────────────────────────────────────────
 
 export async function exchangeCodeForTokens(

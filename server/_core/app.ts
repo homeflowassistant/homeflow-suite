@@ -7,6 +7,7 @@ import { registerGHLOAuthRoutes } from "../ghl-oauth.js";
 import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField.js";
 import { registerZapierRoutes } from "../routes/zapier.js";
 import { registerCustomValuesRoutes } from "../routes/customValues.js";
+import { registerCustomTriggerRoutes } from "../routes/customTrigger.js";
 import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
 
@@ -60,6 +61,7 @@ export async function createApp(options?: { serveClient?: boolean }): Promise<Ex
   registerGHLOAuthRoutes(app);
   registerContactsCustomFieldRoutes(app);
   registerCustomValuesRoutes(app);
+  registerCustomTriggerRoutes(app);
   registerZapierRoutes(app);
 
   app.use(
