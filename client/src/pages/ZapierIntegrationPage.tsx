@@ -114,7 +114,8 @@ export default function ZapierIntegrationPage() {
   const [connection, setConnection] = useState<ZapierConnectionResponse | null>(null);
   const [visibleConnectionKey, setVisibleConnectionKey] = useState<string>("");
   const [customTriggerWebhook, setCustomTriggerWebhook] = useState<CustomTriggerWebhookResponse | null>(null);
-  const [copiedCustomTriggerUrl, setCopiedCustomTriggerUrl] = useState(false);
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const [webhookUrlSource, setWebhookUrlSource] = useState<"custom-value" | "database-fallback" | "loading">("loading");
   const [isLoadingCustomTriggerWebhook, setIsLoadingCustomTriggerWebhook] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -136,11 +137,25 @@ export default function ZapierIntegrationPage() {
   const saveSweepGoMutation = trpc.integrations.saveSettings.useMutation();
 
   useEffect(() => {
-    if (sweepGoSettingsQuery.data) {
-      setWebhookUrl(sweepGoSettingsQuery.data.webhookUrl || "");
-      setAccessToken(sweepGoSettingsQuery.data.accessToken || "");
+    const settings = sweepGoSettingsQuery.data;
+    if (!settings) return;
+
+    const customValueUrl = settings.webhookUrl?.trim() || "";
+    setAccessToken(settings.accessToken || "");
+
+    if (customValueUrl) {
+      // The GHL custom value is authoritative when it exists.
+      setWebhookUrl(customValueUrl);
+      setWebhookUrlSource("custom-value");
+    } else if (customTriggerWebhook?.webhookUrl) {
+      // The custom-trigger API is the database-backed fallback.
+      setWebhookUrl(customTriggerWebhook.webhookUrl);
+      setWebhookUrlSource("database-fallback");
+    } else {
+      setWebhookUrl("");
+      setWebhookUrlSource("loading");
     }
-  }, [sweepGoSettingsQuery.data]);
+  }, [sweepGoSettingsQuery.data, customTriggerWebhook?.webhookUrl]);
 
   const handleSaveSweepGo = async () => {
     if (!locationId || locationId === "preview" || locationId === "test-location") {
@@ -219,6 +234,11 @@ export default function ZapierIntegrationPage() {
         throw new Error(data.message || body.text || "Failed to load the custom-trigger webhook URL.");
       }
       setCustomTriggerWebhook(data);
+      if (!sweepGoSettingsQuery.data?.webhookUrl?.trim()) {
+        setWebhookUrl(data.webhookUrl || "");
+        setWebhookUrlSource(data.webhookUrl ? "database-fallback" : "loading");
+      }
+      await sweepGoSettingsQuery.refetch();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to load the custom-trigger webhook URL.");
     } finally {
@@ -252,20 +272,20 @@ export default function ZapierIntegrationPage() {
     }
   };
 
-  const handleCopyCustomTriggerUrl = async () => {
-    const url = customTriggerWebhook?.webhookUrl;
+  const handleCopyWebhookUrl = async () => {
+    const url = webhookUrl.trim();
     if (!url) {
-      toast.error("The custom-trigger webhook URL is not available yet.");
+      toast.error("The webhook URL is not available yet.");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(url);
-      setCopiedCustomTriggerUrl(true);
-      toast.success("Custom-trigger webhook URL copied.");
-      window.setTimeout(() => setCopiedCustomTriggerUrl(false), 1800);
+      setCopiedWebhookUrl(true);
+      toast.success("Webhook URL copied.");
+      window.setTimeout(() => setCopiedWebhookUrl(false), 1800);
     } catch {
-      toast.error("Unable to copy the custom-trigger webhook URL.");
+      toast.error("Unable to copy the webhook URL.");
     }
   };
 
@@ -417,17 +437,41 @@ export default function ZapierIntegrationPage() {
             {/* Left Column: Form Inputs & Save Button */}
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-800 mb-1.5" htmlFor="sweepgo-webhook-url">
-                  Webhook URL
-                </label>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-800" htmlFor="sweepgo-webhook-url">
+                    Webhook URL
+                  </label>
+                  <span className={customTriggerWebhook?.status === "ready" ? "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {customTriggerWebhook?.status === "ready" ? "Connected" : "Waiting for workflow"}
+                  </span>
+                </div>
                 <Input
                   id="sweepgo-webhook-url"
                   type="text"
-                  placeholder="Enter Webhook URL"
+                  readOnly
+                  placeholder={isLoadingCustomTriggerWebhook ? "Loading webhook URL…" : "Webhook URL unavailable"}
                   value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="h-10 text-xs border-slate-300 focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                  className="h-10 text-xs border-slate-300 bg-slate-50 font-mono focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                  aria-describedby="sweepgo-webhook-url-help"
                 />
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={handleCopyWebhookUrl} disabled={!webhookUrl.trim()} className="gap-2 h-8 text-xs px-3">
+                    {copiedWebhookUrl ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedWebhookUrl ? "Copied" : "Copy URL"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => void loadCustomTriggerWebhook()} disabled={isLoadingCustomTriggerWebhook} className="gap-2 h-8 text-xs px-3">
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoadingCustomTriggerWebhook ? "animate-spin" : ""}`} />
+                    {isLoadingCustomTriggerWebhook ? "Refreshing..." : "Refresh"}
+                  </Button>
+                </div>
+                <p id="sweepgo-webhook-url-help" className="text-[11px] text-slate-500 leading-relaxed pt-1.5">
+                  {webhookUrlSource === "custom-value"
+                    ? "Loaded from the GHL homeflow_webhook custom value."
+                    : webhookUrlSource === "database-fallback"
+                      ? "GHL custom value was empty, so this URL was loaded from HomeFlow storage."
+                      : "The URL will load automatically for this sub-account."}
+                </p>
               </div>
 
               <div>
@@ -486,57 +530,6 @@ export default function ZapierIntegrationPage() {
           </div>
         </Card>
 
-        {/* ── Custom Marketplace Trigger Webhook Card ── */}
-        <Card className="border border-emerald-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7 space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Link2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 leading-tight">Custom Trigger Webhook</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Send the complete onboarding event payload into the workflow configured for this sub-account.
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-semibold text-slate-800">Public webhook URL</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  This URL is unique to the current GHL sub-account. No external Authorization header is required.
-                </p>
-              </div>
-              <span className={customTriggerWebhook?.status === "ready" ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"}>
-                {customTriggerWebhook?.status === "ready" ? "Workflow connected" : "Waiting for workflow"}
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                readOnly
-                value={customTriggerWebhook?.webhookUrl || (isLoadingCustomTriggerWebhook ? "Generating webhook URL…" : "Webhook URL unavailable")}
-                className="font-mono text-xs h-10 bg-white border-emerald-200"
-                aria-label="Custom trigger public webhook URL"
-              />
-              <Button type="button" variant="outline" onClick={handleCopyCustomTriggerUrl} disabled={!customTriggerWebhook?.webhookUrl} className="gap-2 h-10 text-xs px-4 whitespace-nowrap border-emerald-300 hover:bg-emerald-100">
-                {copiedCustomTriggerUrl ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copiedCustomTriggerUrl ? "Copied" : "Copy URL"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void loadCustomTriggerWebhook()} disabled={isLoadingCustomTriggerWebhook} className="gap-2 h-10 text-xs px-4 whitespace-nowrap">
-                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingCustomTriggerWebhook ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-            </div>
-
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              {customTriggerWebhook?.status === "ready"
-                ? `${customTriggerWebhook.bindingCount} HighLevel workflow binding${customTriggerWebhook.bindingCount === 1 ? "" : "s"} found. Send POST JSON payloads to this URL.`
-                : "The URL has been provisioned. It becomes deliverable after the published Marketplace custom trigger is attached to a workflow in the snapshot."}
-            </p>
-          </div>
-        </Card>
 
         {/* ── 2. Zapier Integration Outer Card ── */}
         <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7 space-y-6">
