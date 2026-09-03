@@ -69,6 +69,15 @@ function sendError(res: Response, error: unknown): void {
   res.status(500).json({ success: false, code: "INTERNAL_ERROR", message: "Unable to process the custom-trigger request." });
 }
 
+function logIncomingCustomTriggerPayload(req: Request): void {
+  console.log("[Custom Trigger][PAYLOAD_RECEIVED]", {
+    receivedAt: new Date().toISOString(),
+    contentType: req.headers["content-type"] ?? "unknown",
+    contentLength: req.headers["content-length"] ?? "unknown",
+    payload: req.body ?? {},
+  });
+}
+
 async function requireInstalledLocation(locationId: string, res: Response): Promise<boolean> {
   if (!ENV.databaseUrl.trim()) {
     res.status(503).json({ success: false, code: "DATABASE_NOT_CONFIGURED", message: "The HomeFlow database is not configured." });
@@ -164,6 +173,7 @@ export function registerCustomTriggerRoutes(app: Express): void {
    */
   app.post("/webhooks/:token", async (req: Request, res: Response) => {
     try {
+      logIncomingCustomTriggerPayload(req);
       const result = await deliverCustomTriggerPayload(req.params.token, req.body ?? {});
       if (result.failed > 0) {
         res.status(502).json({ success: false, code: "PARTIAL_DELIVERY_FAILURE", ...result, message: "The payload was received, but one or more HighLevel workflow deliveries failed." });
