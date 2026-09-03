@@ -495,6 +495,7 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
           body: JSON.stringify(deliveryPayload),
           signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
         });
+        const responseBody = await response.text();
         const ok = response.ok;
         await db
           .update(customTriggerBindings)
@@ -509,6 +510,7 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
             locationId: webhook.locationId,
             workflowId: binding.workflowId,
             status: response.status,
+            responseBody: responseBody.slice(0, 2000),
           });
         }
         return ok;
