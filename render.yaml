@@ -11,7 +11,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: GHL_CLIENT_ID
         scope: all
       - key: GHL_CLIENT_SECRET

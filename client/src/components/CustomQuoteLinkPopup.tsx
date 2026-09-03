@@ -144,14 +144,46 @@ const DEFAULT_FORM: QuoteFormData = {
 };
 
 const MAX_GALLERY_IMAGES = 6;
+const MAX_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+async function uploadCustomQuoteImage(
+  locationId: string,
+  file: File,
+  fileName: string
+): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error(`${file.name} is not a supported image file.`);
+  }
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new Error(
+      `${file.name} is too large. Each image must be smaller than 50 MB.`
+    );
+  }
+
+  const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  const params = new URLSearchParams({ locationId, fileName });
+  const response = await fetch(
+    `${apiUrl}/api/request-scheduling/upload-image?${params.toString()}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": file.type,
+      },
+      credentials: "include",
+      body: file,
+    }
+  );
+
+  const result = (await response.json().catch(() => ({}))) as {
+    url?: string;
+    message?: string;
+  };
+  if (!response.ok || !result.url) {
+    throw new Error(
+      result.message || `Image upload failed (${response.status}).`
+    );
+  }
+  return result.url;
 }
 
 // ─── GHL Custom Value Picker ──────────────────────────────────────────
@@ -661,14 +693,54 @@ function QuoteFormFields({
   const offerImageRefs = useRef<(HTMLInputElement | null)[]>([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const testimonialHeadshotRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const isUploading = uploadingCount > 0;
+
+  const uploadImage = useCallback(
+    async (file: File, fileName: string): Promise<string | null> => {
+      setUploadingCount(count => count + 1);
+      try {
+        return await uploadCustomQuoteImage(locationId, file, fileName);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Image upload failed.";
+        toast.error(message);
+        return null;
+      } finally {
+        setUploadingCount(count => count - 1);
+      }
+    },
+    [locationId]
+  );
 
   const handleImageUpload = async (
     file: File | undefined,
     field: keyof QuoteFormData
   ) => {
     if (!file) return;
-    const base64 = await fileToBase64(file);
-    setFormData({ ...formData, [field]: base64 });
+    const uploadedUrl = await uploadImage(
+      file,
+      `custom_quote_${field}_${Date.now()}_${file.name}`
+    );
+    if (!uploadedUrl) return;
+    setFormData(prev => ({ ...prev, [field]: uploadedUrl }));
+  };
+
+  const handleOfferImageUpload = async (
+    file: File | undefined,
+    index: number
+  ) => {
+    if (!file) return;
+    const uploadedUrl = await uploadImage(
+      file,
+      `custom_quote_offer_${index + 1}_${Date.now()}_${file.name}`
+    );
+    if (!uploadedUrl) return;
+    setFormData(prev => {
+      const offers = [...prev.offers];
+      offers[index] = { ...offers[index], image: uploadedUrl };
+      return { ...prev, offers };
+    });
   };
 
   const handleGalleryUpload = async (
@@ -678,30 +750,51 @@ function QuoteFormFields({
     if (!files) return;
     const newImages: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      const base64 = await fileToBase64(files[i]);
-      newImages.push(base64);
+      const uploadedUrl = await uploadImage(
+        files[i],
+        `custom_quote_gallery_${(replaceIndex ?? i) + 1}_${Date.now()}_${files[i].name}`
+      );
+      if (uploadedUrl) newImages.push(uploadedUrl);
     }
+    if (newImages.length === 0) return;
     if (replaceIndex !== undefined) {
       // Replace the specific slot
-      const updated = [...formData.galleryImages];
-      updated[replaceIndex] = newImages[0];
-      setFormData({ ...formData, galleryImages: updated });
+      setFormData(prev => {
+        const updated = [...prev.galleryImages];
+        updated[replaceIndex] = newImages[0];
+        return { ...prev, galleryImages: updated };
+      });
     } else {
       // Append to fill empty slots
-      const updated = [...formData.galleryImages];
-      let slotIdx = 0;
-      for (
-        let i = 0;
-        i < newImages.length && slotIdx < MAX_GALLERY_IMAGES;
-        i++
-      ) {
-        if (updated[slotIdx] === undefined || updated[slotIdx] === null) {
-          updated[slotIdx] = newImages[i];
+      setFormData(prev => {
+        const updated = [...prev.galleryImages];
+        let slotIdx = 0;
+        for (
+          let i = 0;
+          i < newImages.length && slotIdx < MAX_GALLERY_IMAGES;
+          i++
+        ) {
+          if (updated[slotIdx] === undefined || updated[slotIdx] === null) {
+            updated[slotIdx] = newImages[i];
+          }
+          slotIdx++;
         }
-        slotIdx++;
-      }
-      setFormData({ ...formData, galleryImages: updated });
+        return { ...prev, galleryImages: updated };
+      });
     }
+  };
+
+  const handleTestimonialHeadshotUpload = async (
+    file: File | undefined,
+    index: number
+  ) => {
+    if (!file) return;
+    const uploadedUrl = await uploadImage(
+      file,
+      `custom_quote_review_${index + 1}_${Date.now()}_${file.name}`
+    );
+    if (!uploadedUrl) return;
+    updateTestimonial(index, "testimonialHeadshots", uploadedUrl);
   };
 
   const handleRemoveGalleryImage = (index: number) => {
@@ -716,9 +809,11 @@ function QuoteFormFields({
     field: "testimonialHeadshots" | "testimonialNames" | "testimonialTexts",
     value: string | null
   ) => {
-    const updated = [...formData[field]];
-    updated[index] = value as any;
-    setFormData({ ...formData, [field]: updated });
+    setFormData(prev => {
+      const updated = [...prev[field]];
+      updated[index] = value as any;
+      return { ...prev, [field]: updated };
+    });
   };
 
   return (
@@ -927,13 +1022,7 @@ function QuoteFormFields({
                 }}
                 onChange={e => {
                   const file = e.target.files?.[0];
-                  if (file) {
-                    fileToBase64(file).then(b64 => {
-                      const offers = [...formData.offers];
-                      offers[0] = { ...offers[0], image: b64 };
-                      setFormData({ ...formData, offers });
-                    });
-                  }
+                  void handleOfferImageUpload(file, 0);
                 }}
               />
             </div>
@@ -1005,13 +1094,7 @@ function QuoteFormFields({
                 }}
                 onChange={e => {
                   const file = e.target.files?.[0];
-                  if (file) {
-                    fileToBase64(file).then(b64 => {
-                      const offers = [...formData.offers];
-                      offers[1] = { ...offers[1], image: b64 };
-                      setFormData({ ...formData, offers });
-                    });
-                  }
+                  void handleOfferImageUpload(file, 1);
                 }}
               />
             </div>
@@ -1143,10 +1226,7 @@ function QuoteFormFields({
                   if (el) {
                     el.onchange = (ev: Event) => {
                       const file = (ev.target as HTMLInputElement).files?.[0];
-                      if (file)
-                        fileToBase64(file).then(b64 =>
-                          updateTestimonial(idx, "testimonialHeadshots", b64)
-                        );
+                      void handleTestimonialHeadshotUpload(file, idx);
                     };
                   }
                 }}
@@ -1203,13 +1283,18 @@ function QuoteFormFields({
         <button
           type="button"
           onClick={onSave}
-          disabled={isSaving}
+          disabled={isSaving || isUploading}
           className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <>
               <Loader2 size={14} className="animate-spin" />
               Saving...
+            </>
+          ) : isUploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Uploading image...
             </>
           ) : (
             <>
