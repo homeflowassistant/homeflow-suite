@@ -70,6 +70,87 @@ function normalizeText(value: unknown): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+type JsonRecord = Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function firstText(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    const normalized = normalizeText(value);
+    if (normalized) return normalized;
+  }
+  return undefined;
+}
+
+function splitFullName(value: unknown): {
+  firstName?: string;
+  lastName?: string;
+} {
+  const fullName = firstText(value);
+  if (!fullName) return {};
+
+  const parts = fullName.split(/\s+/);
+  const firstName = parts.shift();
+  const lastName = parts.join(" ").trim();
+
+  return {
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+  };
+}
+
+/**
+ * Different HomeFlow event sources use different names for the same contact
+ * fields. Keep the original event fields for backward compatibility, while
+ * also adding one stable set of fields for HighLevel custom variables.
+ */
+function normalizeCustomTriggerPayload(payload: unknown): unknown {
+  if (!isJsonRecord(payload)) return payload;
+
+  const originalData = isJsonRecord(payload.data) ? payload.data : {};
+  const nameFromClientName = splitFullName(originalData.client_name);
+  const nameFromFullName = splitFullName(originalData.full_name);
+
+  const firstName =
+    firstText(originalData.first_name) ||
+    nameFromClientName.firstName ||
+    nameFromFullName.firstName ||
+    "";
+  const lastName =
+    firstText(originalData.last_name) ||
+    nameFromClientName.lastName ||
+    nameFromFullName.lastName ||
+    "";
+  const email =
+    firstText(
+      originalData.email,
+      originalData.client_email,
+      originalData.your_email_address
+    ) || "";
+  const homePhone =
+    firstText(originalData.home_phone, originalData.home_phone_number) || "";
+  const cellPhone =
+    firstText(originalData.cell_phone, originalData.cell_phone_number) || "";
+  const address =
+    firstText(originalData.address, originalData.client_address) || "";
+
+  return {
+    ...payload,
+    data: {
+      ...originalData,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone: cellPhone || homePhone,
+      home_phone: homePhone,
+      cell_phone: cellPhone,
+      address,
+    },
+  };
+}
+
 function encryptionKey(): Buffer {
   const secret = ENV.cookieSecret.trim();
   if (!secret) {
@@ -484,7 +565,11 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
     );
   }
 
-  const deliveryPayload = payload && typeof payload === "object" ? payload : { data: payload };
+  const normalizedPayload = normalizeCustomTriggerPayload(payload);
+  const deliveryPayload =
+    normalizedPayload && typeof normalizedPayload === "object"
+      ? normalizedPayload
+      : { data: normalizedPayload };
   const results = await Promise.all(
     bindings.map(async binding => {
       const targetUrl = binding.targetUrl as string;
