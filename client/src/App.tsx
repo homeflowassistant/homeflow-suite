@@ -1,83 +1,55 @@
-import express from "express";
-import cors from "cors";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import type { Express } from "express";
-import { registerOAuthRoutes } from "./oauth.js";
-import { registerGHLOAuthRoutes } from "../ghl-oauth.js";
-import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField.js";
-import { registerZapierRoutes } from "../routes/zapier.js";
-import { registerCustomValuesRoutes } from "../routes/customValues.js";
-import { registerCustomTriggerRoutes } from "../routes/customTrigger.js";
-import { registerRequestSchedulingUploadRoutes } from "../routes/requestSchedulingUpload.js";
-import { appRouter } from "../routers.js";
-import { createContext } from "./context.js";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/NotFound";
+import { Route, Switch, Redirect } from "wouter";
+import ErrorBoundary from "./components/ErrorBoundary";
+import AddContactsPage from "./pages/AddContactsPage";
+import RequestScheduling from "./pages/RequestScheduling";
+import ReactivationPage from "./pages/ReactivationPage";
+import AddOnCampaignPage from "./pages/AddOnCampaignPage";
+import QuickSendPage from "./pages/QuickSendPage";
+import ContactsPage from "./pages/ContactsPage";
+import AlertsNotificationsPage from "./pages/AlertsNotificationsPage";
+import PricingPage from "./pages/PricingPage";
+import AccountSetupPage from "./pages/AccountSetupPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import ZapierIntegrationPage from "./pages/ZapierIntegrationPage";
 
-export async function createApp(options?: { serveClient?: boolean }): Promise<Express> {
-  const app = express();
-
-  // Capture the raw request body while parsing JSON. The internal-machine
-  // endpoints (e.g. server/routes/contactsCustomField.ts) verify an
-  // HMAC-SHA256 signature over the exact raw bytes, so the unmodified body
-  // is preserved on req.rawBody.
-  app.use(
-    express.json({
-      limit: "50mb",
-      verify: (req, _res, buf) => {
-        (req as any).rawBody = buf.toString("utf8");
-      },
-    })
+function Router() {
+  return (
+    <Switch>
+      <Route path={"/request-scheduling"} component={RequestScheduling} />
+      <Route path={"/reactivation"} component={ReactivationPage} />
+      <Route path={"/add-on-campaign"} component={AddOnCampaignPage} />
+      <Route path={"/add-contacts"} component={AddContactsPage} />
+      <Route path={"/quick-send"} component={QuickSendPage} />
+      <Route path={"/contacts"} component={ContactsPage} />
+      <Route
+        path={"/alerts-notifications"}
+        component={AlertsNotificationsPage}
+      />
+      <Route path={"/pricing"} component={PricingPage} />
+      <Route path={"/account-setup"} component={AccountSetupPage} />
+      <Route path={"/integrations"} component={ZapierIntegrationPage} />
+      <Route path={"/integrate"} component={ZapierIntegrationPage} />
+      <Route path={"/"}>
+        <Redirect to="/add-contacts" />
+      </Route>
+      <Route path={"/404"} component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
   );
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // CORS configuration: allow explicit origins and enable credentials
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-
-  if (allowedOrigins.length === 0) {
-    console.warn(
-      "[CORS] No ALLOWED_ORIGINS configured; allowing all origins (development only)"
-    );
-    app.use(
-      cors({
-        origin: true,
-        credentials: true,
-      })
-    );
-  } else {
-    app.use(
-      cors({
-        origin: (origin, callback) => {
-          if (!origin) return callback(null, false);
-          if (allowedOrigins.includes(origin)) return callback(null, true);
-          return callback(new Error("CORS origin not allowed"));
-        },
-        credentials: true,
-      })
-    );
-  }
-
-  registerOAuthRoutes(app);
-  registerGHLOAuthRoutes(app);
-  registerContactsCustomFieldRoutes(app);
-  registerCustomValuesRoutes(app);
-  registerCustomTriggerRoutes(app);
-  registerRequestSchedulingUploadRoutes(app);
-  registerZapierRoutes(app);
-
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
-
-  if (options?.serveClient) {
-    const { serveStatic } = await import("./vite.js");
-    serveStatic(app);
-  }
-
-  return app;
 }
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <TooltipProvider>
+        <Toaster position="top-right" richColors />
+        <Router />
+      </TooltipProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

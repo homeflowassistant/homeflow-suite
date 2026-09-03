@@ -8,6 +8,7 @@ import { registerContactsCustomFieldRoutes } from "../routes/contactsCustomField
 import { registerZapierRoutes } from "../routes/zapier.js";
 import { registerCustomValuesRoutes } from "../routes/customValues.js";
 import { registerCustomTriggerRoutes } from "../routes/customTrigger.js";
+import { registerRequestSchedulingUploadRoutes } from "../routes/requestSchedulingUpload.js";
 import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
 
@@ -62,6 +63,7 @@ export async function createApp(options?: { serveClient?: boolean }): Promise<Ex
   registerContactsCustomFieldRoutes(app);
   registerCustomValuesRoutes(app);
   registerCustomTriggerRoutes(app);
+  registerRequestSchedulingUploadRoutes(app);
   registerZapierRoutes(app);
 
   app.use(
