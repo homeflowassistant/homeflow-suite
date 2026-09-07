@@ -236,6 +236,9 @@ export default function AlertsNotificationsPage() {
   const [subscriptionPausedNotifyMessage, setSubscriptionPausedNotifyMessage] = useState(
     "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested. Thank you for trusting {{location.name}}!"
   );
+  const [subscriptionUnpausedNotifyMessage, setSubscriptionUnpausedNotifyMessage] = useState(
+    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled. Thank you for trusting {{location.name}}!"
+  );
 
   // Active inline editor key & modal state
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -287,6 +290,7 @@ export default function AlertsNotificationsPage() {
 
     setSubscriptionPausedNotifyEnabled(d.subscriptionPausedNotifyEnabled);
     if (d.subscriptionPausedNotifyMessage) setSubscriptionPausedNotifyMessage(d.subscriptionPausedNotifyMessage);
+    if (d.subscriptionUnpausedNotifyMessage) setSubscriptionUnpausedNotifyMessage(d.subscriptionUnpausedNotifyMessage);
   }, [settingsQuery.data]);
 
   // Insert selected token into active field
@@ -300,6 +304,7 @@ export default function AlertsNotificationsPage() {
         failedPayment: setFailedPaymentNotifyMessage,
         skippedJob: setSkippedJobNotifyMessage,
         subscriptionPaused: setSubscriptionPausedNotifyMessage,
+        subscriptionUnpaused: setSubscriptionUnpausedNotifyMessage,
       };
 
       const setter = fieldSetterMap[fieldKey];
@@ -358,6 +363,7 @@ export default function AlertsNotificationsPage() {
         skippedJobNotifyMessage: skippedJobNotifyEnabled ? skippedJobNotifyMessage : "",
         subscriptionPausedNotifyEnabled,
         subscriptionPausedNotifyMessage: subscriptionPausedNotifyEnabled ? subscriptionPausedNotifyMessage : "",
+        subscriptionUnpausedNotifyMessage: subscriptionPausedNotifyEnabled ? subscriptionUnpausedNotifyMessage : "",
       });
 
       toast.success("Alerts & Notifications settings saved successfully!");
@@ -645,22 +651,24 @@ export default function AlertsNotificationsPage() {
           <div>
             <h2 className="alerts-section-title">Subscription Paused/Unpaused</h2>
             <div className="alerts-card-box">
-              <div className="alerts-item-block">
-                <div className="alerts-item-header">
+              <div className="alerts-item-block space-y-4">
+                <div className="alerts-item-header flex items-center justify-between">
                   <h3 className="alerts-item-title">
                     Custom Subscription Paused/Unpaused Message
                     <span className="alerts-item-subtitle">(S&G Only)</span>
                   </h3>
+                  <ToggleSwitch
+                    id="toggle-subscription-paused"
+                    isOn={subscriptionPausedNotifyEnabled}
+                    onToggle={() => setSubscriptionPausedNotifyEnabled((v) => !v)}
+                  />
                 </div>
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <div className="pt-2">
-                    <ToggleSwitch
-                      id="toggle-subscription-paused"
-                      isOn={subscriptionPausedNotifyEnabled}
-                      onToggle={() => setSubscriptionPausedNotifyEnabled((v) => !v)}
-                    />
-                  </div>
-                  <div className="flex-1 w-full">
+
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Custom Subscription Paused Message (Paused)
+                    </label>
                     <ChatBubble
                       pickerId="subscriptionPaused"
                       value={subscriptionPausedNotifyMessage}
@@ -672,6 +680,25 @@ export default function AlertsNotificationsPage() {
                       onTogglePicker={handleTogglePicker}
                       onCaretChange={handleCaretChange}
                       pickerComponent={renderPickerForField("subscriptionPaused")}
+                      disabled={!subscriptionPausedNotifyEnabled}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Custom Subscription Unpaused Message (Unpaused)
+                    </label>
+                    <ChatBubble
+                      pickerId="subscriptionUnpaused"
+                      value={subscriptionUnpausedNotifyMessage}
+                      onChange={setSubscriptionUnpausedNotifyMessage}
+                      isEditing={editingKey === "subscriptionUnpaused"}
+                      onStartEditing={() => setEditingKey("subscriptionUnpaused")}
+                      onStopEditing={() => setEditingKey(null)}
+                      activePickerId={activePickerId}
+                      onTogglePicker={handleTogglePicker}
+                      onCaretChange={handleCaretChange}
+                      pickerComponent={renderPickerForField("subscriptionUnpaused")}
                       disabled={!subscriptionPausedNotifyEnabled}
                     />
                   </div>

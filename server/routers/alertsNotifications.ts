@@ -41,42 +41,53 @@ export const DEFAULT_ALERT_TEMPLATES = {
   subscriptionPausedNotifyEnabled: true,
   subscriptionPausedNotifyMessage:
     "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested. Thank you for trusting {{location.name}}!",
+
+  subscriptionUnpausedNotifyMessage:
+    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled. Thank you for trusting {{location.name}}!",
 };
 
 /**
- * GHL Custom Value Key Mappings matching the exact names & keys in the
- * "Alerts and Notifications" folder screenshot:
+ * GHL Custom Value Key Mappings matching the exact client specification:
  *
- * 1. Auto-Reply New Customer Message      → {{custom_values.autoreply_new_customer_message}}
- * 2. Auto-Reply New Lead Message          → {{custom_values.autoreply_new_lead_message}}
- * 3. Custom Failed Payment Message        → {{custom_values.custom_failed_payment_message}}
- * 4. Custom Skipped Job Message           → {{custom_values.custom_skipped_job_message}}
- * 5. Custom Subscription Paused/Unpaused  → {{custom_values.custom_subscription_pausedunpaused_message}}
- * 6. Send Team Notification Email         → {{custom_values.send_team_notification_email}}
- * 7. Send Team Notification Phone         → {{custom_values.send_team_notification_phone}}
- * 8. Team-Notification New Customer Msg   → {{custom_values.teamnotification_new_customer_message}}
- * 9. Team-Notification New Lead Msg       → {{custom_values.teamnotification_new_lead_message}}
+ * 1. Auto-Reply New Lead Switch             → {{custom_values.autoreplies_to_new_leads}}
+ * 2. Auto-Reply New Lead Message            → {{custom_values.autoreply_new_lead_message}}
+ * 3. Auto-Reply New Customer Switch         → {{custom_values.autoreply_to_new_customers}}
+ * 4. Auto-Reply New Customer Message        → {{custom_values.autoreply_new_customer_message}}
+ * 5. Team Notification New Lead Switch      → {{custom_values.internal_new_lead_notification}}
+ * 6. Team Notification New Lead Message     → {{custom_values.teamnotification_new_lead_message}}
+ * 7. Team Notification New Customer Switch  → {{custom_values.internal_new_customer_notification}}
+ * 8. Team Notification New Customer Message → {{custom_values.teamnotification_new_customer_message}}
+ * 9. Send Team Notification Phone           → {{custom_values.internal_notifications_phone_number}}
+ * 10. Send Team Notification Email          → {{custom_values.internal_notifications_email}}
+ * 11. Custom Failed Payment Switch          → {{custom_values.failed_payment_message}}
+ * 12. Custom Failed Payment Message         → {{custom_values.custom_failed_payment_message}}
+ * 13. Custom Skipped Job Switch             → {{custom_values.skipped_job_message}}
+ * 14. Custom Skipped Job Message            → {{custom_values.custom_skipped_job_message}}
+ * 15. Custom Subscription Switch            → {{custom_values.subscription_pausedunpaused_message}}
+ * 16. Custom Subscription Paused Message    → {{custom_values.custom_subscription_pausedunpaused_message}}
+ * 17. Custom Subscription Unpaused Message  → {{custom_values.account_unpaused_message}}
  */
 const CV_KEYS = {
-  // Primary Keys from GHL Folder
+  // Primary Message Text Keys from GHL Folder
   autoReplyNewLeadMessage: "autoreply_new_lead_message",
   autoReplyNewCustomerMessage: "autoreply_new_customer_message",
   teamNotifyNewLeadMessage: "teamnotification_new_lead_message",
   teamNotifyNewCustomerMessage: "teamnotification_new_customer_message",
-  teamNotifyPhone: "send_team_notification_phone",
-  teamNotifyEmail: "send_team_notification_email",
+  teamNotifyPhone: "internal_notifications_phone_number",
+  teamNotifyEmail: "internal_notifications_email",
   failedPaymentNotifyMessage: "custom_failed_payment_message",
   skippedJobNotifyMessage: "custom_skipped_job_message",
   subscriptionPausedNotifyMessage: "custom_subscription_pausedunpaused_message",
+  subscriptionUnpausedNotifyMessage: "account_unpaused_message",
 
-  // Toggle State Keys
-  autoReplyNewLeadEnabled: "autoreply_new_lead_enabled",
-  autoReplyNewCustomerEnabled: "autoreply_new_customer_enabled",
-  teamNotifyNewLeadEnabled: "teamnotification_new_lead_enabled",
-  teamNotifyNewCustomerEnabled: "teamnotification_new_customer_enabled",
-  failedPaymentNotifyEnabled: "custom_failed_payment_enabled",
-  skippedJobNotifyEnabled: "custom_skipped_job_enabled",
-  subscriptionPausedNotifyEnabled: "custom_subscription_pausedunpaused_enabled",
+  // Primary Toggle State Keys (On/Off Switches)
+  autoReplyNewLeadEnabled: "autoreplies_to_new_leads",
+  autoReplyNewCustomerEnabled: "autoreply_to_new_customers",
+  teamNotifyNewLeadEnabled: "internal_new_lead_notification",
+  teamNotifyNewCustomerEnabled: "internal_new_customer_notification",
+  failedPaymentNotifyEnabled: "failed_payment_message",
+  skippedJobNotifyEnabled: "skipped_job_message",
+  subscriptionPausedNotifyEnabled: "subscription_pausedunpaused_message",
 } as const;
 
 export const alertsNotificationsSchema = z.object({
@@ -97,6 +108,7 @@ export const alertsNotificationsSchema = z.object({
   skippedJobNotifyMessage: z.string(),
   subscriptionPausedNotifyEnabled: z.boolean(),
   subscriptionPausedNotifyMessage: z.string(),
+  subscriptionUnpausedNotifyMessage: z.string(),
 });
 
 export type AlertsNotificationsSettings = z.infer<
@@ -115,8 +127,8 @@ export const alertsNotificationsRouter = router({
           { id: "cv_1", source: "custom_value" as const, name: "Company Phone", fieldKey: "custom_values.company_phone", token: "{{custom_values.company_phone}}" },
           { id: "cv_2", source: "custom_value" as const, name: "Auto-Reply New Lead Message", fieldKey: "autoreply_new_lead_message", token: "{{custom_values.autoreply_new_lead_message}}" },
           { id: "cv_3", source: "custom_value" as const, name: "Auto-Reply New Customer Message", fieldKey: "autoreply_new_customer_message", token: "{{custom_values.autoreply_new_customer_message}}" },
-          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "send_team_notification_phone", token: "{{custom_values.send_team_notification_phone}}" },
-          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "send_team_notification_email", token: "{{custom_values.send_team_notification_email}}" },
+          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "internal_notifications_phone_number", token: "{{custom_values.internal_notifications_phone_number}}" },
+          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "internal_notifications_email", token: "{{custom_values.internal_notifications_email}}" },
           { id: "cf_1", source: "contact_custom_field" as const, name: "Dog Count", fieldKey: "contact.dog_count", token: "{{contact.dog_count}}", dataType: "NUMERIC" },
           { id: "cf_2", source: "contact_custom_field" as const, name: "Service Frequency", fieldKey: "contact.service_frequency", token: "{{contact.service_frequency}}", dataType: "TEXT" },
           { id: "cf_3", source: "contact_custom_field" as const, name: "Yard Access Code", fieldKey: "contact.yard_access_code", token: "{{contact.yard_access_code}}", dataType: "TEXT" },
@@ -182,10 +194,8 @@ export const alertsNotificationsRouter = router({
         const parseBool = (keys: string[], fallback: boolean): boolean => {
           const val = getValueForKeys(keys);
           if (!val) return fallback;
-          return (
-            val.trim().toUpperCase() === "ON" ||
-            val.trim().toLowerCase() === "true"
-          );
+          const clean = val.trim().toLowerCase();
+          return clean === "on" || clean === "true" || clean === "1" || clean === "yes";
         };
 
         const parseStr = (keys: string[], fallback: string): string => {
@@ -195,7 +205,7 @@ export const alertsNotificationsRouter = router({
 
         return {
           autoReplyNewLeadEnabled: parseBool(
-            [CV_KEYS.autoReplyNewLeadEnabled, "auto_reply_new_lead_enabled"],
+            [CV_KEYS.autoReplyNewLeadEnabled, "autoreplies_to_new_leads", "auto_reply_new_lead_enabled"],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled
           ),
           autoReplyNewLeadMessage: parseStr(
@@ -210,6 +220,7 @@ export const alertsNotificationsRouter = router({
           autoReplyNewCustomerEnabled: parseBool(
             [
               CV_KEYS.autoReplyNewCustomerEnabled,
+              "autoreply_to_new_customers",
               "auto_reply_new_customer_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewCustomerEnabled
@@ -224,7 +235,11 @@ export const alertsNotificationsRouter = router({
           ),
 
           teamNotifyNewLeadEnabled: parseBool(
-            [CV_KEYS.teamNotifyNewLeadEnabled, "team_notify_new_lead_enabled"],
+            [
+              CV_KEYS.teamNotifyNewLeadEnabled,
+              "internal_new_lead_notification",
+              "team_notify_new_lead_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewLeadEnabled
           ),
           teamNotifyNewLeadMessage: parseStr(
@@ -239,6 +254,7 @@ export const alertsNotificationsRouter = router({
           teamNotifyNewCustomerEnabled: parseBool(
             [
               CV_KEYS.teamNotifyNewCustomerEnabled,
+              "internal_new_customer_notification",
               "team_notify_new_customer_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewCustomerEnabled
@@ -255,7 +271,8 @@ export const alertsNotificationsRouter = router({
           teamNotifyPhone: parseStr(
             [
               CV_KEYS.teamNotifyPhone,
-              "team_notify_phone",
+              "internal_notifications_phone_number",
+              "send_team_notification_phone",
               "Send Team Notification Phone",
             ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyPhone
@@ -263,7 +280,8 @@ export const alertsNotificationsRouter = router({
           teamNotifyEmail: parseStr(
             [
               CV_KEYS.teamNotifyEmail,
-              "team_notify_email",
+              "internal_notifications_email",
+              "send_team_notification_email",
               "Send Team Notification Email",
             ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyEmail
@@ -272,6 +290,7 @@ export const alertsNotificationsRouter = router({
           failedPaymentNotifyEnabled: parseBool(
             [
               CV_KEYS.failedPaymentNotifyEnabled,
+              "failed_payment_message",
               "failed_payment_notify_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.failedPaymentNotifyEnabled
@@ -286,7 +305,11 @@ export const alertsNotificationsRouter = router({
           ),
 
           skippedJobNotifyEnabled: parseBool(
-            [CV_KEYS.skippedJobNotifyEnabled, "skipped_job_notify_enabled"],
+            [
+              CV_KEYS.skippedJobNotifyEnabled,
+              "skipped_job_message",
+              "skipped_job_notify_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.skippedJobNotifyEnabled
           ),
           skippedJobNotifyMessage: parseStr(
@@ -301,6 +324,7 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyEnabled: parseBool(
             [
               CV_KEYS.subscriptionPausedNotifyEnabled,
+              "subscription_pausedunpaused_message",
               "subscription_paused_notify_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyEnabled
@@ -312,6 +336,14 @@ export const alertsNotificationsRouter = router({
               "Custom Subscription Paused/Unpaused Message",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage
+          ),
+          subscriptionUnpausedNotifyMessage: parseStr(
+            [
+              CV_KEYS.subscriptionUnpausedNotifyMessage,
+              "account_unpaused_message",
+              "subscription_unpaused_notify_message",
+            ],
+            DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage
           ),
         };
       } catch (err) {
@@ -325,61 +357,55 @@ export const alertsNotificationsRouter = router({
 
   /**
    * Save alert settings to GHL custom values.
-   * Maps typed form values to the exact custom value keys in the GHL "Alerts and Notifications" folder.
-   * Uses non-destructive update strategy preserving GHL display names.
+   * Maps typed form values to the exact custom value keys matching client requirement.
+   * Dual-writes "true"/"false" and "ON"/"OFF" for full automation snippet compatibility.
    */
   saveSettings: publicProcedure
     .input(alertsNotificationsSchema)
     .mutation(async ({ input }) => {
       const { locationId, ...data } = input;
 
-      // Exact GHL Custom Value Key Mappings matching screenshot
+      // Exact GHL Custom Value Key Mappings matching client requirements
       const customValuePayload: Record<string, string> = {
         // Message Templates
         [CV_KEYS.autoReplyNewLeadMessage]: data.autoReplyNewLeadMessage,
         [CV_KEYS.autoReplyNewCustomerMessage]: data.autoReplyNewCustomerMessage,
         [CV_KEYS.teamNotifyNewLeadMessage]: data.teamNotifyNewLeadMessage,
-        [CV_KEYS.teamNotifyNewCustomerMessage]:
-          data.teamNotifyNewCustomerMessage,
+        [CV_KEYS.teamNotifyNewCustomerMessage]: data.teamNotifyNewCustomerMessage,
         [CV_KEYS.teamNotifyPhone]: data.teamNotifyPhone,
         [CV_KEYS.teamNotifyEmail]: data.teamNotifyEmail,
         [CV_KEYS.failedPaymentNotifyMessage]: data.failedPaymentNotifyMessage,
         [CV_KEYS.skippedJobNotifyMessage]: data.skippedJobNotifyMessage,
-        [CV_KEYS.subscriptionPausedNotifyMessage]:
-          data.subscriptionPausedNotifyMessage,
+        [CV_KEYS.subscriptionPausedNotifyMessage]: data.subscriptionPausedNotifyMessage,
+        [CV_KEYS.subscriptionUnpausedNotifyMessage]: data.subscriptionUnpausedNotifyMessage,
 
-        // Also dual-write secondary aliases for complete sub-account coverage
+        // Dual-write legacy aliases for backwards compatibility
         auto_reply_new_lead_message: data.autoReplyNewLeadMessage,
         auto_reply_new_customer_message: data.autoReplyNewCustomerMessage,
         team_notify_new_lead_message: data.teamNotifyNewLeadMessage,
-        team_notify_new_customer_message: data.autoReplyNewCustomerMessage,
-        team_notify_phone: data.teamNotifyPhone,
-        team_notify_email: data.teamNotifyEmail,
+        team_notify_new_customer_message: data.teamNotifyNewCustomerMessage,
+        send_team_notification_phone: data.teamNotifyPhone,
+        send_team_notification_email: data.teamNotifyEmail,
         failed_payment_notify_message: data.failedPaymentNotifyMessage,
         skipped_job_notify_message: data.skippedJobNotifyMessage,
-        subscription_paused_notify_message:
-          data.subscriptionPausedNotifyMessage,
 
-        // Toggle States
-        [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled
-          ? "ON"
-          : "OFF",
-        [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled
-          ? "ON"
-          : "OFF",
-        [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled
-          ? "ON"
-          : "OFF",
-        [CV_KEYS.teamNotifyNewCustomerEnabled]:
-          data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
-        [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled
-          ? "ON"
-          : "OFF",
-        [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled
-          ? "ON"
-          : "OFF",
-        [CV_KEYS.subscriptionPausedNotifyEnabled]:
-          data.subscriptionPausedNotifyEnabled ? "ON" : "OFF",
+        // Toggle States (On/Off Switches - saved as True/False as requested by client)
+        [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",
+        [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled ? "True" : "False",
+        [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled ? "True" : "False",
+        [CV_KEYS.teamNotifyNewCustomerEnabled]: data.teamNotifyNewCustomerEnabled ? "True" : "False",
+        [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled ? "True" : "False",
+        [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled ? "True" : "False",
+        [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "True" : "False",
+
+        // Secondary aliases for toggle states
+        autoreply_new_lead_enabled: data.autoReplyNewLeadEnabled ? "ON" : "OFF",
+        autoreply_new_customer_enabled: data.autoReplyNewCustomerEnabled ? "ON" : "OFF",
+        teamnotification_new_lead_enabled: data.teamNotifyNewLeadEnabled ? "ON" : "OFF",
+        teamnotification_new_customer_enabled: data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
+        custom_failed_payment_enabled: data.failedPaymentNotifyEnabled ? "ON" : "OFF",
+        custom_skipped_job_enabled: data.skippedJobNotifyEnabled ? "ON" : "OFF",
+        custom_subscription_pausedunpaused_enabled: data.subscriptionPausedNotifyEnabled ? "ON" : "OFF",
       };
 
       try {
@@ -388,24 +414,23 @@ export const alertsNotificationsRouter = router({
 
         // Step 2: Upsert primary keys to guarantee creation if not existing
         const primaryEntries = [
+          [CV_KEYS.autoReplyNewLeadEnabled, data.autoReplyNewLeadEnabled ? "True" : "False"],
           [CV_KEYS.autoReplyNewLeadMessage, data.autoReplyNewLeadMessage],
-          [
-            CV_KEYS.autoReplyNewCustomerMessage,
-            data.autoReplyNewCustomerMessage,
-          ],
+          [CV_KEYS.autoReplyNewCustomerEnabled, data.autoReplyNewCustomerEnabled ? "True" : "False"],
+          [CV_KEYS.autoReplyNewCustomerMessage, data.autoReplyNewCustomerMessage],
+          [CV_KEYS.teamNotifyNewLeadEnabled, data.teamNotifyNewLeadEnabled ? "True" : "False"],
           [CV_KEYS.teamNotifyNewLeadMessage, data.teamNotifyNewLeadMessage],
-          [
-            CV_KEYS.teamNotifyNewCustomerMessage,
-            data.teamNotifyNewCustomerMessage,
-          ],
+          [CV_KEYS.teamNotifyNewCustomerEnabled, data.teamNotifyNewCustomerEnabled ? "True" : "False"],
+          [CV_KEYS.teamNotifyNewCustomerMessage, data.teamNotifyNewCustomerMessage],
           [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
           [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
+          [CV_KEYS.failedPaymentNotifyEnabled, data.failedPaymentNotifyEnabled ? "True" : "False"],
           [CV_KEYS.failedPaymentNotifyMessage, data.failedPaymentNotifyMessage],
+          [CV_KEYS.skippedJobNotifyEnabled, data.skippedJobNotifyEnabled ? "True" : "False"],
           [CV_KEYS.skippedJobNotifyMessage, data.skippedJobNotifyMessage],
-          [
-            CV_KEYS.subscriptionPausedNotifyMessage,
-            data.subscriptionPausedNotifyMessage,
-          ],
+          [CV_KEYS.subscriptionPausedNotifyEnabled, data.subscriptionPausedNotifyEnabled ? "True" : "False"],
+          [CV_KEYS.subscriptionPausedNotifyMessage, data.subscriptionPausedNotifyMessage],
+          [CV_KEYS.subscriptionUnpausedNotifyMessage, data.subscriptionUnpausedNotifyMessage],
         ];
 
         for (const [key, val] of primaryEntries) {
