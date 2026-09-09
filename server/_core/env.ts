@@ -4,6 +4,8 @@ export const ENV = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   internalApiKey: process.env.INTERNAL_API_KEY ?? "",
+  // Immutable key of the separate HighLevel Marketplace trigger used by n8n.
+  n8nCustomTriggerKey: process.env.N8N_CUSTOM_TRIGGER_KEY ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",

@@ -1,5 +1,11 @@
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "crypto";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+} from "crypto";
+import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { getDb } from "../db.js";
 import { ENV } from "../_core/env.js";
 import { ensureGhlCustomValue, getValidAccessToken } from "../ghl-service.js";
@@ -170,15 +176,26 @@ function encryptionKey(): Buffer {
 function encryptToken(token: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv(ENCRYPTION_ALGORITHM, encryptionKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  const ciphertext = Buffer.concat([
+    cipher.update(token, "utf8"),
+    cipher.final(),
+  ]);
   const authTag = cipher.getAuthTag();
-  return [iv.toString("base64url"), authTag.toString("base64url"), ciphertext.toString("base64url")].join(".");
+  return [
+    iv.toString("base64url"),
+    authTag.toString("base64url"),
+    ciphertext.toString("base64url"),
+  ].join(".");
 }
 
 function decryptToken(encoded: string): string {
   const [ivEncoded, authTagEncoded, ciphertextEncoded] = encoded.split(".");
   if (!ivEncoded || !authTagEncoded || !ciphertextEncoded) {
-    throw new CustomTriggerHttpError(500, "WEBHOOK_TOKEN_CORRUPT", "Stored webhook token is invalid.");
+    throw new CustomTriggerHttpError(
+      500,
+      "WEBHOOK_TOKEN_CORRUPT",
+      "Stored webhook token is invalid."
+    );
   }
 
   try {
@@ -193,7 +210,11 @@ function decryptToken(encoded: string): string {
       decipher.final(),
     ]).toString("utf8");
   } catch {
-    throw new CustomTriggerHttpError(500, "WEBHOOK_TOKEN_CORRUPT", "Stored webhook token could not be decrypted.");
+    throw new CustomTriggerHttpError(
+      500,
+      "WEBHOOK_TOKEN_CORRUPT",
+      "Stored webhook token could not be decrypted."
+    );
   }
 }
 
@@ -210,7 +231,9 @@ export function hashCustomTriggerToken(token: string): string {
       "JWT_SECRET must be configured before webhook URLs can be generated."
     );
   }
-  return createHmac("sha256", secret).update(`homeflow-custom-trigger:${token}`).digest("hex");
+  return createHmac("sha256", secret)
+    .update(`homeflow-custom-trigger:${token}`)
+    .digest("hex");
 }
 
 function webhookBaseUrl(): string {
@@ -227,11 +250,19 @@ function webhookBaseUrl(): string {
   try {
     parsed = new URL(configured);
   } catch {
-    throw new CustomTriggerHttpError(500, "WEBHOOK_BASE_URL_INVALID", "The custom-trigger webhook base URL is invalid.");
+    throw new CustomTriggerHttpError(
+      500,
+      "WEBHOOK_BASE_URL_INVALID",
+      "The custom-trigger webhook base URL is invalid."
+    );
   }
 
   if (parsed.protocol !== "https:" && parsed.hostname !== "localhost") {
-    throw new CustomTriggerHttpError(500, "WEBHOOK_BASE_URL_INSECURE", "The public custom-trigger webhook base URL must use HTTPS.");
+    throw new CustomTriggerHttpError(
+      500,
+      "WEBHOOK_BASE_URL_INSECURE",
+      "The public custom-trigger webhook base URL must use HTTPS."
+    );
   }
 
   return configured;
@@ -258,17 +289,26 @@ export async function syncIntegrationWebhookCustomValue(
       webhookUrl
     );
     if (result.id === "create_failed") {
-      console.warn("[Custom Trigger] homeflow_webhook custom value could not be created; URL remains available through the backend API", { locationId });
+      console.warn(
+        "[Custom Trigger] homeflow_webhook custom value could not be created; URL remains available through the backend API",
+        { locationId }
+      );
       return;
     }
-    console.info("[Custom Trigger] homeflow_webhook custom value synchronized", { locationId });
+    console.info(
+      "[Custom Trigger] homeflow_webhook custom value synchronized",
+      { locationId }
+    );
   } catch (error) {
     // The backend-generated URL remains authoritative. A temporary GHL custom
     // value failure must not prevent the integration page from loading.
-    console.error("[Custom Trigger] failed to synchronize homeflow_webhook custom value", {
-      locationId,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error(
+      "[Custom Trigger] failed to synchronize homeflow_webhook custom value",
+      {
+        locationId,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    );
   }
 }
 
@@ -294,7 +334,10 @@ function tokenPreview(token: string): string {
   return `${token.slice(0, 9)}…${token.slice(-6)}`;
 }
 
-export async function ensureCustomTriggerWebhook(locationId: string, companyId?: string): Promise<{
+export async function ensureCustomTriggerWebhook(
+  locationId: string,
+  companyId?: string
+): Promise<{
   locationId: string;
   companyId: string | null;
   webhookUrl: string;
@@ -304,7 +347,11 @@ export async function ensureCustomTriggerWebhook(locationId: string, companyId?:
 }> {
   const normalizedLocationId = normalizeText(locationId);
   if (!normalizedLocationId) {
-    throw new CustomTriggerHttpError(400, "LOCATION_ID_REQUIRED", "locationId is required.");
+    throw new CustomTriggerHttpError(
+      400,
+      "LOCATION_ID_REQUIRED",
+      "locationId is required."
+    );
   }
 
   const db = await requireDb();
@@ -316,8 +363,13 @@ export async function ensureCustomTriggerWebhook(locationId: string, companyId?:
 
   if (existing.length > 0) {
     const row = existing[0];
-    const existingWebhookUrl = buildCustomTriggerWebhookUrl(decryptToken(row.tokenCiphertext));
-    await syncIntegrationWebhookCustomValue(normalizedLocationId, existingWebhookUrl);
+    const existingWebhookUrl = buildCustomTriggerWebhookUrl(
+      decryptToken(row.tokenCiphertext)
+    );
+    await syncIntegrationWebhookCustomValue(
+      normalizedLocationId,
+      existingWebhookUrl
+    );
     if (companyId && row.companyId !== companyId) {
       await db
         .update(customTriggerWebhooks)
@@ -353,8 +405,13 @@ export async function ensureCustomTriggerWebhook(locationId: string, companyId?:
 
   if (created) {
     const createdWebhookUrl = buildCustomTriggerWebhookUrl(token);
-    await syncIntegrationWebhookCustomValue(normalizedLocationId, createdWebhookUrl);
-    console.info("[Custom Trigger] public webhook generated", { locationId: normalizedLocationId });
+    await syncIntegrationWebhookCustomValue(
+      normalizedLocationId,
+      createdWebhookUrl
+    );
+    console.info("[Custom Trigger] public webhook generated", {
+      locationId: normalizedLocationId,
+    });
     return {
       locationId: created.locationId,
       companyId: created.companyId || null,
@@ -373,11 +430,20 @@ export async function ensureCustomTriggerWebhook(locationId: string, companyId?:
     .where(eq(customTriggerWebhooks.locationId, normalizedLocationId))
     .limit(1);
   if (!concurrent.length) {
-    throw new CustomTriggerHttpError(500, "WEBHOOK_PROVISIONING_FAILED", "Unable to provision the location webhook URL.");
+    throw new CustomTriggerHttpError(
+      500,
+      "WEBHOOK_PROVISIONING_FAILED",
+      "Unable to provision the location webhook URL."
+    );
   }
   const row = concurrent[0];
-  const concurrentWebhookUrl = buildCustomTriggerWebhookUrl(decryptToken(row.tokenCiphertext));
-  await syncIntegrationWebhookCustomValue(normalizedLocationId, concurrentWebhookUrl);
+  const concurrentWebhookUrl = buildCustomTriggerWebhookUrl(
+    decryptToken(row.tokenCiphertext)
+  );
+  await syncIntegrationWebhookCustomValue(
+    normalizedLocationId,
+    concurrentWebhookUrl
+  );
   return {
     locationId: row.locationId,
     companyId: row.companyId || null,
@@ -409,7 +475,12 @@ export async function getCustomTriggerWebhookForLocation(locationId: string) {
       updatedAt: customTriggerBindings.updatedAt,
     })
     .from(customTriggerBindings)
-    .where(and(eq(customTriggerBindings.locationId, locationId), eq(customTriggerBindings.active, true)))
+    .where(
+      and(
+        eq(customTriggerBindings.locationId, locationId),
+        eq(customTriggerBindings.active, true)
+      )
+    )
     .orderBy(desc(customTriggerBindings.updatedAt));
 
   return {
@@ -422,27 +493,50 @@ export async function getCustomTriggerWebhookForLocation(locationId: string) {
 
 export async function recordCustomTriggerSubscription(
   payload: CustomTriggerSubscriptionPayload
-): Promise<{ eventType: CustomTriggerEventType; locationId: string; workflowId: string; targetUrl: string | null }> {
+): Promise<{
+  eventType: CustomTriggerEventType;
+  locationId: string;
+  workflowId: string;
+  targetUrl: string | null;
+}> {
   const triggerData = payload.triggerData || {};
   const extras = payload.extras || {};
   const meta = payload.meta || {};
   const locationId = normalizeText(extras.locationId);
   const workflowId = normalizeText(extras.workflowId);
   const triggerKey = normalizeText(meta.key) || normalizeText(triggerData.key);
-  const eventType = normalizeText(triggerData.eventType)?.toUpperCase() as CustomTriggerEventType | undefined;
+  const eventType = normalizeText(triggerData.eventType)?.toUpperCase() as
+    | CustomTriggerEventType
+    | undefined;
   const targetUrl = normalizeText(triggerData.targetUrl) || null;
 
   if (!locationId || !workflowId || !triggerKey) {
-    throw new CustomTriggerHttpError(400, "INVALID_SUBSCRIPTION_PAYLOAD", "Subscription payload must include locationId, workflowId, and trigger key.");
+    throw new CustomTriggerHttpError(
+      400,
+      "INVALID_SUBSCRIPTION_PAYLOAD",
+      "Subscription payload must include locationId, workflowId, and trigger key."
+    );
   }
   if (!eventType || !["CREATED", "UPDATED", "DELETED"].includes(eventType)) {
-    throw new CustomTriggerHttpError(400, "INVALID_SUBSCRIPTION_EVENT", "Subscription eventType must be CREATED, UPDATED, or DELETED.");
+    throw new CustomTriggerHttpError(
+      400,
+      "INVALID_SUBSCRIPTION_EVENT",
+      "Subscription eventType must be CREATED, UPDATED, or DELETED."
+    );
   }
   if (eventType !== "DELETED" && !targetUrl) {
-    throw new CustomTriggerHttpError(400, "TARGET_URL_REQUIRED", "CREATED and UPDATED subscription events must include targetUrl.");
+    throw new CustomTriggerHttpError(
+      400,
+      "TARGET_URL_REQUIRED",
+      "CREATED and UPDATED subscription events must include targetUrl."
+    );
   }
   if (targetUrl && !isHighLevelTriggerTargetUrl(targetUrl)) {
-    throw new CustomTriggerHttpError(400, "INVALID_TARGET_URL", "targetUrl is not a valid HighLevel Marketplace trigger execution URL.");
+    throw new CustomTriggerHttpError(
+      400,
+      "INVALID_TARGET_URL",
+      "targetUrl is not a valid HighLevel Marketplace trigger execution URL."
+    );
   }
 
   const db = await requireDb();
@@ -478,9 +572,14 @@ export async function recordCustomTriggerSubscription(
   };
 
   if (existing.length > 0) {
-    await db.update(customTriggerBindings).set(values).where(eq(customTriggerBindings.id, existing[0].id));
+    await db
+      .update(customTriggerBindings)
+      .set(values)
+      .where(eq(customTriggerBindings.id, existing[0].id));
   } else {
-    await db.insert(customTriggerBindings).values({ ...values, createdAt: now });
+    await db
+      .insert(customTriggerBindings)
+      .values({ ...values, createdAt: now });
   }
 
   console.info("[Custom Trigger] subscription binding updated", {
@@ -496,18 +595,34 @@ export async function recordCustomTriggerSubscription(
 async function resolveWebhookToken(rawToken: string) {
   const normalizedToken = normalizeText(rawToken);
   if (!normalizedToken || normalizedToken.length < TOKEN_PREFIX.length + 20) {
-    throw new CustomTriggerHttpError(404, "WEBHOOK_NOT_FOUND", "Webhook endpoint not found.");
+    throw new CustomTriggerHttpError(
+      404,
+      "WEBHOOK_NOT_FOUND",
+      "Webhook endpoint not found."
+    );
   }
 
   const db = await requireDb();
   const rows = await db
     .select()
     .from(customTriggerWebhooks)
-    .where(and(eq(customTriggerWebhooks.tokenHash, hashCustomTriggerToken(normalizedToken)), eq(customTriggerWebhooks.active, true)))
+    .where(
+      and(
+        eq(
+          customTriggerWebhooks.tokenHash,
+          hashCustomTriggerToken(normalizedToken)
+        ),
+        eq(customTriggerWebhooks.active, true)
+      )
+    )
     .limit(1);
 
   if (!rows.length) {
-    throw new CustomTriggerHttpError(404, "WEBHOOK_NOT_FOUND", "Webhook endpoint not found.");
+    throw new CustomTriggerHttpError(
+      404,
+      "WEBHOOK_NOT_FOUND",
+      "Webhook endpoint not found."
+    );
   }
   return rows[0];
 }
@@ -522,41 +637,108 @@ function deliveryHeaders(accessToken: string): Record<string, string> {
   };
 }
 
-export async function deliverCustomTriggerPayload(rawToken: string, payload: unknown): Promise<{
+export async function deliverCustomTriggerPayload(
+  rawToken: string,
+  payload: unknown
+): Promise<{
   locationId: string;
   delivered: number;
   failed: number;
   bindingCount: number;
 }> {
   const webhook = await resolveWebhookToken(rawToken);
+  return deliverCustomTriggerPayloadForLocation(
+    webhook.locationId,
+    payload,
+    webhook.id,
+    { excludeTriggerKey: ENV.n8nCustomTriggerKey }
+  );
+}
+
+/**
+ * Deliver a payload to all active Marketplace trigger bindings for one exact
+ * HighLevel location. The location-scoped entrypoint is used by authenticated
+ * machine-to-machine callers such as n8n; the public token entrypoint above
+ * delegates here so both paths share binding lookup, token refresh, payload
+ * normalization, and delivery telemetry.
+ */
+export async function deliverCustomTriggerPayloadForLocation(
+  locationId: string,
+  payload: unknown,
+  webhookId?: number,
+  options: { triggerKey?: string; excludeTriggerKey?: string } = {}
+): Promise<{
+  locationId: string;
+  delivered: number;
+  failed: number;
+  bindingCount: number;
+}> {
+  const normalizedLocationId = normalizeText(locationId);
+  if (!normalizedLocationId) {
+    throw new CustomTriggerHttpError(
+      400,
+      "LOCATION_ID_REQUIRED",
+      "locationId is required."
+    );
+  }
+
   const db = await requireDb();
+  const bindingConditions = [
+    eq(customTriggerBindings.locationId, normalizedLocationId),
+    eq(customTriggerBindings.active, true),
+    isNotNull(customTriggerBindings.targetUrl),
+  ];
+  const triggerKey = normalizeText(options.triggerKey);
+  const excludedTriggerKey = normalizeText(options.excludeTriggerKey);
+  if (triggerKey) {
+    bindingConditions.push(eq(customTriggerBindings.triggerKey, triggerKey));
+  }
+  if (excludedTriggerKey) {
+    bindingConditions.push(
+      ne(customTriggerBindings.triggerKey, excludedTriggerKey)
+    );
+  }
+
   const bindings = await db
     .select()
     .from(customTriggerBindings)
-    .where(
-      and(
-        eq(customTriggerBindings.locationId, webhook.locationId),
-        eq(customTriggerBindings.active, true),
-        isNotNull(customTriggerBindings.targetUrl)
-      )
-    )
+    .where(and(...bindingConditions))
     .orderBy(desc(customTriggerBindings.updatedAt));
 
+  const webhookRows = webhookId
+    ? []
+    : await db
+        .select({ id: customTriggerWebhooks.id })
+        .from(customTriggerWebhooks)
+        .where(
+          and(
+            eq(customTriggerWebhooks.locationId, normalizedLocationId),
+            eq(customTriggerWebhooks.active, true)
+          )
+        )
+        .limit(1);
+  const metricsWebhookId = webhookId ?? webhookRows[0]?.id;
   const receivedAt = new Date();
-  await db
-    .update(customTriggerWebhooks)
-    .set({ lastReceivedAt: receivedAt, updatedAt: receivedAt })
-    .where(eq(customTriggerWebhooks.id, webhook.id));
+  if (metricsWebhookId) {
+    await db
+      .update(customTriggerWebhooks)
+      .set({ lastReceivedAt: receivedAt, updatedAt: receivedAt })
+      .where(eq(customTriggerWebhooks.id, metricsWebhookId));
+  }
 
   if (!bindings.length) {
-    throw new CustomTriggerHttpError(409, "NO_ACTIVE_TRIGGER_BINDING", "The webhook URL is valid, but no active HighLevel workflow is currently bound to this custom trigger.");
+    throw new CustomTriggerHttpError(
+      409,
+      "NO_ACTIVE_TRIGGER_BINDING",
+      "No active HighLevel workflow is currently bound to this custom trigger for the location."
+    );
   }
 
   let accessToken: string;
   try {
     // HighLevel's generated Marketplace trigger execution URL requires the
     // installed location's OAuth token for server-to-server delivery.
-    accessToken = await getValidAccessToken(webhook.locationId);
+    accessToken = await getValidAccessToken(normalizedLocationId);
   } catch {
     throw new CustomTriggerHttpError(
       401,
@@ -592,7 +774,7 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
           .where(eq(customTriggerBindings.id, binding.id));
         if (!ok) {
           console.warn("[Custom Trigger] HighLevel target rejected payload", {
-            locationId: webhook.locationId,
+            locationId: normalizedLocationId,
             workflowId: binding.workflowId,
             status: response.status,
             responseBody: responseBody.slice(0, 2000),
@@ -602,10 +784,14 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
       } catch (error) {
         await db
           .update(customTriggerBindings)
-          .set({ lastDeliveryAt: new Date(), lastDeliveryStatus: "error", updatedAt: new Date() })
+          .set({
+            lastDeliveryAt: new Date(),
+            lastDeliveryStatus: "error",
+            updatedAt: new Date(),
+          })
           .where(eq(customTriggerBindings.id, binding.id));
         console.error("[Custom Trigger] HighLevel target delivery failed", {
-          locationId: webhook.locationId,
+          locationId: normalizedLocationId,
           workflowId: binding.workflowId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -616,12 +802,23 @@ export async function deliverCustomTriggerPayload(rawToken: string, payload: unk
 
   const delivered = results.filter(Boolean).length;
   const failed = results.length - delivered;
-  await db
-    .update(customTriggerWebhooks)
-    .set({ lastDeliveryAt: new Date(), lastDeliveryStatus: failed === 0 ? "success" : "partial_failure", updatedAt: new Date() })
-    .where(eq(customTriggerWebhooks.id, webhook.id));
+  if (metricsWebhookId) {
+    await db
+      .update(customTriggerWebhooks)
+      .set({
+        lastDeliveryAt: new Date(),
+        lastDeliveryStatus: failed === 0 ? "success" : "partial_failure",
+        updatedAt: new Date(),
+      })
+      .where(eq(customTriggerWebhooks.id, metricsWebhookId));
+  }
 
-  return { locationId: webhook.locationId, delivered, failed, bindingCount: bindings.length };
+  return {
+    locationId: normalizedLocationId,
+    delivered,
+    failed,
+    bindingCount: bindings.length,
+  };
 }
 
 export async function rotateCustomTriggerWebhook(locationId: string) {
