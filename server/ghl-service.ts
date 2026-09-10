@@ -377,10 +377,47 @@ export function findCustomValueId(
       typeof cv.fieldKey === "string" && cv.fieldKey
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
+    const normName = typeof cv.name === "string" ? normalizeKey(cv.name) : "";
+    const canonicalKeys: string[] = [];
+    let isSubscriptionCard = false;
+
+    if (
+      normName === "customsubscriptionpausedmessage" ||
+      normName === "customsubscriptionpausedunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_paused_message",
+        "custom_subscription_pausedunpaused_message",
+        "Custom Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      normName === "customsubscriptionunpausedmessage" ||
+      normName === "accountunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_unpaused_message",
+        "account_unpaused_message",
+        "Custom Subscription Unpaused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      normName === "subscriptionpausedmessage" ||
+      normName === "subscriptionpausedunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "subscription_paused_message",
+        "subscription_pausedunpaused_message",
+        "Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    }
+
     return [
-      unwrapped,
-      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
-      typeof cv.key === "string" ? cv.key : undefined,
+      ...canonicalKeys,
+      !isSubscriptionCard && typeof unwrapped === "string" ? unwrapped : undefined,
+      !isSubscriptionCard && typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      !isSubscriptionCard && typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
     ].filter(Boolean) as string[];
   };
@@ -618,10 +655,47 @@ export async function updateExistingCustomValuesOnly(
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
 
+    const normName = typeof cv.name === "string" ? normalizeKey(cv.name) : "";
+    const canonicalKeys: string[] = [];
+    let isSubscriptionCard = false;
+
+    if (
+      normName === "customsubscriptionpausedmessage" ||
+      normName === "customsubscriptionpausedunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_paused_message",
+        "custom_subscription_pausedunpaused_message",
+        "Custom Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      normName === "customsubscriptionunpausedmessage" ||
+      normName === "accountunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_unpaused_message",
+        "account_unpaused_message",
+        "Custom Subscription Unpaused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      normName === "subscriptionpausedmessage" ||
+      normName === "subscriptionpausedunpausedmessage"
+    ) {
+      canonicalKeys.push(
+        "subscription_paused_message",
+        "subscription_pausedunpaused_message",
+        "Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    }
+
     const keys = [
-      typeof unwrapped === "string" ? unwrapped : undefined,
-      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
-      typeof cv.key === "string" ? cv.key : undefined,
+      ...canonicalKeys,
+      !isSubscriptionCard && typeof unwrapped === "string" ? unwrapped : undefined,
+      !isSubscriptionCard && typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      !isSubscriptionCard && typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
     ].filter(Boolean) as string[];
 
