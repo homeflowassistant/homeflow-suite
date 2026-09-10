@@ -324,7 +324,6 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyEnabled: parseBool(
             [
               CV_KEYS.subscriptionPausedNotifyEnabled,
-              "subscription_pausedunpaused_message",
               "subscription_paused_notify_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyEnabled
@@ -332,10 +331,8 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyMessage: parseStr(
             [
               CV_KEYS.subscriptionPausedNotifyMessage,
-              "custom_subscription_pausedunpaused_message",
               "subscription_paused_notify_message",
               "Custom Subscription Paused Message",
-              "Custom Subscription Paused/Unpaused Message",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage
           ),
@@ -391,7 +388,6 @@ export const alertsNotificationsRouter = router({
         send_team_notification_email: data.teamNotifyEmail,
         failed_payment_notify_message: data.failedPaymentNotifyMessage,
         skipped_job_notify_message: data.skippedJobNotifyMessage,
-        custom_subscription_pausedunpaused_message: data.subscriptionPausedNotifyMessage,
         account_unpaused_message: data.subscriptionUnpausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
@@ -404,14 +400,12 @@ export const alertsNotificationsRouter = router({
         [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "True" : "False",
 
         // Secondary aliases for toggle states
-        subscription_pausedunpaused_message: data.subscriptionPausedNotifyEnabled ? "True" : "False",
         autoreply_new_lead_enabled: data.autoReplyNewLeadEnabled ? "ON" : "OFF",
         autoreply_new_customer_enabled: data.autoReplyNewCustomerEnabled ? "ON" : "OFF",
         teamnotification_new_lead_enabled: data.teamNotifyNewLeadEnabled ? "ON" : "OFF",
         teamnotification_new_customer_enabled: data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
         custom_failed_payment_enabled: data.failedPaymentNotifyEnabled ? "ON" : "OFF",
         custom_skipped_job_enabled: data.skippedJobNotifyEnabled ? "ON" : "OFF",
-        custom_subscription_pausedunpaused_enabled: data.subscriptionPausedNotifyEnabled ? "ON" : "OFF",
       };
 
       try {

@@ -381,13 +381,9 @@ export function findCustomValueId(
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (
-      normName === "customsubscriptionpausedmessage" ||
-      normName === "customsubscriptionpausedunpausedmessage"
-    ) {
+    if (normName === "customsubscriptionpausedmessage") {
       canonicalKeys.push(
         "custom_subscription_paused_message",
-        "custom_subscription_pausedunpaused_message",
         "Custom Subscription Paused Message"
       );
       isSubscriptionCard = true;
@@ -401,13 +397,9 @@ export function findCustomValueId(
         "Custom Subscription Unpaused Message"
       );
       isSubscriptionCard = true;
-    } else if (
-      normName === "subscriptionpausedmessage" ||
-      normName === "subscriptionpausedunpausedmessage"
-    ) {
+    } else if (normName === "subscriptionpausedmessage") {
       canonicalKeys.push(
         "subscription_paused_message",
-        "subscription_pausedunpaused_message",
         "Subscription Paused Message"
       );
       isSubscriptionCard = true;
@@ -659,13 +651,9 @@ export async function updateExistingCustomValuesOnly(
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (
-      normName === "customsubscriptionpausedmessage" ||
-      normName === "customsubscriptionpausedunpausedmessage"
-    ) {
+    if (normName === "customsubscriptionpausedmessage") {
       canonicalKeys.push(
         "custom_subscription_paused_message",
-        "custom_subscription_pausedunpaused_message",
         "Custom Subscription Paused Message"
       );
       isSubscriptionCard = true;
@@ -679,13 +667,9 @@ export async function updateExistingCustomValuesOnly(
         "Custom Subscription Unpaused Message"
       );
       isSubscriptionCard = true;
-    } else if (
-      normName === "subscriptionpausedmessage" ||
-      normName === "subscriptionpausedunpausedmessage"
-    ) {
+    } else if (normName === "subscriptionpausedmessage") {
       canonicalKeys.push(
         "subscription_paused_message",
-        "subscription_pausedunpaused_message",
         "Subscription Paused Message"
       );
       isSubscriptionCard = true;
@@ -814,13 +798,10 @@ export async function upsertGhlCustomValue(
       nameAliases.push("Custom Subscription Unpaused Message");
     } else if (normName.includes("custom") && normName.includes("paused")) {
       nameAliases.push("custom_subscription_paused_message");
-      nameAliases.push("custom_subscription_pausedunpaused_message");
       nameAliases.push("Custom Subscription Paused Message");
     } else if (normName.includes("subscription")) {
       nameAliases.push("subscription_paused_message");
-      nameAliases.push("subscription_pausedunpaused_message");
       nameAliases.push("Subscription Paused Message");
-      nameAliases.push("Custom Subscription Paused/Unpaused Message");
     }
   }
 

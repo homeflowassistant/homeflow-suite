@@ -43,8 +43,44 @@ describe("Alerts & Notifications Router Defaults", () => {
   });
 
   it("exports exact custom value keys for subscription toggle and message text fields", async () => {
-    // Dynamically import router module to verify internal CV_KEYS mappings
     const alertsModule = await import("./alertsNotifications.js");
     expect(alertsModule.DEFAULT_ALERT_TEMPLATES).toBeDefined();
+  });
+});
+
+describe("Subscription Card Custom-Value Persistence Mapping", () => {
+  it("resolves the toggle, paused text, and unpaused text to independent custom-value IDs", async () => {
+    const { findCustomValueId } = await import("../ghl-service.js");
+
+    const mockGhlCustomValues = [
+      {
+        id: "cv_toggle_123",
+        name: "Subscription Paused Message",
+        fieldKey: "{{custom_values.subscription_paused_message}}",
+      },
+      {
+        id: "cv_paused_text_456",
+        name: "Custom Subscription Paused Message",
+        fieldKey: "{{custom_values.custom_subscription_paused_message}}",
+      },
+      {
+        id: "cv_unpaused_text_789",
+        name: "Custom Subscription Unpaused Message",
+        fieldKey: "{{custom_values.custom_subscription_unpaused_message}}",
+      },
+    ];
+
+    const toggleId = findCustomValueId(mockGhlCustomValues, "subscription_paused_message");
+    const pausedTextId = findCustomValueId(mockGhlCustomValues, "custom_subscription_paused_message");
+    const unpausedTextId = findCustomValueId(mockGhlCustomValues, "custom_subscription_unpaused_message");
+
+    expect(toggleId).toBe("cv_toggle_123");
+    expect(pausedTextId).toBe("cv_paused_text_456");
+    expect(unpausedTextId).toBe("cv_unpaused_text_789");
+
+    // Guarantee that toggle and paused text resolve to distinct records
+    expect(toggleId).not.toBe(pausedTextId);
+    expect(toggleId).not.toBe(unpausedTextId);
+    expect(pausedTextId).not.toBe(unpausedTextId);
   });
 });
