@@ -371,6 +371,20 @@ export function findCustomValueId(
 
   const normTarget = normalizeKey(targetName);
 
+  // Helper to extract candidate keys for a custom value item
+  const getCandidates = (cv: Record<string, unknown>): string[] => {
+    const unwrapped =
+      typeof cv.fieldKey === "string" && cv.fieldKey
+        ? extractCustomValueKey(cv.fieldKey)
+        : undefined;
+    return [
+      unwrapped,
+      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      typeof cv.key === "string" ? cv.key : undefined,
+      typeof cv.name === "string" ? cv.name : undefined,
+    ].filter(Boolean) as string[];
+  };
+
   // Tier 1: Exact or case-insensitive match
   for (const cv of customValues) {
     const id =
@@ -381,13 +395,7 @@ export function findCustomValueId(
           : undefined;
     if (!id) continue;
 
-    const candidates = [
-      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
-      typeof cv.key === "string" ? cv.key : undefined,
-      typeof cv.name === "string" ? cv.name : undefined,
-    ].filter(Boolean) as string[];
-
-    for (const cand of candidates) {
+    for (const cand of getCandidates(cv)) {
       if (
         cand === targetName ||
         cand.toLowerCase() === targetName.toLowerCase()
@@ -407,13 +415,7 @@ export function findCustomValueId(
           : undefined;
     if (!id) continue;
 
-    const candidates = [
-      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
-      typeof cv.key === "string" ? cv.key : undefined,
-      typeof cv.name === "string" ? cv.name : undefined,
-    ].filter(Boolean) as string[];
-
-    for (const cand of candidates) {
+    for (const cand of getCandidates(cv)) {
       const normCand = normalizeKey(cand);
       if (normCand === normTarget) {
         return id;
@@ -431,14 +433,16 @@ export function findCustomValueId(
           : undefined;
     if (!id) continue;
 
-    const candidates = [
-      typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
-      typeof cv.key === "string" ? cv.key : undefined,
-      typeof cv.name === "string" ? cv.name : undefined,
-    ].filter(Boolean) as string[];
-
-    for (const cand of candidates) {
+    for (const cand of getCandidates(cv)) {
       const normCand = normalizeKey(cand);
+      // Do not cross-match keys that differ by "custom" prefix in Tier 3
+      if (
+        (normTarget.startsWith("custom") && !normCand.startsWith("custom")) ||
+        (!normTarget.startsWith("custom") && normCand.startsWith("custom"))
+      ) {
+        continue;
+      }
+
       if (
         normCand.includes(normTarget) ||
         normTarget.includes(normCand) ||
@@ -627,17 +631,20 @@ export async function updateExistingCustomValuesOnly(
     }
   }
 
-  // Step 3: For each requested update, PUT only if the key already exists
+  // Step 3: Deduplicate updates by target Custom Value ID to prevent race conditions & duplicate PUTs
+  const idToUpdateMap = new Map<
+    string,
+    { key: string; displayName: string; value: string; isExact: boolean }
+  >();
 
-  // IMPORTANT: Preserve the original display name (GHL API requires the display name
-  // in the PUT body — passing the key would silently rename the custom value)
-  const promises = Object.entries(updates).map(async ([key, value]) => {
-    let entry = existingMap.get(key) || existingMap.get(normalizeKey(key));
+  for (const [key, value] of Object.entries(updates)) {
+    let entry = existingMap.get(key);
+    let isExact = true;
+    if (!entry) {
+      entry = existingMap.get(normalizeKey(key));
+      isExact = false;
+    }
 
-    // Fallback: fuzzy search (exact / case-insensitive / normalized /
-    // substring) across all candidate name fields — catches cases where the
-    // display name differs from the config key, e.g. "Lead Follow-up Options
-    // (Lite, SG-Link, Custom-Link)" vs "lead_followup_options"
     if (!entry) {
       const fuzzyId = findCustomValueId(cvs, key);
       if (fuzzyId) {
@@ -652,36 +659,52 @@ export async function updateExistingCustomValuesOnly(
                 ? extractCustomValueKey(matched.fieldKey)
                 : key;
           entry = { id: fuzzyId, displayName: matchedName };
+          isExact = false;
         }
       }
     }
 
-    if (!entry) {
+    if (entry) {
+      const existing = idToUpdateMap.get(entry.id);
+      // Prefer exact key matches over fallback/alias matches
+      if (!existing || isExact) {
+        idToUpdateMap.set(entry.id, {
+          key,
+          displayName: entry.displayName,
+          value,
+          isExact,
+        });
+      }
+    } else {
       console.warn(
-        `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping — will NOT create.`
-      );
-      return;
-    }
-
-    const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(entry.id)}`;
-    const resp = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        Version: GHL_API_VERSION,
-      },
-      body: JSON.stringify({ name: entry.displayName || key, value }),
-    });
-
-    if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error(
-        `[GHL] PUT failed for custom value '${key}' (display name: '${entry.displayName}'): ${resp.status} ${errBody}`
+        `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping.`
       );
     }
-  });
+  }
+
+  // Step 4: Perform PUT for each unique custom value ID
+  const promises = Array.from(idToUpdateMap.entries()).map(
+    async ([id, { key, displayName, value }]) => {
+      const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(id)}`;
+      const resp = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: GHL_API_VERSION,
+        },
+        body: JSON.stringify({ name: displayName || key, value }),
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.text();
+        console.error(
+          `[GHL] PUT failed for custom value '${key}' (ID: '${id}', display name: '${displayName}'): ${resp.status} ${errBody}`
+        );
+      }
+    }
+  );
 
   await Promise.all(promises);
 }
