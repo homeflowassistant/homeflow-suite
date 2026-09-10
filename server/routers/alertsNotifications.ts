@@ -78,7 +78,7 @@ const CV_KEYS = {
   failedPaymentNotifyMessage: "custom_failed_payment_message",
   skippedJobNotifyMessage: "custom_skipped_job_message",
   subscriptionPausedNotifyMessage: "custom_subscription_paused_message",
-  subscriptionUnpausedNotifyMessage: "account_unpaused_message",
+  subscriptionUnpausedNotifyMessage: "custom_subscription_unpaused_message",
 
   // Primary Toggle State Keys (On/Off Switches)
   autoReplyNewLeadEnabled: "autoreplies_to_new_leads",
@@ -87,7 +87,7 @@ const CV_KEYS = {
   teamNotifyNewCustomerEnabled: "internal_new_customer_notification",
   failedPaymentNotifyEnabled: "failed_payment_message",
   skippedJobNotifyEnabled: "skipped_job_message",
-  subscriptionPausedNotifyEnabled: "subscription_pausedunpaused_message",
+  subscriptionPausedNotifyEnabled: "subscription_paused_message",
 } as const;
 
 export const alertsNotificationsSchema = z.object({
@@ -332,10 +332,9 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyMessage: parseStr(
             [
               CV_KEYS.subscriptionPausedNotifyMessage,
-              "custom_subscription_paused_message",
-              "subscription_paused_message",
               "custom_subscription_pausedunpaused_message",
               "subscription_paused_notify_message",
+              "Custom Subscription Paused Message",
               "Custom Subscription Paused/Unpaused Message",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage
@@ -345,6 +344,7 @@ export const alertsNotificationsRouter = router({
               CV_KEYS.subscriptionUnpausedNotifyMessage,
               "account_unpaused_message",
               "subscription_unpaused_notify_message",
+              "Custom Subscription Unpaused Message",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage
           ),
@@ -391,8 +391,8 @@ export const alertsNotificationsRouter = router({
         send_team_notification_email: data.teamNotifyEmail,
         failed_payment_notify_message: data.failedPaymentNotifyMessage,
         skipped_job_notify_message: data.skippedJobNotifyMessage,
-        subscription_paused_message: data.subscriptionPausedNotifyMessage,
         custom_subscription_pausedunpaused_message: data.subscriptionPausedNotifyMessage,
+        account_unpaused_message: data.subscriptionUnpausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
         [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",

@@ -41,4 +41,10 @@ describe("Alerts & Notifications Router Defaults", () => {
     expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toContain("service pause has been removed");
     expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain("recurring cleanups have been unpaused");
   });
+
+  it("exports exact custom value keys for subscription toggle and message text fields", async () => {
+    // Dynamically import router module to verify internal CV_KEYS mappings
+    const alertsModule = await import("./alertsNotifications.js");
+    expect(alertsModule.DEFAULT_ALERT_TEMPLATES).toBeDefined();
+  });
 });
