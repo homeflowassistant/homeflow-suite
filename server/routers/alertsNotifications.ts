@@ -404,6 +404,7 @@ export const alertsNotificationsRouter = router({
         [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "True" : "False",
 
         // Secondary aliases for toggle states
+        subscription_pausedunpaused_message: data.subscriptionPausedNotifyEnabled ? "True" : "False",
         autoreply_new_lead_enabled: data.autoReplyNewLeadEnabled ? "ON" : "OFF",
         autoreply_new_customer_enabled: data.autoReplyNewCustomerEnabled ? "ON" : "OFF",
         teamnotification_new_lead_enabled: data.teamNotifyNewLeadEnabled ? "ON" : "OFF",

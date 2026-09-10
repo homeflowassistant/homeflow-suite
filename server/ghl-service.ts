@@ -733,6 +733,23 @@ export async function upsertGhlCustomValue(
     nameAliases.push("lead_followup_option");
   }
 
+  if (normName.includes("subscription") || normName.includes("unpaused") || normName.includes("paused")) {
+    if (normName.includes("unpaused")) {
+      nameAliases.push("custom_subscription_unpaused_message");
+      nameAliases.push("account_unpaused_message");
+      nameAliases.push("Custom Subscription Unpaused Message");
+    } else if (normName.includes("custom") && normName.includes("paused")) {
+      nameAliases.push("custom_subscription_paused_message");
+      nameAliases.push("custom_subscription_pausedunpaused_message");
+      nameAliases.push("Custom Subscription Paused Message");
+    } else if (normName.includes("subscription")) {
+      nameAliases.push("subscription_paused_message");
+      nameAliases.push("subscription_pausedunpaused_message");
+      nameAliases.push("Subscription Paused Message");
+      nameAliases.push("Custom Subscription Paused/Unpaused Message");
+    }
+  }
+
   let existingId: string | undefined;
   for (const alias of nameAliases) {
     existingId = findCustomValueId(customValues, alias);
