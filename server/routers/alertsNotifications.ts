@@ -77,7 +77,7 @@ const CV_KEYS = {
   teamNotifyEmail: "internal_notifications_email",
   failedPaymentNotifyMessage: "custom_failed_payment_message",
   skippedJobNotifyMessage: "custom_skipped_job_message",
-  subscriptionPausedNotifyMessage: "custom_subscription_pausedunpaused_message",
+  subscriptionPausedNotifyMessage: "custom_subscription_paused_message",
   subscriptionUnpausedNotifyMessage: "account_unpaused_message",
 
   // Primary Toggle State Keys (On/Off Switches)
@@ -332,6 +332,9 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyMessage: parseStr(
             [
               CV_KEYS.subscriptionPausedNotifyMessage,
+              "custom_subscription_paused_message",
+              "subscription_paused_message",
+              "custom_subscription_pausedunpaused_message",
               "subscription_paused_notify_message",
               "Custom Subscription Paused/Unpaused Message",
             ],
@@ -388,6 +391,8 @@ export const alertsNotificationsRouter = router({
         send_team_notification_email: data.teamNotifyEmail,
         failed_payment_notify_message: data.failedPaymentNotifyMessage,
         skipped_job_notify_message: data.skippedJobNotifyMessage,
+        subscription_paused_message: data.subscriptionPausedNotifyMessage,
+        custom_subscription_pausedunpaused_message: data.subscriptionPausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
         [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",

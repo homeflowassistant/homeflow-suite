@@ -33,3 +33,12 @@ describe("GHL Picker Variable Normalization", () => {
     expect(normalizeContactFieldToken("")).toBeNull();
   });
 });
+
+describe("Alerts & Notifications Router Defaults", () => {
+  it("provides default alert templates with correct initial message values", async () => {
+    const { DEFAULT_ALERT_TEMPLATES } = await import("./alertsNotifications.js");
+    expect(DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled).toBe(true);
+    expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toContain("service pause has been removed");
+    expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain("recurring cleanups have been unpaused");
+  });
+});

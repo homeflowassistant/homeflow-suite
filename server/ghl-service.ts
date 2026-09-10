@@ -738,6 +738,12 @@ export async function upsertGhlCustomValue(
   }
 
   // Step 4: Send PUT strictly to update the existing custom value
+  const matchedCv = customValues.find(cv => (cv.id || cv._id) === existingId);
+  const existingDisplayName =
+    matchedCv && typeof matchedCv.name === "string" && matchedCv.name
+      ? matchedCv.name
+      : name;
+
   const url = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(existingId)}`;
 
   const resp = await fetch(url, {
@@ -748,7 +754,7 @@ export async function upsertGhlCustomValue(
       Authorization: `Bearer ${accessToken}`,
       Version: GHL_API_VERSION,
     },
-    body: JSON.stringify({ name, value }),
+    body: JSON.stringify({ name: existingDisplayName, value }),
   });
 
   if (resp.ok) {
