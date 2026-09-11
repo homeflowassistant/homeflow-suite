@@ -377,27 +377,48 @@ export function findCustomValueId(
       typeof cv.fieldKey === "string" && cv.fieldKey
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
-    const normName = typeof cv.name === "string" ? normalizeKey(cv.name) : "";
+
+    const rawName = typeof cv.name === "string" ? cv.name : "";
+    const rawFieldKey = typeof cv.fieldKey === "string" ? cv.fieldKey : "";
+    const rawKey = typeof cv.key === "string" ? cv.key : "";
+
+    const normName = normalizeKey(rawName);
+    const normUnwrapped = unwrapped ? normalizeKey(unwrapped) : "";
+    const normFieldKey = normalizeKey(rawFieldKey);
+    const normKey = normalizeKey(rawKey);
+
+    const allNorms = [normName, normUnwrapped, normFieldKey, normKey];
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (normName === "customsubscriptionpausedmessage") {
-      canonicalKeys.push(
-        "custom_subscription_paused_message",
-        "Custom Subscription Paused Message"
-      );
-      isSubscriptionCard = true;
-    } else if (
-      normName === "customsubscriptionunpausedmessage" ||
-      normName === "accountunpausedmessage"
-    ) {
+    if (allNorms.some((n) => n.includes("unpaused"))) {
       canonicalKeys.push(
         "custom_subscription_unpaused_message",
         "account_unpaused_message",
         "Custom Subscription Unpaused Message"
       );
       isSubscriptionCard = true;
-    } else if (normName === "subscriptionpausedmessage") {
+    } else if (
+      allNorms.some(
+        (n) =>
+          n === "customsubscriptionpausedmessage" ||
+          n === "custom_subscription_paused_message" ||
+          n.includes("customsubscriptionpaused")
+      )
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_paused_message",
+        "Custom Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      allNorms.some(
+        (n) =>
+          n === "subscriptionpausedmessage" ||
+          n === "subscription_paused_message" ||
+          (n.includes("subscriptionpaused") && !n.includes("custom"))
+      )
+    ) {
       canonicalKeys.push(
         "subscription_paused_message",
         "Subscription Paused Message"
@@ -647,27 +668,47 @@ export async function updateExistingCustomValuesOnly(
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
 
-    const normName = typeof cv.name === "string" ? normalizeKey(cv.name) : "";
+    const rawName = typeof cv.name === "string" ? cv.name : "";
+    const rawFieldKey = typeof cv.fieldKey === "string" ? cv.fieldKey : "";
+    const rawKey = typeof cv.key === "string" ? cv.key : "";
+
+    const normName = normalizeKey(rawName);
+    const normUnwrapped = unwrapped ? normalizeKey(unwrapped) : "";
+    const normFieldKey = normalizeKey(rawFieldKey);
+    const normKey = normalizeKey(rawKey);
+
+    const allNorms = [normName, normUnwrapped, normFieldKey, normKey];
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (normName === "customsubscriptionpausedmessage") {
-      canonicalKeys.push(
-        "custom_subscription_paused_message",
-        "Custom Subscription Paused Message"
-      );
-      isSubscriptionCard = true;
-    } else if (
-      normName === "customsubscriptionunpausedmessage" ||
-      normName === "accountunpausedmessage"
-    ) {
+    if (allNorms.some((n) => n.includes("unpaused"))) {
       canonicalKeys.push(
         "custom_subscription_unpaused_message",
         "account_unpaused_message",
         "Custom Subscription Unpaused Message"
       );
       isSubscriptionCard = true;
-    } else if (normName === "subscriptionpausedmessage") {
+    } else if (
+      allNorms.some(
+        (n) =>
+          n === "customsubscriptionpausedmessage" ||
+          n === "custom_subscription_paused_message" ||
+          n.includes("customsubscriptionpaused")
+      )
+    ) {
+      canonicalKeys.push(
+        "custom_subscription_paused_message",
+        "Custom Subscription Paused Message"
+      );
+      isSubscriptionCard = true;
+    } else if (
+      allNorms.some(
+        (n) =>
+          n === "subscriptionpausedmessage" ||
+          n === "subscription_paused_message" ||
+          (n.includes("subscriptionpaused") && !n.includes("custom"))
+      )
+    ) {
       canonicalKeys.push(
         "subscription_paused_message",
         "Subscription Paused Message"
