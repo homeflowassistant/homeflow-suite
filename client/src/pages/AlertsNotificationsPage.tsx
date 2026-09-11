@@ -201,12 +201,12 @@ export default function AlertsNotificationsPage() {
   // State management for all toggles & fields
   const [autoReplyNewLeadEnabled, setAutoReplyNewLeadEnabled] = useState(true);
   const [autoReplyNewLeadMessage, setAutoReplyNewLeadMessage] = useState(
-    "Thanks for contacting {{location.name}}! We've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!"
+    "Thanks for contacting {{location.name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!"
   );
 
   const [autoReplyNewCustomerEnabled, setAutoReplyNewCustomerEnabled] = useState(true);
   const [autoReplyNewCustomerMessage, setAutoReplyNewCustomerMessage] = useState(
-    "Thanks for signing up with {{location.name}}! We look forward to keeping your yard clean and enjoyable year-round."
+    "Thanks for signing up with {{location.name}}!\nWe look forward to keeping your yard clean and enjoyable year-round."
   );
 
   const [teamNotifyNewLeadEnabled, setTeamNotifyNewLeadEnabled] = useState(true);
@@ -224,20 +224,20 @@ export default function AlertsNotificationsPage() {
 
   const [failedPaymentNotifyEnabled, setFailedPaymentNotifyEnabled] = useState(true);
   const [failedPaymentNotifyMessage, setFailedPaymentNotifyMessage] = useState(
-    "Hi John, we were unable to process your recent payment. To avoid any interruption in service, please update your payment method using the secure link below:"
+    "Hi John, we were unable to process your recent payment.\nTo avoid any interruption in service, please update your payment method using the secure link below:"
   );
 
   const [skippedJobNotifyEnabled, setSkippedJobNotifyEnabled] = useState(true);
   const [skippedJobNotifyMessage, setSkippedJobNotifyMessage] = useState(
-    "Hi John, due to your gate being locked, we were unable to complete your scheduled service. We apologize for the inconvenience and will be back on your next service day. Thank you for your patience!"
+    "Hi John, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!"
   );
 
   const [subscriptionPausedNotifyEnabled, setSubscriptionPausedNotifyEnabled] = useState(true);
   const [subscriptionPausedNotifyMessage, setSubscriptionPausedNotifyMessage] = useState(
-    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested. Thank you for trusting {{location.name}}!"
+    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested.\nThank you for trusting {{location.name}}!"
   );
   const [subscriptionUnpausedNotifyMessage, setSubscriptionUnpausedNotifyMessage] = useState(
-    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled. Thank you for trusting {{location.name}}!"
+    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{location.name}}!"
   );
 
   // Active inline editor key & modal state

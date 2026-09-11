@@ -13,11 +13,11 @@ import {
 export const DEFAULT_ALERT_TEMPLATES = {
   autoReplyNewLeadEnabled: true,
   autoReplyNewLeadMessage:
-    "Thanks for contacting {{location.name}}! We've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!",
+    "Thanks for contacting {{location.name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!",
 
   autoReplyNewCustomerEnabled: true,
   autoReplyNewCustomerMessage:
-    "Thanks for signing up with {{location.name}}! We look forward to keeping your yard clean and enjoyable year-round.",
+    "Thanks for signing up with {{location.name}}!\nWe look forward to keeping your yard clean and enjoyable year-round.",
 
   teamNotifyNewLeadEnabled: true,
   teamNotifyNewLeadMessage:
@@ -32,18 +32,18 @@ export const DEFAULT_ALERT_TEMPLATES = {
 
   failedPaymentNotifyEnabled: true,
   failedPaymentNotifyMessage:
-    "Hi John, we were unable to process your recent payment. To avoid any interruption in service, please update your payment method using the secure link below:",
+    "Hi John, we were unable to process your recent payment.\nTo avoid any interruption in service, please update your payment method using the secure link below:",
 
   skippedJobNotifyEnabled: true,
   skippedJobNotifyMessage:
-    "Hi John, due to your gate being locked, we were unable to complete your scheduled service. We apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
+    "Hi John, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
 
   subscriptionPausedNotifyEnabled: true,
   subscriptionPausedNotifyMessage:
-    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested. Thank you for trusting {{location.name}}!",
+    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested.\nThank you for trusting {{location.name}}!",
 
   subscriptionUnpausedNotifyMessage:
-    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled. Thank you for trusting {{location.name}}!",
+    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{location.name}}!",
 };
 
 /**
