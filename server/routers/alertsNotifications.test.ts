@@ -95,6 +95,16 @@ describe("Line Break Normalization for Custom Text Values", () => {
     expect(formatCustomTextWithNewlines(multiLineInput)).toBe(expectedOutput);
   });
 
+  it("preserves multiple consecutive line breaks with exact '\\n' count", async () => {
+    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+
+    const doubleLineBreak = "Paragraph 1\r\n\r\nParagraph 2";
+    expect(formatCustomTextWithNewlines(doubleLineBreak)).toBe("Paragraph 1\n\nParagraph 2");
+
+    const tripleLineBreak = "Header\n\n\nBody text";
+    expect(formatCustomTextWithNewlines(tripleLineBreak)).toBe("Header\n\n\nBody text");
+  });
+
   it("handles empty or null inputs gracefully", async () => {
     const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
 
@@ -103,4 +113,5 @@ describe("Line Break Normalization for Custom Text Values", () => {
     expect(formatCustomTextWithNewlines(undefined)).toBe("");
   });
 });
+
 
