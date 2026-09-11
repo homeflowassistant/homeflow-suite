@@ -84,3 +84,23 @@ describe("Subscription Card Custom-Value Persistence Mapping", () => {
     expect(pausedTextId).not.toBe(unpausedTextId);
   });
 });
+
+describe("Line Break Normalization for Custom Text Values", () => {
+  it("normalizes CRLF and CR line breaks into explicit LF '\\n' characters", async () => {
+    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+
+    const multiLineInput = "Line 1\r\nLine 2\rLine 3\nLine 4";
+    const expectedOutput = "Line 1\nLine 2\nLine 3\nLine 4";
+
+    expect(formatCustomTextWithNewlines(multiLineInput)).toBe(expectedOutput);
+  });
+
+  it("handles empty or null inputs gracefully", async () => {
+    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+
+    expect(formatCustomTextWithNewlines("")).toBe("");
+    expect(formatCustomTextWithNewlines(null)).toBe("");
+    expect(formatCustomTextWithNewlines(undefined)).toBe("");
+  });
+});
+

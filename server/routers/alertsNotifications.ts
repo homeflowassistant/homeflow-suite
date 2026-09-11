@@ -115,6 +115,15 @@ export type AlertsNotificationsSettings = z.infer<
   typeof alertsNotificationsSchema
 >;
 
+/**
+ * Normalizes multi-line custom text inputs so that line breaks (\r\n, \r)
+ * are stored consistently as explicit '\n' in GHL custom values.
+ */
+export function formatCustomTextWithNewlines(text: string | undefined | null): string {
+  if (!text) return "";
+  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
 export const alertsNotificationsRouter = router({
   /**
    * Fetch live Custom Values & Contact Custom Fields metadata for the tag picker.
@@ -365,30 +374,40 @@ export const alertsNotificationsRouter = router({
     .mutation(async ({ input }) => {
       const { locationId, ...data } = input;
 
+      // Formatted text message payloads with explicit '\n' line breaks preserved
+      const autoReplyNewLeadMessage = formatCustomTextWithNewlines(data.autoReplyNewLeadMessage);
+      const autoReplyNewCustomerMessage = formatCustomTextWithNewlines(data.autoReplyNewCustomerMessage);
+      const teamNotifyNewLeadMessage = formatCustomTextWithNewlines(data.teamNotifyNewLeadMessage);
+      const teamNotifyNewCustomerMessage = formatCustomTextWithNewlines(data.teamNotifyNewCustomerMessage);
+      const failedPaymentNotifyMessage = formatCustomTextWithNewlines(data.failedPaymentNotifyMessage);
+      const skippedJobNotifyMessage = formatCustomTextWithNewlines(data.skippedJobNotifyMessage);
+      const subscriptionPausedNotifyMessage = formatCustomTextWithNewlines(data.subscriptionPausedNotifyMessage);
+      const subscriptionUnpausedNotifyMessage = formatCustomTextWithNewlines(data.subscriptionUnpausedNotifyMessage);
+
       // Exact GHL Custom Value Key Mappings matching client requirements
       const customValuePayload: Record<string, string> = {
         // Message Templates
-        [CV_KEYS.autoReplyNewLeadMessage]: data.autoReplyNewLeadMessage,
-        [CV_KEYS.autoReplyNewCustomerMessage]: data.autoReplyNewCustomerMessage,
-        [CV_KEYS.teamNotifyNewLeadMessage]: data.teamNotifyNewLeadMessage,
-        [CV_KEYS.teamNotifyNewCustomerMessage]: data.teamNotifyNewCustomerMessage,
+        [CV_KEYS.autoReplyNewLeadMessage]: autoReplyNewLeadMessage,
+        [CV_KEYS.autoReplyNewCustomerMessage]: autoReplyNewCustomerMessage,
+        [CV_KEYS.teamNotifyNewLeadMessage]: teamNotifyNewLeadMessage,
+        [CV_KEYS.teamNotifyNewCustomerMessage]: teamNotifyNewCustomerMessage,
         [CV_KEYS.teamNotifyPhone]: data.teamNotifyPhone,
         [CV_KEYS.teamNotifyEmail]: data.teamNotifyEmail,
-        [CV_KEYS.failedPaymentNotifyMessage]: data.failedPaymentNotifyMessage,
-        [CV_KEYS.skippedJobNotifyMessage]: data.skippedJobNotifyMessage,
-        [CV_KEYS.subscriptionPausedNotifyMessage]: data.subscriptionPausedNotifyMessage,
-        [CV_KEYS.subscriptionUnpausedNotifyMessage]: data.subscriptionUnpausedNotifyMessage,
+        [CV_KEYS.failedPaymentNotifyMessage]: failedPaymentNotifyMessage,
+        [CV_KEYS.skippedJobNotifyMessage]: skippedJobNotifyMessage,
+        [CV_KEYS.subscriptionPausedNotifyMessage]: subscriptionPausedNotifyMessage,
+        [CV_KEYS.subscriptionUnpausedNotifyMessage]: subscriptionUnpausedNotifyMessage,
 
         // Dual-write legacy aliases for backwards compatibility
-        auto_reply_new_lead_message: data.autoReplyNewLeadMessage,
-        auto_reply_new_customer_message: data.autoReplyNewCustomerMessage,
-        team_notify_new_lead_message: data.teamNotifyNewLeadMessage,
-        team_notify_new_customer_message: data.teamNotifyNewCustomerMessage,
+        auto_reply_new_lead_message: autoReplyNewLeadMessage,
+        auto_reply_new_customer_message: autoReplyNewCustomerMessage,
+        team_notify_new_lead_message: teamNotifyNewLeadMessage,
+        team_notify_new_customer_message: teamNotifyNewCustomerMessage,
         send_team_notification_phone: data.teamNotifyPhone,
         send_team_notification_email: data.teamNotifyEmail,
-        failed_payment_notify_message: data.failedPaymentNotifyMessage,
-        skipped_job_notify_message: data.skippedJobNotifyMessage,
-        account_unpaused_message: data.subscriptionUnpausedNotifyMessage,
+        failed_payment_notify_message: failedPaymentNotifyMessage,
+        skipped_job_notify_message: skippedJobNotifyMessage,
+        account_unpaused_message: subscriptionUnpausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
         [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",
@@ -415,22 +434,22 @@ export const alertsNotificationsRouter = router({
         // Step 2: Upsert primary keys to guarantee creation if not existing
         const primaryEntries = [
           [CV_KEYS.autoReplyNewLeadEnabled, data.autoReplyNewLeadEnabled ? "True" : "False"],
-          [CV_KEYS.autoReplyNewLeadMessage, data.autoReplyNewLeadMessage],
+          [CV_KEYS.autoReplyNewLeadMessage, autoReplyNewLeadMessage],
           [CV_KEYS.autoReplyNewCustomerEnabled, data.autoReplyNewCustomerEnabled ? "True" : "False"],
-          [CV_KEYS.autoReplyNewCustomerMessage, data.autoReplyNewCustomerMessage],
+          [CV_KEYS.autoReplyNewCustomerMessage, autoReplyNewCustomerMessage],
           [CV_KEYS.teamNotifyNewLeadEnabled, data.teamNotifyNewLeadEnabled ? "True" : "False"],
-          [CV_KEYS.teamNotifyNewLeadMessage, data.teamNotifyNewLeadMessage],
+          [CV_KEYS.teamNotifyNewLeadMessage, teamNotifyNewLeadMessage],
           [CV_KEYS.teamNotifyNewCustomerEnabled, data.teamNotifyNewCustomerEnabled ? "True" : "False"],
-          [CV_KEYS.teamNotifyNewCustomerMessage, data.teamNotifyNewCustomerMessage],
+          [CV_KEYS.teamNotifyNewCustomerMessage, teamNotifyNewCustomerMessage],
           [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
           [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
           [CV_KEYS.failedPaymentNotifyEnabled, data.failedPaymentNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.failedPaymentNotifyMessage, data.failedPaymentNotifyMessage],
+          [CV_KEYS.failedPaymentNotifyMessage, failedPaymentNotifyMessage],
           [CV_KEYS.skippedJobNotifyEnabled, data.skippedJobNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.skippedJobNotifyMessage, data.skippedJobNotifyMessage],
+          [CV_KEYS.skippedJobNotifyMessage, skippedJobNotifyMessage],
           [CV_KEYS.subscriptionPausedNotifyEnabled, data.subscriptionPausedNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.subscriptionPausedNotifyMessage, data.subscriptionPausedNotifyMessage],
-          [CV_KEYS.subscriptionUnpausedNotifyMessage, data.subscriptionUnpausedNotifyMessage],
+          [CV_KEYS.subscriptionPausedNotifyMessage, subscriptionPausedNotifyMessage],
+          [CV_KEYS.subscriptionUnpausedNotifyMessage, subscriptionUnpausedNotifyMessage],
         ];
 
         for (const [key, val] of primaryEntries) {
