@@ -80,24 +80,44 @@ function matchesCustomKey(apiKey: string, configKey: string): boolean {
   );
 }
 
-function getCustomValueMap(
+export function getCustomValueMap(
   customValues: Record<string, unknown>[]
 ): Map<string, { id: string; value: string }> {
   const map = new Map<string, { id: string; value: string }>();
 
   for (const customValue of customValues) {
-    const key =
-      typeof customValue.fieldKey === "string"
-        ? customValue.fieldKey
-        : typeof customValue.name === "string"
-          ? customValue.name
+    const id =
+      typeof customValue.id === "string"
+        ? customValue.id
+        : typeof customValue._id === "string"
+          ? customValue._id
           : "";
-    const id = typeof customValue.id === "string" ? customValue.id : "";
     const value =
-      typeof customValue.value === "string" ? customValue.value : "";
+      customValue.value !== undefined && customValue.value !== null
+        ? String(customValue.value)
+        : "";
 
-    if (!key || !id) continue;
-    map.set(key, { id, value });
+    if (!id) continue;
+
+    const rawKeys = [
+      typeof customValue.fieldKey === "string" ? customValue.fieldKey : "",
+      typeof customValue.key === "string" ? customValue.key : "",
+      typeof customValue.name === "string" ? customValue.name : "",
+    ].filter(Boolean);
+
+    for (const rawKey of rawKeys) {
+      const unwrappedKey = extractCustomValueKey(rawKey);
+      const keys = new Set([
+        rawKey,
+        unwrappedKey,
+        rawKey.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        unwrappedKey.toLowerCase().replace(/[^a-z0-9]/g, ""),
+      ]);
+
+      for (const key of Array.from(keys)) {
+        if (key) map.set(key, { id, value });
+      }
+    }
   }
 
   return map;
@@ -107,15 +127,24 @@ export async function getLocationCustomValueMap(
   locationId: string
 ): Promise<Map<string, { id: string; value: string }>> {
   const { accessToken } = await getAccessTokenAndInstallation(locationId);
-  const response = await fetchJson<{
-    customValues?: Record<string, unknown>[];
-  }>(
+  const response = await fetchJson<
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+  >(
     `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
     accessToken,
     { method: "GET" }
   );
 
-  return getCustomValueMap(response.customValues ?? []);
+  const values = Array.isArray(response)
+    ? response
+    : ((response.customValues ??
+        response.custom_values ??
+        response.values ??
+        response.data ??
+        []) as Record<string, unknown>[]);
+
+  return getCustomValueMap(values);
 }
 
 async function getAccessTokenAndInstallation(locationId: string) {

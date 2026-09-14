@@ -77,8 +77,8 @@ const CV_KEYS = {
   teamNotifyEmail: "internal_notifications_email",
   failedPaymentNotifyMessage: "custom_failed_payment_message",
   skippedJobNotifyMessage: "custom_skipped_job_message",
-  subscriptionPausedNotifyMessage: "custom_subscription_paused_message",
-  subscriptionUnpausedNotifyMessage: "custom_subscription_unpaused_message",
+  subscriptionPausedNotifyMessage: "custom_subscription_pausedunpaused_message",
+  subscriptionUnpausedNotifyMessage: "account_unpaused_message",
 
   // Primary Toggle State Keys (On/Off Switches)
   autoReplyNewLeadEnabled: "autoreplies_to_new_leads",
@@ -87,7 +87,7 @@ const CV_KEYS = {
   teamNotifyNewCustomerEnabled: "internal_new_customer_notification",
   failedPaymentNotifyEnabled: "failed_payment_message",
   skippedJobNotifyEnabled: "skipped_job_message",
-  subscriptionPausedNotifyEnabled: "subscription_paused_message",
+  subscriptionPausedNotifyEnabled: "subscription_pausedunpaused_message",
 } as const;
 
 export const alertsNotificationsSchema = z.object({
@@ -116,12 +116,27 @@ export type AlertsNotificationsSettings = z.infer<
 >;
 
 /**
- * Normalizes multi-line custom text inputs so that line breaks (\r\n, \r)
- * are stored consistently as explicit '\n' in GHL custom values.
+ * Serializes multi-line text for GHL Custom Values using literal "\\n"
+ * sequences (two characters: backslash and n), rather than actual newline
+ * characters.
  */
 export function formatCustomTextWithNewlines(text: string | undefined | null): string {
   if (!text) return "";
-  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\\n");
+}
+
+/**
+ * Decodes GHL's stored literal "\\n" sequences for display in the editor.
+ */
+export function parseCustomTextWithNewlines(text: string | undefined | null): string {
+  if (!text) return "";
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\\n/g, "\n");
 }
 
 export const alertsNotificationsRouter = router({
@@ -192,7 +207,7 @@ export const alertsNotificationsRouter = router({
             if (
               entry?.value !== undefined &&
               entry.value !== null &&
-              entry.value !== ""
+              entry.value.trim() !== ""
             ) {
               return entry.value;
             }
@@ -212,12 +227,15 @@ export const alertsNotificationsRouter = router({
           return val !== undefined ? val : fallback;
         };
 
+        const parseMessage = (keys: string[], fallback: string): string =>
+          parseCustomTextWithNewlines(parseStr(keys, fallback));
+
         return {
           autoReplyNewLeadEnabled: parseBool(
             [CV_KEYS.autoReplyNewLeadEnabled, "autoreplies_to_new_leads", "auto_reply_new_lead_enabled"],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled
           ),
-          autoReplyNewLeadMessage: parseStr(
+          autoReplyNewLeadMessage: parseMessage(
             [
               CV_KEYS.autoReplyNewLeadMessage,
               "auto_reply_new_lead_message",
@@ -234,7 +252,7 @@ export const alertsNotificationsRouter = router({
             ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewCustomerEnabled
           ),
-          autoReplyNewCustomerMessage: parseStr(
+          autoReplyNewCustomerMessage: parseMessage(
             [
               CV_KEYS.autoReplyNewCustomerMessage,
               "auto_reply_new_customer_message",
@@ -251,7 +269,7 @@ export const alertsNotificationsRouter = router({
             ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewLeadEnabled
           ),
-          teamNotifyNewLeadMessage: parseStr(
+          teamNotifyNewLeadMessage: parseMessage(
             [
               CV_KEYS.teamNotifyNewLeadMessage,
               "team_notify_new_lead_message",
@@ -268,7 +286,7 @@ export const alertsNotificationsRouter = router({
             ],
             DEFAULT_ALERT_TEMPLATES.teamNotifyNewCustomerEnabled
           ),
-          teamNotifyNewCustomerMessage: parseStr(
+          teamNotifyNewCustomerMessage: parseMessage(
             [
               CV_KEYS.teamNotifyNewCustomerMessage,
               "team_notify_new_customer_message",
@@ -304,7 +322,7 @@ export const alertsNotificationsRouter = router({
             ],
             DEFAULT_ALERT_TEMPLATES.failedPaymentNotifyEnabled
           ),
-          failedPaymentNotifyMessage: parseStr(
+          failedPaymentNotifyMessage: parseMessage(
             [
               CV_KEYS.failedPaymentNotifyMessage,
               "failed_payment_notify_message",
@@ -321,7 +339,7 @@ export const alertsNotificationsRouter = router({
             ],
             DEFAULT_ALERT_TEMPLATES.skippedJobNotifyEnabled
           ),
-          skippedJobNotifyMessage: parseStr(
+          skippedJobNotifyMessage: parseMessage(
             [
               CV_KEYS.skippedJobNotifyMessage,
               "skipped_job_notify_message",
@@ -333,22 +351,24 @@ export const alertsNotificationsRouter = router({
           subscriptionPausedNotifyEnabled: parseBool(
             [
               CV_KEYS.subscriptionPausedNotifyEnabled,
+              "subscription_paused_message",
               "subscription_paused_notify_enabled",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyEnabled
           ),
-          subscriptionPausedNotifyMessage: parseStr(
+          subscriptionPausedNotifyMessage: parseMessage(
             [
               CV_KEYS.subscriptionPausedNotifyMessage,
+              "custom_subscription_paused_message",
               "subscription_paused_notify_message",
               "Custom Subscription Paused Message",
             ],
             DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage
           ),
-          subscriptionUnpausedNotifyMessage: parseStr(
+          subscriptionUnpausedNotifyMessage: parseMessage(
             [
               CV_KEYS.subscriptionUnpausedNotifyMessage,
-              "account_unpaused_message",
+              "custom_subscription_unpaused_message",
               "subscription_unpaused_notify_message",
               "Custom Subscription Unpaused Message",
             ],
@@ -407,7 +427,6 @@ export const alertsNotificationsRouter = router({
         send_team_notification_email: data.teamNotifyEmail,
         failed_payment_notify_message: failedPaymentNotifyMessage,
         skipped_job_notify_message: skippedJobNotifyMessage,
-        account_unpaused_message: subscriptionUnpausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
         [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",
