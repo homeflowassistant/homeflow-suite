@@ -9,6 +9,7 @@ import { registerZapierRoutes } from "../routes/zapier.js";
 import { registerCustomValuesRoutes } from "../routes/customValues.js";
 import { registerCustomTriggerRoutes } from "../routes/customTrigger.js";
 import { registerN8nCustomTriggerRoutes } from "../routes/n8nCustomTrigger.js";
+import { registerGhlSmsCustomActionRoutes } from "../routes/ghlSmsCustomAction.js";
 import { registerRequestSchedulingUploadRoutes } from "../routes/requestSchedulingUpload.js";
 import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
@@ -67,6 +68,7 @@ export async function createApp(options?: {
   registerCustomValuesRoutes(app);
   registerCustomTriggerRoutes(app);
   registerN8nCustomTriggerRoutes(app);
+  registerGhlSmsCustomActionRoutes(app);
   registerRequestSchedulingUploadRoutes(app);
   registerZapierRoutes(app);
 

@@ -24,6 +24,7 @@ export const ENV = {
     "https://homeflow-suite.vercel.app",
   customTriggerSubscriptionSecret:
     process.env.CUSTOM_TRIGGER_SUBSCRIPTION_SECRET ?? "",
+  ghlCustomActionSecret: process.env.GHL_CUSTOM_ACTION_SECRET ?? "",
   appDomain:
     process.env.APP_DOMAIN ??
     process.env.VITE_API_URL ??

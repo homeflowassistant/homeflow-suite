@@ -126,6 +126,13 @@ export function getCustomValueMap(
 export async function getLocationCustomValueMap(
   locationId: string
 ): Promise<Map<string, { id: string; value: string }>> {
+  const values = await getLocationCustomValues(locationId);
+  return getCustomValueMap(values);
+}
+
+export async function getLocationCustomValues(
+  locationId: string
+): Promise<Record<string, unknown>[]> {
   const { accessToken } = await getAccessTokenAndInstallation(locationId);
   const response = await fetchJson<
     | Record<string, unknown>
@@ -136,15 +143,13 @@ export async function getLocationCustomValueMap(
     { method: "GET" }
   );
 
-  const values = Array.isArray(response)
-    ? response
-    : ((response.customValues ??
-        response.custom_values ??
-        response.values ??
-        response.data ??
-        []) as Record<string, unknown>[]);
+  if (Array.isArray(response)) return response;
 
-  return getCustomValueMap(values);
+  return ((response.customValues ??
+    response.custom_values ??
+    response.values ??
+    response.data ??
+    []) as Record<string, unknown>[]);
 }
 
 async function getAccessTokenAndInstallation(locationId: string) {
