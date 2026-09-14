@@ -65,10 +65,14 @@ function getContactName(contact: ContactRecord): string {
 }
 
 function getContactFieldValue(contact: ContactRecord, key: string): string | undefined {
+  const normalizedKey = normalizeTokenKey(key);
+  if (normalizedKey === "name" || normalizedKey === "fullname") {
+    return getContactName(contact) || undefined;
+  }
+
   const directValue = contact[key];
   if (directValue !== undefined && directValue !== null) return String(directValue);
 
-  const normalizedKey = normalizeTokenKey(key);
   for (const [contactKey, contactValue] of Object.entries(contact)) {
     if (normalizeTokenKey(contactKey) === normalizedKey) {
       if (contactValue !== undefined && contactValue !== null && typeof contactValue !== "object") {
@@ -183,6 +187,8 @@ export function renderSmsMessage(
           sourceToken.slice("location.".length).trim(),
           options.locationId
         );
+      } else {
+        value = getContactFieldValue(options.contact, sourceToken);
       }
 
       if (value === undefined) {
@@ -402,7 +408,19 @@ export async function sendSavedSms(
 }
 
 export function parseSmsActionInput(data: Record<string, unknown>): ActionInput {
-  const messageCustomValueKey = asText(data.messageCustomValueKey);
+  const explicitKey =
+    asText(data.messageCustomValueKey) ||
+    asText(data.customValueKey) ||
+    asText(data.custom_value_key) ||
+    asText(data.messageKey) ||
+    asText(data.savedMessage);
+  const messageCustomValueKey =
+    explicitKey ||
+    Object.values(data)
+      .map(asText)
+      .map(value => extractCustomValueKey(value))
+      .find(value => SMS_CUSTOM_VALUE_KEYS.has(normalizeTokenKey(value))) ||
+    "";
   if (!messageCustomValueKey) {
     throw new GhlSmsActionError(
       "INVALID_ACTION_PAYLOAD",
@@ -417,6 +435,11 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
     contactEmail: asText(data.contactEmail) || undefined,
     fromNumber: asText(data.fromNumber) || undefined,
   };
+}
+
+function extractCustomValueKey(value: string): string {
+  const match = value.match(/^\{\{\s*custom_values\.([^}]+?)\s*\}\}$/i);
+  return match?.[1]?.trim() ?? value.trim();
 }
 
 export type { ActionEnvelope, ActionInput };
