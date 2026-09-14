@@ -7,7 +7,7 @@ import {
   getSmsCustomValueOptions,
   parseSmsActionInput,
   sendSavedSms,
-} from "../services/ghl-sms-custom-action-service.ts";
+} from "../services/ghl-sms-custom-action-service.js";
 import { getInstallation } from "../ghl-service.js";
 
 const actionEnvelopeSchema = z.object({
@@ -25,9 +25,23 @@ function getHeader(req: Request, name: string): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
+function normalizeActionSecret(value: string): string {
+  const trimmed = value.trim();
+  if (
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 function isAuthorized(req: Request): boolean {
-  const configured = ENV.ghlCustomActionSecret;
-  const received = getHeader(req, "x-homeflow-action-secret");
+  const configured = normalizeActionSecret(ENV.ghlCustomActionSecret);
+  const received = normalizeActionSecret(
+    getHeader(req, "x-homeflow-action-secret")
+  );
   if (!configured || !received) return false;
 
   const expectedBuffer = Buffer.from(configured, "utf8");
