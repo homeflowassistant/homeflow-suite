@@ -1,7 +1,5 @@
-import crypto from "node:crypto";
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
-import { ENV } from "../_core/env.js";
 import {
   GhlSmsActionError,
   getSmsCustomValueOptions,
@@ -18,38 +16,6 @@ const actionEnvelopeSchema = z.object({
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function getHeader(req: Request, name: string): string {
-  const value = req.headers[name.toLowerCase()];
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
-
-function normalizeActionSecret(value: string): string {
-  const trimmed = value.trim();
-  if (
-    trimmed.length >= 2 &&
-    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'")))
-  ) {
-    return trimmed.slice(1, -1).trim();
-  }
-  return trimmed;
-}
-
-function isAuthorized(req: Request): boolean {
-  const configured = normalizeActionSecret(ENV.ghlCustomActionSecret);
-  const received = normalizeActionSecret(
-    getHeader(req, "x-homeflow-action-secret")
-  );
-  if (!configured || !received) return false;
-
-  const expectedBuffer = Buffer.from(configured, "utf8");
-  const receivedBuffer = Buffer.from(received, "utf8");
-  return (
-    expectedBuffer.length === receivedBuffer.length &&
-    crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
-  );
 }
 
 function getLocationId(extras: Record<string, unknown>): string {
@@ -106,21 +72,8 @@ async function requireLocation(locationId: string, res: Response): Promise<boole
   return true;
 }
 
-function requireActionAuth(req: Request, res: Response): boolean {
-  if (isAuthorized(req)) return true;
-
-  res.status(401).json({
-    success: false,
-    code: "INVALID_ACTION_SECRET",
-    message: "Invalid or missing HomeFlow action secret.",
-  });
-  return false;
-}
-
 export function registerGhlSmsCustomActionRoutes(app: Express): void {
   app.post("/api/ghl/custom-action/sms-fields", async (req: Request, res: Response) => {
-    if (!requireActionAuth(req, res)) return;
-
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       res.status(400).json({
@@ -176,8 +129,6 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
   });
 
   app.post("/api/ghl/custom-action/send-sms", async (req: Request, res: Response) => {
-    if (!requireActionAuth(req, res)) return;
-
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       res.status(400).json({

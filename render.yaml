@@ -26,5 +26,3 @@ services:
         scope: all
       - key: CUSTOM_TRIGGER_SUBSCRIPTION_SECRET
         scope: all
-      - key: GHL_CUSTOM_ACTION_SECRET
-        scope: all
