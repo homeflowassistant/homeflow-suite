@@ -3,7 +3,6 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
-  upsertGhlCustomValue,
   updateExistingCustomValuesOnly,
   getInstallation,
   getLocationPickerVariables,
@@ -418,16 +417,6 @@ export const alertsNotificationsRouter = router({
         [CV_KEYS.subscriptionPausedNotifyMessage]: subscriptionPausedNotifyMessage,
         [CV_KEYS.subscriptionUnpausedNotifyMessage]: subscriptionUnpausedNotifyMessage,
 
-        // Dual-write legacy aliases for backwards compatibility
-        auto_reply_new_lead_message: autoReplyNewLeadMessage,
-        auto_reply_new_customer_message: autoReplyNewCustomerMessage,
-        team_notify_new_lead_message: teamNotifyNewLeadMessage,
-        team_notify_new_customer_message: teamNotifyNewCustomerMessage,
-        send_team_notification_phone: data.teamNotifyPhone,
-        send_team_notification_email: data.teamNotifyEmail,
-        failed_payment_notify_message: failedPaymentNotifyMessage,
-        skipped_job_notify_message: skippedJobNotifyMessage,
-
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
         [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",
         [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled ? "True" : "False",
@@ -437,49 +426,31 @@ export const alertsNotificationsRouter = router({
         [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled ? "True" : "False",
         [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "True" : "False",
 
-        // Secondary aliases for toggle states
-        autoreply_new_lead_enabled: data.autoReplyNewLeadEnabled ? "ON" : "OFF",
-        autoreply_new_customer_enabled: data.autoReplyNewCustomerEnabled ? "ON" : "OFF",
-        teamnotification_new_lead_enabled: data.teamNotifyNewLeadEnabled ? "ON" : "OFF",
-        teamnotification_new_customer_enabled: data.teamNotifyNewCustomerEnabled ? "ON" : "OFF",
-        custom_failed_payment_enabled: data.failedPaymentNotifyEnabled ? "ON" : "OFF",
-        custom_skipped_job_enabled: data.skippedJobNotifyEnabled ? "ON" : "OFF",
       };
 
       try {
-        // Step 1: Update existing custom values while preserving display names
-        await updateExistingCustomValuesOnly(locationId, customValuePayload);
+        // Update each authoritative Custom Value once while preserving its
+        // existing GHL display name. Missing fields are returned explicitly
+        // so the page cannot report a false successful save.
+        const { missingKeys, failedKeys } = await updateExistingCustomValuesOnly(
+          locationId,
+          customValuePayload
+        );
 
-        // Step 2: Upsert primary keys to guarantee creation if not existing
-        const primaryEntries = [
-          [CV_KEYS.autoReplyNewLeadEnabled, data.autoReplyNewLeadEnabled ? "True" : "False"],
-          [CV_KEYS.autoReplyNewLeadMessage, autoReplyNewLeadMessage],
-          [CV_KEYS.autoReplyNewCustomerEnabled, data.autoReplyNewCustomerEnabled ? "True" : "False"],
-          [CV_KEYS.autoReplyNewCustomerMessage, autoReplyNewCustomerMessage],
-          [CV_KEYS.teamNotifyNewLeadEnabled, data.teamNotifyNewLeadEnabled ? "True" : "False"],
-          [CV_KEYS.teamNotifyNewLeadMessage, teamNotifyNewLeadMessage],
-          [CV_KEYS.teamNotifyNewCustomerEnabled, data.teamNotifyNewCustomerEnabled ? "True" : "False"],
-          [CV_KEYS.teamNotifyNewCustomerMessage, teamNotifyNewCustomerMessage],
-          [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
-          [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
-          [CV_KEYS.failedPaymentNotifyEnabled, data.failedPaymentNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.failedPaymentNotifyMessage, failedPaymentNotifyMessage],
-          [CV_KEYS.skippedJobNotifyEnabled, data.skippedJobNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.skippedJobNotifyMessage, skippedJobNotifyMessage],
-          [CV_KEYS.subscriptionPausedNotifyEnabled, data.subscriptionPausedNotifyEnabled ? "True" : "False"],
-          [CV_KEYS.subscriptionPausedNotifyMessage, subscriptionPausedNotifyMessage],
-          [CV_KEYS.subscriptionUnpausedNotifyMessage, subscriptionUnpausedNotifyMessage],
-        ];
-
-        for (const [key, val] of primaryEntries) {
-          try {
-            await upsertGhlCustomValue(locationId, key, val);
-          } catch (e) {
-            console.warn(
-              `[AlertsNotifications] Upsert custom value '${key}':`,
-              e
-            );
-          }
+        if (missingKeys.length > 0 || failedKeys.length > 0) {
+          const details = [
+            missingKeys.length > 0
+              ? `missing: ${missingKeys.join(", ")}`
+              : "",
+            failedKeys.length > 0
+              ? `failed: ${failedKeys.join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("; ");
+          throw new Error(
+            `Some GHL Custom Values were not saved (${details}).`
+          );
         }
 
         return { success: true };

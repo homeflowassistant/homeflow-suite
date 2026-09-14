@@ -372,10 +372,19 @@ export function clearCustomFieldCache(locationId?: string): void {
  * Strips "contact." prefix, removes all non-alphanumeric chars, lowercases.
  */
 function normalizeKey(key: string): string {
-  return key
+  const normalized = key
     .toLowerCase()
     .replace(/^contact\./, "")
     .replace(/[^a-z0-9]/g, "");
+
+  if (normalized === "subscriptionpausedunpausedmessage") {
+    return "subscriptionpausedmessage";
+  }
+  if (normalized === "customsubscriptionpausedunpausedmessage") {
+    return "customsubscriptionpausedmessage";
+  }
+
+  return normalized;
 }
 
 /**
@@ -660,7 +669,7 @@ export async function uploadToGhlMedia(
 export async function updateExistingCustomValuesOnly(
   locationId: string,
   updates: Record<string, string>
-): Promise<void> {
+): Promise<{ missingKeys: string[]; failedKeys: string[] }> {
   const accessToken = await getValidAccessToken(locationId);
 
   // Step 1: Fetch all existing custom values for this sub-account
@@ -669,7 +678,7 @@ export async function updateExistingCustomValuesOnly(
     console.warn(
       `[GHL] No custom values found for location ${locationId}. Skipping all updates.`
     );
-    return;
+    return { missingKeys: Object.keys(updates), failedKeys: [] };
   }
 
   // Step 2: Build a map of key → { id, displayName } from existing custom values
@@ -764,6 +773,8 @@ export async function updateExistingCustomValuesOnly(
     string,
     { key: string; displayName: string; value: string; isExact: boolean }
   >();
+  const missingKeys: string[] = [];
+  const failedKeys: string[] = [];
 
   for (const [key, value] of Object.entries(updates)) {
     let entry = existingMap.get(key);
@@ -807,6 +818,7 @@ export async function updateExistingCustomValuesOnly(
       console.warn(
         `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping.`
       );
+      missingKeys.push(key);
     }
   }
 
@@ -827,6 +839,7 @@ export async function updateExistingCustomValuesOnly(
 
       if (!resp.ok) {
         const errBody = await resp.text();
+        failedKeys.push(key);
         console.error(
           `[GHL] PUT failed for custom value '${key}' (ID: '${id}', display name: '${displayName}'): ${resp.status} ${errBody}`
         );
@@ -835,6 +848,7 @@ export async function updateExistingCustomValuesOnly(
   );
 
   await Promise.all(promises);
+  return { missingKeys, failedKeys };
 }
 
 export async function upsertGhlCustomValue(
