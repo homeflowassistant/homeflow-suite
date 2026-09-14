@@ -12,14 +12,47 @@ const actionEnvelopeSchema = z.object({
   data: z.record(z.string(), z.unknown()).optional().default({}),
   extras: z.record(z.string(), z.unknown()).optional().default({}),
   meta: z.record(z.string(), z.unknown()).optional().default({}),
-});
+  locationId: z.unknown().optional(),
+  location_id: z.unknown().optional(),
+  locationID: z.unknown().optional(),
+  location: z.unknown().optional(),
+}).passthrough();
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function getLocationId(extras: Record<string, unknown>): string {
-  return text(extras.locationId);
+function getLocationId(
+  req: Request,
+  payload: {
+    data: Record<string, unknown>;
+    extras: Record<string, unknown>;
+    locationId?: unknown;
+    location_id?: unknown;
+    locationID?: unknown;
+    location?: unknown;
+  }
+): string {
+  const nestedLocation =
+    payload.location && typeof payload.location === "object"
+      ? (payload.location as Record<string, unknown>)
+      : {};
+  return (
+    text(payload.extras.locationId) ||
+    text(payload.extras.location_id) ||
+    text(payload.locationId) ||
+    text(payload.location_id) ||
+    text(payload.locationID) ||
+    text(nestedLocation.locationId) ||
+    text(nestedLocation.id) ||
+    text(payload.data.locationId) ||
+    text(payload.data.location_id) ||
+    text(payload.data.locationID) ||
+    text(req.query.locationId) ||
+    text(req.query.location_id) ||
+    text(req.headers["x-location-id"]) ||
+    text(req.headers["location-id"])
+  );
 }
 
 function sendError(res: Response, error: unknown): void {
@@ -45,7 +78,7 @@ async function requireLocation(locationId: string, res: Response): Promise<boole
     res.status(400).json({
       success: false,
       code: "LOCATION_ID_REQUIRED",
-      message: "extras.locationId is required.",
+      message: "A HighLevel location ID is required.",
     });
     return false;
   }
@@ -84,7 +117,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
       return;
     }
 
-    const locationId = getLocationId(parsed.data.extras);
+    const locationId = getLocationId(req, parsed.data);
     if (!(await requireLocation(locationId, res))) return;
 
     try {
@@ -139,7 +172,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
       return;
     }
 
-    const locationId = getLocationId(parsed.data.extras);
+    const locationId = getLocationId(req, parsed.data);
     if (!(await requireLocation(locationId, res))) return;
 
     try {
@@ -147,7 +180,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
       const result = await sendSavedSms(
         locationId,
         input,
-        text(parsed.data.extras.contactId)
+        text(parsed.data.extras.contactId) || text(parsed.data.data.contactId)
       );
       res.status(200).json(result);
     } catch (error) {
