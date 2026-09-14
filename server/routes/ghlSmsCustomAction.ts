@@ -22,6 +22,31 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function redactId(value: string): string {
+  return value.length > 6 ? `…${value.slice(-6)}` : value ? "[set]" : "[missing]";
+}
+
+function logIncomingRequest(req: Request, body: unknown): void {
+  const payload = body && typeof body === "object"
+    ? (body as Record<string, unknown>)
+    : {};
+  const data = payload.data && typeof payload.data === "object"
+    ? (payload.data as Record<string, unknown>)
+    : {};
+  const extras = payload.extras && typeof payload.extras === "object"
+    ? (payload.extras as Record<string, unknown>)
+    : {};
+
+  console.log("[GHL SMS Action][INCOMING]", {
+    method: req.method,
+    path: req.path,
+    bodyKeys: Object.keys(payload),
+    dataKeys: Object.keys(data),
+    extrasKeys: Object.keys(extras),
+    contentType: req.headers["content-type"] ?? "unknown",
+  });
+}
+
 function getLocationId(
   req: Request,
   payload: {
@@ -77,6 +102,11 @@ function getActionData(payload: Record<string, unknown>): Record<string, unknown
 
 function sendError(res: Response, error: unknown): void {
   if (error instanceof GhlSmsActionError) {
+    console.warn("[GHL SMS Action][FAILED]", {
+      code: error.code,
+      statusCode: error.statusCode,
+      message: error.message,
+    });
     res.status(error.statusCode).json({
       success: false,
       code: error.code,
@@ -127,6 +157,7 @@ async function requireLocation(locationId: string, res: Response): Promise<boole
 
 export function registerGhlSmsCustomActionRoutes(app: Express): void {
   app.post("/api/ghl/custom-action/sms-fields", async (req: Request, res: Response) => {
+    logIncomingRequest(req, req.body);
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       res.status(400).json({
@@ -138,10 +169,17 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
     }
 
     const locationId = getLocationId(req, parsed.data);
+    console.log("[GHL SMS Action][FIELDS]", {
+      locationId: redactId(locationId),
+    });
     if (!(await requireLocation(locationId, res))) return;
 
     try {
       const options = await getSmsCustomValueOptions(locationId);
+      console.log("[GHL SMS Action][FIELDS_SUCCESS]", {
+        locationId: redactId(locationId),
+        optionCount: options.length,
+      });
       res.status(200).json({
         inputs: [
           {
@@ -182,6 +220,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
   });
 
   app.post("/api/ghl/custom-action/send-sms", async (req: Request, res: Response) => {
+    logIncomingRequest(req, req.body);
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       res.status(400).json({
@@ -198,11 +237,25 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
     try {
       const actionData = getActionData(parsed.data);
       const input = parseSmsActionInput(actionData);
+      const resolvedContactId =
+        text(parsed.data.extras.contactId) || text(actionData.contactId);
+      console.log("[GHL SMS Action][SEND_START]", {
+        locationId: redactId(locationId),
+        customValueKey: input.messageCustomValueKey,
+        contactId: redactId(resolvedContactId),
+        contactEmailProvided: Boolean(input.contactEmail),
+      });
       const result = await sendSavedSms(
         locationId,
         input,
-        text(parsed.data.extras.contactId) || text(actionData.contactId)
+        resolvedContactId
       );
+      console.log("[GHL SMS Action][SEND_SUCCESS]", {
+        locationId: redactId(locationId),
+        contactId: redactId(result.contactId),
+        conversationId: redactId(result.conversationId ?? ""),
+        messageId: redactId(result.messageId ?? ""),
+      });
       res.status(200).json(result);
     } catch (error) {
       sendError(res, error);

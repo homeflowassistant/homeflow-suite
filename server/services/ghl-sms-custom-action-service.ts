@@ -245,6 +245,10 @@ async function ghlJson<T>(
 }
 
 async function getContactById(locationId: string, contactId: string): Promise<ContactRecord> {
+  console.log("[GHL SMS Action][CONTACT_LOOKUP_ID]", {
+    locationId: locationId.slice(-6),
+    contactId: contactId.slice(-6),
+  });
   const response = await ghlJson<{ contact?: ContactRecord } | ContactRecord>(
     locationId,
     `/contacts/${encodeURIComponent(contactId)}`
@@ -265,6 +269,10 @@ async function getContactById(locationId: string, contactId: string): Promise<Co
 }
 
 async function getContactByEmail(locationId: string, email: string): Promise<ContactRecord> {
+  console.log("[GHL SMS Action][CONTACT_LOOKUP_EMAIL]", {
+    locationId: locationId.slice(-6),
+    emailProvided: Boolean(email),
+  });
   const query = new URLSearchParams({ locationId, email, limit: "20" });
   const response = await ghlJson<{ contacts?: ContactRecord[] }>(
     locationId,
@@ -346,11 +354,26 @@ export async function sendSavedSms(
   input: ActionInput,
   workflowContactId: string
 ) {
+  console.log("[GHL SMS Action][SERVICE_START]", {
+    locationId: locationId.slice(-6),
+    customValueKey: input.messageCustomValueKey,
+    contactIdProvided: Boolean(input.contactId),
+    contactEmailProvided: Boolean(input.contactEmail),
+    workflowContactIdProvided: Boolean(workflowContactId),
+  });
   const contact = await resolveContact(locationId, input, workflowContactId);
+  console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
+    contactId: getContactId(contact).slice(-6),
+    emailProvided: Boolean(getContactEmail(contact)),
+  });
   const customValues = await getLocationCustomValues(locationId);
   const template = getCustomValue(customValues, input.messageCustomValueKey);
 
   if (template === undefined) {
+    console.warn("[GHL SMS Action][CUSTOM_VALUE_NOT_FOUND]", {
+      locationId: locationId.slice(-6),
+      customValueKey: input.messageCustomValueKey,
+    });
     throw new GhlSmsActionError(
       "CUSTOM_VALUE_NOT_FOUND",
       `Custom Value '${input.messageCustomValueKey}' was not found.`,
@@ -358,6 +381,10 @@ export async function sendSavedSms(
     );
   }
   if (template.trim() === "") {
+    console.warn("[GHL SMS Action][CUSTOM_VALUE_EMPTY]", {
+      locationId: locationId.slice(-6),
+      customValueKey: input.messageCustomValueKey,
+    });
     throw new GhlSmsActionError(
       "CUSTOM_VALUE_EMPTY",
       `Custom Value '${input.messageCustomValueKey}' is empty.`,
@@ -375,6 +402,12 @@ export async function sendSavedSms(
     location,
     customValues,
   });
+  console.log("[GHL SMS Action][MESSAGE_RENDERED]", {
+    locationId: locationId.slice(-6),
+    contactId: getContactId(contact).slice(-6),
+    messageLength: message.length,
+    lineCount: message.split("\n").length,
+  });
 
   const body: Record<string, unknown> = {
     type: "SMS",
@@ -384,16 +417,31 @@ export async function sendSavedSms(
   };
   if (asText(input.fromNumber)) body.fromNumber = asText(input.fromNumber);
 
-  const response = await ghlJson<{
+  let response: {
     conversationId?: string;
     messageId?: string;
     messageIds?: string[];
     msg?: string;
-  }>(locationId, "/conversations/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  };
+  try {
+    response = await ghlJson<{
+      conversationId?: string;
+      messageId?: string;
+      messageIds?: string[];
+      msg?: string;
+    }>(locationId, "/conversations/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    console.error("[GHL SMS Action][GHL_SEND_FAILED]", {
+      locationId: locationId.slice(-6),
+      contactId: getContactId(contact).slice(-6),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 
   return {
     success: true,
