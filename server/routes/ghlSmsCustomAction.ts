@@ -55,6 +55,26 @@ function getLocationId(
   );
 }
 
+function getActionData(payload: Record<string, unknown>): Record<string, unknown> {
+  const envelopeKeys = new Set([
+    "data",
+    "extras",
+    "meta",
+    "locationId",
+    "location_id",
+    "locationID",
+    "location",
+  ]);
+  const topLevelFields = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => !envelopeKeys.has(key))
+  );
+  const nestedData =
+    payload.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : {};
+  return { ...topLevelFields, ...nestedData };
+}
+
 function sendError(res: Response, error: unknown): void {
   if (error instanceof GhlSmsActionError) {
     res.status(error.statusCode).json({
@@ -176,11 +196,12 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
     if (!(await requireLocation(locationId, res))) return;
 
     try {
-      const input = parseSmsActionInput(parsed.data.data);
+      const actionData = getActionData(parsed.data);
+      const input = parseSmsActionInput(actionData);
       const result = await sendSavedSms(
         locationId,
         input,
-        text(parsed.data.extras.contactId) || text(parsed.data.data.contactId)
+        text(parsed.data.extras.contactId) || text(actionData.contactId)
       );
       res.status(200).json(result);
     } catch (error) {
