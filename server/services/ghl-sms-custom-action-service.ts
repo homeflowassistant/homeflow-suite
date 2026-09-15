@@ -304,15 +304,21 @@ async function getLocationRecord(locationId: string): Promise<ContactRecord> {
   return response as ContactRecord;
 }
 
-async function resolveContact(
+type ResolvedContacts = {
+  recipientContact: ContactRecord;
+  mergeContact: ContactRecord;
+};
+
+async function resolveContacts(
   locationId: string,
   input: ActionInput,
   workflowContactId: string
-): Promise<ContactRecord> {
-  const contactId = asText(input.contactId) || workflowContactId;
+): Promise<ResolvedContacts> {
+  const configuredContactId = asText(input.contactId);
+  const workflowId = asText(workflowContactId);
   const email = asText(input.contactEmail).toLowerCase();
 
-  if (!contactId && !email) {
+  if (!configuredContactId && !workflowId && !email) {
     throw new GhlSmsActionError(
       "CONTACT_IDENTIFIER_REQUIRED",
       "Provide contactId, contactEmail, or a workflow contact ID.",
@@ -320,18 +326,24 @@ async function resolveContact(
     );
   }
 
-  const contactFromId = contactId ? await getContactById(locationId, contactId) : undefined;
-  if (!email) return contactFromId as ContactRecord;
+  // The optional email is an explicit delivery-recipient override. It is
+  // allowed to identify a different contact from the workflow contact.
+  const recipientContact = email
+    ? await getContactByEmail(locationId, email)
+    : await getContactById(
+        locationId,
+        configuredContactId || workflowId
+      );
 
-  const contactFromEmail = await getContactByEmail(locationId, email);
-  if (contactFromId && getContactId(contactFromId) !== getContactId(contactFromEmail)) {
-    throw new GhlSmsActionError(
-      "CONTACT_MISMATCH",
-      "contactId and contactEmail refer to different contacts.",
-      409
-    );
-  }
-  return contactFromId ?? contactFromEmail;
+  // Merge fields must continue to describe the contact that entered the
+  // workflow, not the separately selected SMS recipient.
+  const mergeContact = workflowId
+    ? getContactId(recipientContact) === workflowId
+      ? recipientContact
+      : await getContactById(locationId, workflowId)
+    : recipientContact;
+
+  return { recipientContact, mergeContact };
 }
 
 export async function getSmsCustomValueOptions(locationId: string) {
@@ -361,10 +373,16 @@ export async function sendSavedSms(
     contactEmailProvided: Boolean(input.contactEmail),
     workflowContactIdProvided: Boolean(workflowContactId),
   });
-  const contact = await resolveContact(locationId, input, workflowContactId);
+  const { recipientContact, mergeContact } = await resolveContacts(
+    locationId,
+    input,
+    workflowContactId
+  );
   console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
-    contactId: getContactId(contact).slice(-6),
-    emailProvided: Boolean(getContactEmail(contact)),
+    recipientContactId: getContactId(recipientContact).slice(-6),
+    mergeContactId: getContactId(mergeContact).slice(-6),
+    recipientEmailProvided: Boolean(getContactEmail(recipientContact)),
+    mergeContactEmailProvided: Boolean(getContactEmail(mergeContact)),
   });
   const customValues = await getLocationCustomValues(locationId);
   const template = getCustomValue(customValues, input.messageCustomValueKey);
@@ -397,21 +415,22 @@ export async function sendSavedSms(
     : undefined;
 
   const message = renderSmsMessage(template, {
-    contact,
+    contact: mergeContact,
     locationId,
     location,
     customValues,
   });
   console.log("[GHL SMS Action][MESSAGE_RENDERED]", {
     locationId: locationId.slice(-6),
-    contactId: getContactId(contact).slice(-6),
+    recipientContactId: getContactId(recipientContact).slice(-6),
+    mergeContactId: getContactId(mergeContact).slice(-6),
     messageLength: message.length,
     lineCount: message.split("\n").length,
   });
 
   const body: Record<string, unknown> = {
     type: "SMS",
-    contactId: getContactId(contact),
+    contactId: getContactId(recipientContact),
     status: "pending",
     message,
   };
@@ -437,7 +456,7 @@ export async function sendSavedSms(
   } catch (error) {
     console.error("[GHL SMS Action][GHL_SEND_FAILED]", {
       locationId: locationId.slice(-6),
-      contactId: getContactId(contact).slice(-6),
+      recipientContactId: getContactId(recipientContact).slice(-6),
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
@@ -446,8 +465,8 @@ export async function sendSavedSms(
   return {
     success: true,
     channel: "SMS",
-    contactId: getContactId(contact),
-    contactEmail: getContactEmail(contact) || undefined,
+    contactId: getContactId(recipientContact),
+    contactEmail: getContactEmail(recipientContact) || undefined,
     conversationId: response.conversationId,
     messageId: response.messageId,
     messageIds: response.messageIds,
