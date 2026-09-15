@@ -6,6 +6,7 @@ import {
   updateExistingCustomValuesOnly,
   getInstallation,
   getLocationPickerVariables,
+  syncStaffNotificationContact,
 } from "../ghl-service.js";
 
 // ─── Default Templates matching UI layout exact specifications ─────────
@@ -429,6 +430,12 @@ export const alertsNotificationsRouter = router({
       };
 
       try {
+        const currentValues = await getLocationCustomValueMap(locationId);
+        const previousStaffEmail =
+          currentValues.get(CV_KEYS.teamNotifyEmail)?.value ?? "";
+        const previousStaffPhone =
+          currentValues.get(CV_KEYS.teamNotifyPhone)?.value ?? "";
+
         // Update each authoritative Custom Value once while preserving its
         // existing GHL display name. Missing fields are returned explicitly
         // so the page cannot report a false successful save.
@@ -452,6 +459,18 @@ export const alertsNotificationsRouter = router({
             `Some GHL Custom Values were not saved (${details}).`
           );
         }
+
+        const staffContact = await syncStaffNotificationContact(
+          locationId,
+          data.teamNotifyEmail,
+          data.teamNotifyPhone,
+          previousStaffEmail,
+          previousStaffPhone
+        );
+        console.log("[AlertsNotifications] Staff contact synchronized", {
+          locationId: locationId.slice(-6),
+          contactId: staffContact.contactId.slice(-6),
+        });
 
         return { success: true };
       } catch (err) {
