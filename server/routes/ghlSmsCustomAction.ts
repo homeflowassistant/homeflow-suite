@@ -244,7 +244,12 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
       const actionData = getActionData(parsed.data);
       const input = parseSmsActionInput(actionData);
       const resolvedContactId =
-        text(parsed.data.extras.contactId) || text(actionData.contactId);
+        text(parsed.data.extras.contactId) ||
+        text(parsed.data.extras.contact_id) ||
+        text(parsed.data.extras.contactID) ||
+        text(actionData.contactId) ||
+        text(actionData.contact_id) ||
+        text(actionData.contactID);
       console.log("[GHL SMS Action][SEND_START]", {
         locationId: redactId(locationId),
         customValueKey: input.messageCustomValueKey,

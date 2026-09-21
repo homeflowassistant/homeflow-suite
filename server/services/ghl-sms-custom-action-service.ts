@@ -627,7 +627,11 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
       asText(data.phone) ||
       asText(data.contact_phone) ||
       undefined,
-    contactEmail: asText(data.contactEmail) || undefined,
+    contactEmail:
+      asText(data.contactEmail) ||
+      asText(data.email) ||
+      asText(data.contact_email) ||
+      undefined,
     fromNumber: asText(data.fromNumber) || undefined,
   };
 }
