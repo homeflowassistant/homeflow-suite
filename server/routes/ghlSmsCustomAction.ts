@@ -241,7 +241,13 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
     if (!(await requireLocation(locationId, res))) return;
 
     try {
-      const actionData = getActionData(parsed.data);
+      // Marketplace versions differ: action values normally arrive in data,
+      // but some versions place mapped values in extras. Keep data/top-level
+      // values authoritative while accepting extras as a compatibility source.
+      const actionData = {
+        ...parsed.data.extras,
+        ...getActionData(parsed.data),
+      };
       const input = parseSmsActionInput(actionData);
       const resolvedContactId =
         text(parsed.data.extras.contactId) ||

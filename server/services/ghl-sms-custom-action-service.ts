@@ -598,6 +598,9 @@ export async function sendSavedSms(
 }
 
 export function parseSmsActionInput(data: Record<string, unknown>): ActionInput {
+  const contact = data.contact && typeof data.contact === "object"
+    ? data.contact as Record<string, unknown>
+    : {};
   const explicitKey =
     asText(data.messageCustomValueKey) ||
     asText(data.customValueKey) ||
@@ -626,11 +629,19 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
       asText(data.contactPhone) ||
       asText(data.phone) ||
       asText(data.contact_phone) ||
+      asText(data.phoneNumber) ||
+      asText(data.phone_number) ||
+      asText(data["contact.phone"]) ||
+      asText(contact.phone) ||
       undefined,
     contactEmail:
       asText(data.contactEmail) ||
       asText(data.email) ||
       asText(data.contact_email) ||
+      asText(data.emailAddress) ||
+      asText(data.email_address) ||
+      asText(data["contact.email"]) ||
+      asText(contact.email) ||
       undefined,
     fromNumber: asText(data.fromNumber) || undefined,
   };
