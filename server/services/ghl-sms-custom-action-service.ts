@@ -35,6 +35,7 @@ type ContactRecord = Record<string, unknown>;
 type ActionInput = {
   messageCustomValueKey: string;
   contactId?: string;
+  contactPhone?: string;
   contactEmail?: string;
   fromNumber?: string;
 };
@@ -293,6 +294,56 @@ async function getContactByEmail(locationId: string, email: string): Promise<Con
   return getContactById(locationId, getContactId(contacts[0]));
 }
 
+function normalizePhoneForLookup(phone: string): string {
+  const compact = phone.trim().replace(/[\s().-]/g, "");
+  const normalized = compact.startsWith("00") ? `+${compact.slice(2)}` : compact;
+
+  if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
+    throw new GhlSmsActionError(
+      "INVALID_PHONE",
+      "Phone must be in E.164 format, for example +14155552671.",
+      400
+    );
+  }
+
+  return normalized;
+}
+
+async function getContactByPhone(locationId: string, phone: string): Promise<ContactRecord> {
+  const normalizedPhone = normalizePhoneForLookup(phone);
+  console.log("[GHL SMS Action][CONTACT_LOOKUP_PHONE]", {
+    locationId: locationId.slice(-6),
+    phoneSuffix: normalizedPhone.slice(-4),
+  });
+  const query = new URLSearchParams({
+    locationId,
+    phone: normalizedPhone,
+    limit: "20",
+  });
+  const response = await ghlJson<{ contacts?: ContactRecord[] }>(
+    locationId,
+    `/contacts/lookup?${query.toString()}`
+  );
+  const contacts = Array.isArray(response.contacts) ? response.contacts : [];
+
+  if (contacts.length === 0) {
+    throw new GhlSmsActionError(
+      "CONTACT_NOT_FOUND",
+      `No contact was found for phone '${normalizedPhone}'.`,
+      404
+    );
+  }
+  if (contacts.length > 1) {
+    throw new GhlSmsActionError(
+      "MULTIPLE_CONTACTS_FOUND",
+      `More than one contact matched phone '${normalizedPhone}'. Use a Contact ID instead.`,
+      409
+    );
+  }
+
+  return getContactById(locationId, getContactId(contacts[0]));
+}
+
 async function getLocationRecord(locationId: string): Promise<ContactRecord> {
   const response = await ghlJson<ContactRecord | { location?: ContactRecord }>(
     locationId,
@@ -316,20 +367,24 @@ async function resolveContacts(
 ): Promise<ResolvedContacts> {
   const configuredContactId = asText(input.contactId);
   const workflowId = asText(workflowContactId);
+  const phone = asText(input.contactPhone);
   const email = asText(input.contactEmail).toLowerCase();
 
-  if (!configuredContactId && !workflowId && !email) {
+  if (!configuredContactId && !workflowId && !phone && !email) {
     throw new GhlSmsActionError(
       "CONTACT_IDENTIFIER_REQUIRED",
-      "Provide contactId, contactEmail, or a workflow contact ID.",
+      "Provide contactId, contactPhone, contactEmail, or a workflow contact ID.",
       400
     );
   }
 
-  // The optional email is an explicit delivery-recipient override. It is
-  // allowed to identify a different contact from the workflow contact.
-  const recipientContact = email
-    ? await getContactByEmail(locationId, email)
+  // Phone and email are explicit delivery-recipient overrides. Phone takes
+  // priority so the new phone-based action configuration is deterministic;
+  // email remains supported for existing workflows during migration.
+  const recipientContact = phone
+    ? await getContactByPhone(locationId, phone)
+    : email
+      ? await getContactByEmail(locationId, email)
     : await getContactById(
         locationId,
         configuredContactId || workflowId
@@ -370,6 +425,7 @@ export async function sendSavedSms(
     locationId: locationId.slice(-6),
     customValueKey: input.messageCustomValueKey,
     contactIdProvided: Boolean(input.contactId),
+    contactPhoneProvided: Boolean(input.contactPhone),
     contactEmailProvided: Boolean(input.contactEmail),
     workflowContactIdProvided: Boolean(workflowContactId),
   });
@@ -381,6 +437,7 @@ export async function sendSavedSms(
   console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
     recipientContactId: getContactId(recipientContact).slice(-6),
     mergeContactId: getContactId(mergeContact).slice(-6),
+    recipientPhoneProvided: Boolean(asText(recipientContact.phone)),
     recipientEmailProvided: Boolean(getContactEmail(recipientContact)),
     mergeContactEmailProvided: Boolean(getContactEmail(mergeContact)),
   });
@@ -466,6 +523,7 @@ export async function sendSavedSms(
     success: true,
     channel: "SMS",
     contactId: getContactId(recipientContact),
+    contactPhone: asText(recipientContact.phone) || undefined,
     contactEmail: getContactEmail(recipientContact) || undefined,
     conversationId: response.conversationId,
     messageId: response.messageId,
@@ -499,6 +557,11 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
   return {
     messageCustomValueKey,
     contactId: asText(data.contactId) || undefined,
+    contactPhone:
+      asText(data.contactPhone) ||
+      asText(data.phone) ||
+      asText(data.contact_phone) ||
+      undefined,
     contactEmail: asText(data.contactEmail) || undefined,
     fromNumber: asText(data.fromNumber) || undefined,
   };

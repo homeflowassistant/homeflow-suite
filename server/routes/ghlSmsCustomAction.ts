@@ -199,8 +199,14 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
                 required: false,
               },
               {
+                field: "contactPhone",
+                title: "Contact Phone",
+                fieldType: "string",
+                required: false,
+              },
+              {
                 field: "contactEmail",
-                title: "Contact Email",
+                title: "Contact Email (legacy)",
                 fieldType: "string",
                 required: false,
               },
@@ -243,6 +249,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
         locationId: redactId(locationId),
         customValueKey: input.messageCustomValueKey,
         contactId: redactId(resolvedContactId),
+        contactPhoneProvided: Boolean(input.contactPhone),
         contactEmailProvided: Boolean(input.contactEmail),
       });
       const result = await sendSavedSms(
