@@ -28,6 +28,8 @@ export const CAMPAIGN_TAGS = {
   ADDON_COMPLETE: "add-on-campaign finished",
 } as const;
 
+export const HIDDEN_CONTACT_TAG = "staff";
+
 function ghlHeaders(
   accessToken: string,
   contentType = "application/json",
@@ -76,6 +78,14 @@ function hasTag(tags: string[], targetTag: string): boolean {
   return tags.some(
     tag => tag.toLowerCase().trim() === targetTag.toLowerCase().trim()
   );
+}
+
+export function isStaffContact(contact: Pick<GHLContact, "tags">): boolean {
+  return hasTag(contact.tags, HIDDEN_CONTACT_TAG);
+}
+
+function filterStaffContacts(contacts: GHLContact[]): GHLContact[] {
+  return contacts.filter(contact => !isStaffContact(contact));
 }
 
 /**
@@ -203,11 +213,14 @@ async function listContacts(
   }
 
   const data = (await resp.json()) as any;
-  const contacts = (data.contacts || []).map(normalizeContact);
+  const rawContacts = (data.contacts || []).map(normalizeContact);
+  const contacts = filterStaffContacts(rawContacts);
+  const hiddenCount = rawContacts.length - contacts.length;
+  const rawTotal = data.totalCount || rawContacts.length;
 
   return {
     contacts,
-    total: data.totalCount || contacts.length,
+    total: Math.max(contacts.length, rawTotal - hiddenCount),
     page,
     pageSize,
   };
@@ -281,10 +294,13 @@ async function searchContacts(
   }
 
   const data = (await resp.json()) as any;
-  const contacts = (data.contacts || data.data?.contacts || []).map(
+  const rawContacts = (data.contacts || data.data?.contacts || []).map(
     normalizeContact
   );
-  const total = data.totalCount || data.data?.totalCount || contacts.length;
+  const contacts = filterStaffContacts(rawContacts);
+  const hiddenCount = rawContacts.length - contacts.length;
+  const rawTotal = data.totalCount || data.data?.totalCount || rawContacts.length;
+  const total = Math.max(contacts.length, rawTotal - hiddenCount);
 
   return {
     contacts,

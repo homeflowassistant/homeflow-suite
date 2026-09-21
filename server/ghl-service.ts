@@ -15,6 +15,7 @@ import { ghlInstallations, type GHLInstallation } from "../drizzle/schema.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
+const STAFF_CONTACT_TAG = "staff";
 // Refresh tokens 10 minutes before they expire
 const TOKEN_REFRESH_BUFFER_MS = 10 * 60 * 1000;
 
@@ -1679,6 +1680,7 @@ export async function syncStaffNotificationContact(
       const body = await response.text();
       throw new Error(`Failed to update Staff contact: ${response.status} ${body}`);
     }
+    await addTagToContact(locationId, existingContactId, STAFF_CONTACT_TAG);
     console.log("[GHL Staff Contact] Updated Staff contact", {
       locationId: locationId.slice(-6),
       contactId: existingContactId.slice(-6),
@@ -1695,6 +1697,7 @@ export async function syncStaffNotificationContact(
     phone: normalizedPhone,
     dnd: false,
   });
+  await addTagToContact(locationId, result.contact.id, STAFF_CONTACT_TAG);
   console.log("[GHL Staff Contact] Created or matched Staff contact", {
     locationId: locationId.slice(-6),
     contactId: result.contact.id.slice(-6),
