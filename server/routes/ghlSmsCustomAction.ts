@@ -206,7 +206,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
               },
               {
                 field: "contactEmail",
-                title: "Contact Email (legacy)",
+                title: "Contact Email",
                 fieldType: "string",
                 required: false,
               },

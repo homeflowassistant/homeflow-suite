@@ -344,6 +344,71 @@ async function getContactByPhone(locationId: string, phone: string): Promise<Con
   return getContactById(locationId, getContactId(contacts[0]));
 }
 
+function normalizePhoneForComparison(phone: unknown): string {
+  return String(phone ?? "").replace(/\D/g, "");
+}
+
+async function getContactByEmailAndPhone(
+  locationId: string,
+  email: string,
+  phone: string
+): Promise<ContactRecord> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPhone = normalizePhoneForLookup(phone);
+  const expectedPhone = normalizePhoneForComparison(normalizedPhone);
+
+  console.log("[GHL SMS Action][CONTACT_LOOKUP_EMAIL_PHONE]", {
+    locationId: locationId.slice(-6),
+    emailProvided: Boolean(normalizedEmail),
+    phoneSuffix: normalizedPhone.slice(-4),
+  });
+
+  const lookup = async (query: URLSearchParams) => {
+    const response = await ghlJson<{ contacts?: ContactRecord[] }>(
+      locationId,
+      `/contacts/lookup?${query.toString()}`
+    );
+    return Array.isArray(response.contacts) ? response.contacts : [];
+  };
+
+  const contacts = await lookup(
+    new URLSearchParams({
+      locationId,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      limit: "20",
+    })
+  );
+  const exactMatches = contacts.filter(contact =>
+    getContactEmail(contact) === normalizedEmail &&
+    normalizePhoneForComparison(contact.phone) === expectedPhone
+  );
+
+  // Some HighLevel locations interpret lookup parameters as either/or, so
+  // retry with email alone and still enforce an exact phone match locally.
+  const candidates = exactMatches.length > 0
+    ? exactMatches
+    : (await lookup(new URLSearchParams({ locationId, email: normalizedEmail, limit: "20" })))
+        .filter(contact => normalizePhoneForComparison(contact.phone) === expectedPhone);
+
+  if (candidates.length === 1) {
+    return getContactById(locationId, getContactId(candidates[0]));
+  }
+  if (candidates.length > 1) {
+    throw new GhlSmsActionError(
+      "MULTIPLE_CONTACTS_FOUND",
+      `More than one contact matched '${normalizedEmail}' and '${normalizedPhone}'. Use a Contact ID instead.`,
+      409
+    );
+  }
+
+  throw new GhlSmsActionError(
+    "CONTACT_NOT_FOUND",
+    `No contact matched both '${normalizedEmail}' and '${normalizedPhone}'.`,
+    404
+  );
+}
+
 async function getLocationRecord(locationId: string): Promise<ContactRecord> {
   const response = await ghlJson<ContactRecord | { location?: ContactRecord }>(
     locationId,
@@ -378,20 +443,20 @@ async function resolveContacts(
     );
   }
 
-  // Phone and email are explicit delivery-recipient overrides. Phone takes
-  // priority so the new phone-based action configuration is deterministic;
-  // email remains supported for existing workflows during migration.
-  const recipientContact = phone
-    ? await getContactByPhone(locationId, phone)
-    : email
-      ? await getContactByEmail(locationId, email)
-    : await getContactById(
-        locationId,
-        configuredContactId || workflowId
-      );
+  // Explicit email/phone values identify a delivery-recipient override. When
+  // both are supplied, require them to match the same GHL contact. If neither
+  // is supplied, use the workflow contact directly.
+  const recipientContact = phone && email
+    ? await getContactByEmailAndPhone(locationId, email, phone)
+    : phone
+      ? await getContactByPhone(locationId, phone)
+      : email
+        ? await getContactByEmail(locationId, email)
+        : await getContactById(locationId, configuredContactId || workflowId);
 
-  // Merge fields must continue to describe the contact that entered the
-  // workflow, not the separately selected SMS recipient.
+  // Merge fields describe the contact that entered the workflow, not the
+  // separately selected SMS recipient. With no workflow ID, the direct
+  // recipient is also the merge-field source.
   const mergeContact = workflowId
     ? getContactId(recipientContact) === workflowId
       ? recipientContact
