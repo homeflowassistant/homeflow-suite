@@ -256,6 +256,13 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
         text(actionData.contactId) ||
         text(actionData.contact_id) ||
         text(actionData.contactID);
+      console.log("[GHL SMS Action][INPUT_PARSED]", {
+        actionDataKeys: Object.keys(actionData),
+        contactEmailProvided: Boolean(input.contactEmail),
+        contactPhoneProvided: Boolean(input.contactPhone),
+        contactEmailIsCustomValue: Boolean(input.contactEmail && /custom\s*values?/i.test(input.contactEmail)),
+        contactPhoneIsCustomValue: Boolean(input.contactPhone && /custom\s*values?/i.test(input.contactPhone)),
+      });
       console.log("[GHL SMS Action][SEND_START]", {
         locationId: redactId(locationId),
         customValueKey: input.messageCustomValueKey,
