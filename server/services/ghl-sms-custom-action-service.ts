@@ -34,11 +34,21 @@ type ContactRecord = Record<string, unknown>;
 
 type ActionInput = {
   messageCustomValueKey: string;
+  recipientType?: string;
   contactId?: string;
   contactPhone?: string;
   contactEmail?: string;
   fromNumber?: string;
 };
+
+type RecipientType = "contact" | "staff";
+
+function normalizeRecipientType(value: string | undefined): RecipientType | undefined {
+  const normalized = normalizeTokenKey(value ?? "");
+  if (["contact", "workflowcontact"].includes(normalized)) return "contact";
+  if (["staff", "team", "teammember", "teamcontact"].includes(normalized)) return "staff";
+  return undefined;
+}
 
 type ActionEnvelope = {
   data?: Record<string, unknown>;
@@ -616,12 +626,25 @@ type ResolvedContacts = {
 async function resolveContacts(
   locationId: string,
   input: ActionInput,
-  workflowContactId: string
+  workflowContactId: string,
+  recipientType?: RecipientType
 ): Promise<ResolvedContacts> {
   const configuredContactId = asText(input.contactId);
   const workflowId = asText(workflowContactId);
   const phone = asText(input.contactPhone);
   const email = asText(input.contactEmail).toLowerCase();
+
+  if (recipientType === "contact") {
+    if (!workflowId) {
+      throw new GhlSmsActionError(
+        "WORKFLOW_CONTACT_REQUIRED",
+        "A workflow contact is required when Send To is Workflow Contact.",
+        400
+      );
+    }
+    const workflowContact = await getContactById(locationId, workflowId);
+    return { recipientContact: workflowContact, mergeContact: workflowContact };
+  }
 
   if (!configuredContactId && !workflowId && !phone && !email) {
     throw new GhlSmsActionError(
@@ -677,21 +700,50 @@ export async function sendSavedSms(
   console.log("[GHL SMS Action][SERVICE_START]", {
     locationId: locationId.slice(-6),
     customValueKey: input.messageCustomValueKey,
+    recipientType: input.recipientType || "legacy",
     contactIdProvided: Boolean(input.contactId),
     contactPhoneProvided: Boolean(input.contactPhone),
     contactEmailProvided: Boolean(input.contactEmail),
     workflowContactIdProvided: Boolean(workflowContactId),
   });
   const customValues = await getLocationCustomValues(locationId);
+  const recipientType = normalizeRecipientType(input.recipientType);
+  if (input.recipientType && !recipientType) {
+    throw new GhlSmsActionError(
+      "INVALID_RECIPIENT_TYPE",
+      "Send To must be either Workflow Contact or Staff.",
+      400
+    );
+  }
+
+  const staffEmail = getCustomValue(customValues, "send_team_notification_email");
+  const staffPhone = getCustomValue(customValues, "send_team_notification_phone");
+  if (recipientType === "staff" && !asText(staffPhone)) {
+    throw new GhlSmsActionError(
+      "STAFF_PHONE_CUSTOM_VALUE_REQUIRED",
+      "The send_team_notification_phone Custom Value is required when Send To is Staff.",
+      422
+    );
+  }
+
   const resolvedInput: ActionInput = {
     ...input,
-    contactEmail: resolveRecipientValue(input.contactEmail, customValues),
-    contactPhone: resolveRecipientValue(input.contactPhone, customValues),
+    contactEmail: recipientType === "contact"
+      ? undefined
+      : recipientType === "staff"
+        ? resolveRecipientValue(staffEmail, customValues)
+        : resolveRecipientValue(input.contactEmail, customValues),
+    contactPhone: recipientType === "contact"
+      ? undefined
+      : recipientType === "staff"
+        ? resolveRecipientValue(staffPhone, customValues)
+        : resolveRecipientValue(input.contactPhone, customValues),
   };
   const { recipientContact, mergeContact } = await resolveContacts(
     locationId,
     resolvedInput,
-    workflowContactId
+    workflowContactId,
+    recipientType
   );
   console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
     recipientContactId: getContactId(recipientContact).slice(-6),
@@ -787,6 +839,7 @@ export async function sendSavedSms(
     messageId: response.messageId,
     messageIds: response.messageIds,
     customValueKey: input.messageCustomValueKey,
+    recipientType: recipientType ?? "legacy",
   };
 }
 
@@ -814,6 +867,16 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
 
   return {
     messageCustomValueKey,
+    recipientType: getAliasedText(data, [
+      "recipientType",
+      "recipient_type",
+      "sendTo",
+      "send_to",
+      "recipient",
+      "targetType",
+      "target_type",
+      "destination",
+    ]) || undefined,
     contactId: getAliasedText(data, [
       "contactId",
       "contact_id",

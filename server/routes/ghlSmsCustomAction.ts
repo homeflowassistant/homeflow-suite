@@ -208,28 +208,14 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
                 options,
               },
               {
-                field: "contactId",
-                title: "Contact ID",
-                fieldType: "string",
-                required: false,
-              },
-              {
-                field: "contactPhone",
-                title: "Contact Phone",
-                fieldType: "string",
-                required: false,
-              },
-              {
-                field: "contactEmail",
-                title: "Contact Email",
-                fieldType: "string",
-                required: false,
-              },
-              {
-                field: "fromNumber",
-                title: "From Number",
-                fieldType: "string",
-                required: false,
+                field: "recipientType",
+                title: "Send To",
+                fieldType: "select",
+                required: true,
+                options: [
+                  { label: "Workflow Contact", value: "contact" },
+                  { label: "Staff", value: "staff" },
+                ],
               },
             ],
           },
@@ -279,6 +265,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
           .filter(([, value]) => Array.isArray(value) || (value && typeof value === "object"))
           .map(([key, value]) => ({ key, ...describePayloadValue(value) }))
           .slice(0, 20),
+        recipientType: input.recipientType || "[missing]",
         contactEmailProvided: Boolean(input.contactEmail),
         contactPhoneProvided: Boolean(input.contactPhone),
         contactEmailIsCustomValue: Boolean(input.contactEmail && /custom\s*values?/i.test(input.contactEmail)),
@@ -287,6 +274,7 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
       console.log("[GHL SMS Action][SEND_START]", {
         locationId: redactId(locationId),
         customValueKey: input.messageCustomValueKey,
+        recipientType: input.recipientType || "legacy",
         contactId: redactId(resolvedContactId),
         contactPhoneProvided: Boolean(input.contactPhone),
         contactEmailProvided: Boolean(input.contactEmail),
