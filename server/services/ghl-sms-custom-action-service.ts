@@ -72,6 +72,8 @@ function asActionText(value: unknown, depth = 0): string {
     "selected_option",
     "customValue",
     "custom_value",
+    "customValueId",
+    "custom_value_id",
     "fieldValue",
     "field_value",
     "reference",
@@ -79,6 +81,8 @@ function asActionText(value: unknown, depth = 0): string {
     "path",
     "key",
     "fieldKey",
+    "id",
+    "_id",
     "displayValue",
     "text",
     "label",
@@ -258,6 +262,19 @@ function getCustomValue(
         const value = customValue.value;
         return value === undefined || value === null ? "" : String(value);
       }
+    }
+  }
+
+  const requestedId = extractedKey.trim();
+  if (requestedId) {
+    const byId = customValues.find(customValue =>
+      [customValue.id, customValue._id]
+        .map(asText)
+        .some(identifier => identifier === requestedId)
+    );
+    if (byId) {
+      const value = byId.value;
+      return value === undefined || value === null ? "" : String(value);
     }
   }
 
@@ -813,6 +830,12 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
       "contact_phone",
       "Contact Phone",
       "Phone",
+      "contactPhoneId",
+      "contact_phone_id",
+      "contactPhoneCustomValue",
+      "contact_phone_custom_value",
+      "contactPhoneCustomValueId",
+      "contact_phone_custom_value_id",
       "recipientPhone",
       "recipient_phone",
       "targetPhone",
@@ -827,6 +850,12 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
       "contactEmail",
       "contact_email",
       "Contact Email",
+      "contactEmailId",
+      "contact_email_id",
+      "contactEmailCustomValue",
+      "contact_email_custom_value",
+      "contactEmailCustomValueId",
+      "contact_email_custom_value_id",
       "recipientEmail",
       "recipient_email",
       "targetEmail",
