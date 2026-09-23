@@ -371,25 +371,25 @@ async function getContactByEmailAndPhone(
     return Array.isArray(response.contacts) ? response.contacts : [];
   };
 
-  const contacts = await lookup(
-    new URLSearchParams({
-      locationId,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      limit: "20",
-    })
-  );
-  const exactMatches = contacts.filter(contact =>
+  // HighLevel's lookup endpoint requires exactly one of email or phone. Do
+  // not send both in one request; look up by email first and enforce the
+  // phone match locally. If that does not find the pair, try the inverse
+  // lookup as a compatibility fallback for locations that index the values
+  // differently.
+  const emailCandidates = (await lookup(
+    new URLSearchParams({ locationId, email: normalizedEmail, limit: "20" })
+  )).filter(contact =>
     getContactEmail(contact) === normalizedEmail &&
     normalizePhoneForComparison(contact.phone) === expectedPhone
   );
 
-  // Some HighLevel locations interpret lookup parameters as either/or, so
-  // retry with email alone and still enforce an exact phone match locally.
-  const candidates = exactMatches.length > 0
-    ? exactMatches
-    : (await lookup(new URLSearchParams({ locationId, email: normalizedEmail, limit: "20" })))
-        .filter(contact => normalizePhoneForComparison(contact.phone) === expectedPhone);
+  const candidates = emailCandidates.length > 0
+    ? emailCandidates
+    : (await lookup(new URLSearchParams({ locationId, phone: normalizedPhone, limit: "20" })))
+        .filter(contact =>
+          getContactEmail(contact) === normalizedEmail &&
+          normalizePhoneForComparison(contact.phone) === expectedPhone
+        );
 
   if (candidates.length === 1) {
     return getContactById(locationId, getContactId(candidates[0]));
