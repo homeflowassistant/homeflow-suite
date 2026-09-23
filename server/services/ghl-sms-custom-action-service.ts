@@ -50,14 +50,26 @@ function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function asActionText(value: unknown): string {
+function asActionText(value: unknown, depth = 0): string {
   const direct = asText(value);
   if (direct) return direct;
-  if (!value || typeof value !== "object") return "";
+  if (!value || typeof value !== "object" || depth > 3) return "";
 
   const record = value as Record<string, unknown>;
-  for (const key of ["value", "selectedValue", "reference", "token", "key", "fieldKey"]) {
-    const nested = asText(record[key]);
+  for (const key of [
+    "value",
+    "selectedValue",
+    "reference",
+    "token",
+    "path",
+    "key",
+    "fieldKey",
+    "displayValue",
+    "text",
+    "label",
+    "name",
+  ]) {
+    const nested = asActionText(record[key], depth + 1);
     if (nested) return nested;
   }
   return "";
@@ -67,14 +79,15 @@ function getAliasedText(
   data: Record<string, unknown>,
   aliases: string[]
 ): string {
+  const normalizedAliases = new Set(
+    aliases.map(alias => alias.toLowerCase().replace(/[^a-z0-9]/g, ""))
+  );
+
   for (const alias of aliases) {
     const direct = asActionText(data[alias]);
     if (direct) return direct;
   }
 
-  const normalizedAliases = new Set(
-    aliases.map(alias => alias.toLowerCase().replace(/[^a-z0-9]/g, ""))
-  );
   for (const [key, value] of Object.entries(data)) {
     if (
       normalizedAliases.has(key.toLowerCase().replace(/[^a-z0-9]/g, ""))
@@ -84,7 +97,43 @@ function getAliasedText(
     }
   }
 
-  return "";
+  const findNested = (value: unknown, depth: number): string => {
+    if (!value || typeof value !== "object" || depth > 5) return "";
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const nested = findNested(item, depth + 1);
+        if (nested) return nested;
+      }
+      return "";
+    }
+
+    const record = value as Record<string, unknown>;
+    const fieldReference = asText(record.reference) || asText(record.field) || asText(record.name);
+    if (normalizedAliases.has(fieldReference.toLowerCase().replace(/[^a-z0-9]/g, ""))) {
+      for (const valueKey of ["value", "selectedValue", "selected", "input", "data"]) {
+        const fieldValue = asActionText(record[valueKey]);
+        if (fieldValue) return fieldValue;
+      }
+    }
+
+    for (const [key, nestedValue] of Object.entries(record)) {
+      // Never use the workflow contact object itself as an explicit recipient
+      // override. Its values belong to merge fields/fallback delivery.
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (["contact", "workflowcontact", "workflowcontactdata"].includes(normalizedKey)) {
+        continue;
+      }
+      if (normalizedAliases.has(normalizedKey)) {
+        const text = asActionText(nestedValue);
+        if (text) return text;
+      }
+      const nested = findNested(nestedValue, depth + 1);
+      if (nested) return nested;
+    }
+    return "";
+  };
+
+  return findNested(data, 0);
 }
 
 function getContactId(contact: ContactRecord): string {
@@ -213,7 +262,14 @@ function resolveRecipientValue(
     const match = resolved.match(/^\{\{\s*custom_values\.([^}]+?)\s*\}\}$/i);
     if (!match?.[1]) break;
     const next = getCustomValue(customValues, match[1]);
-    if (next === undefined || next === resolved) return undefined;
+    if (next === undefined) {
+      throw new GhlSmsActionError(
+        "CUSTOM_VALUE_NOT_FOUND",
+        `Recipient Custom Value '${match[1].trim()}' was not found for this location.`,
+        422
+      );
+    }
+    if (next === resolved) return undefined;
     resolved = asText(next);
     if (!resolved) return undefined;
   }
@@ -224,6 +280,14 @@ function resolveRecipientValue(
   const directCustomValue = getCustomValue(customValues, resolved);
   if (directCustomValue !== undefined && directCustomValue !== resolved) {
     return asText(directCustomValue) || undefined;
+  }
+
+  if (/custom\s*values?/i.test(resolved)) {
+    throw new GhlSmsActionError(
+      "CUSTOM_VALUE_NOT_FOUND",
+      `Recipient Custom Value '${resolved}' was not found for this location.`,
+      422
+    );
   }
 
   return resolved || undefined;
@@ -729,6 +793,8 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
     contactPhone: getAliasedText(data, [
       "contactPhone",
       "contact_phone",
+      "Contact Phone",
+      "Phone",
       "recipientPhone",
       "recipient_phone",
       "targetPhone",
@@ -742,6 +808,7 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
     contactEmail: getAliasedText(data, [
       "contactEmail",
       "contact_email",
+      "Contact Email",
       "recipientEmail",
       "recipient_email",
       "targetEmail",
