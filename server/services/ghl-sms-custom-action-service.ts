@@ -50,6 +50,30 @@ function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function getAliasedText(
+  data: Record<string, unknown>,
+  aliases: string[]
+): string {
+  for (const alias of aliases) {
+    const direct = asText(data[alias]);
+    if (direct) return direct;
+  }
+
+  const normalizedAliases = new Set(
+    aliases.map(alias => alias.toLowerCase().replace(/[^a-z0-9]/g, ""))
+  );
+  for (const [key, value] of Object.entries(data)) {
+    if (
+      normalizedAliases.has(key.toLowerCase().replace(/[^a-z0-9]/g, ""))
+    ) {
+      const text = asText(value);
+      if (text) return text;
+    }
+  }
+
+  return "";
+}
+
 function getContactId(contact: ContactRecord): string {
   return asText(contact.id);
 }
@@ -598,9 +622,6 @@ export async function sendSavedSms(
 }
 
 export function parseSmsActionInput(data: Record<string, unknown>): ActionInput {
-  const contact = data.contact && typeof data.contact === "object"
-    ? data.contact as Record<string, unknown>
-    : {};
   const explicitKey =
     asText(data.messageCustomValueKey) ||
     asText(data.customValueKey) ||
@@ -624,25 +645,43 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
 
   return {
     messageCustomValueKey,
-    contactId: asText(data.contactId) || undefined,
-    contactPhone:
-      asText(data.contactPhone) ||
-      asText(data.phone) ||
-      asText(data.contact_phone) ||
-      asText(data.phoneNumber) ||
-      asText(data.phone_number) ||
-      asText(data["contact.phone"]) ||
-      asText(contact.phone) ||
-      undefined,
-    contactEmail:
-      asText(data.contactEmail) ||
-      asText(data.email) ||
-      asText(data.contact_email) ||
-      asText(data.emailAddress) ||
-      asText(data.email_address) ||
-      asText(data["contact.email"]) ||
-      asText(contact.email) ||
-      undefined,
+    contactId: getAliasedText(data, [
+      "contactId",
+      "contact_id",
+      "contactID",
+      "recipientContactId",
+      "recipient_contact_id",
+    ]) || undefined,
+    // These are explicit action inputs. Do not read data.contact.email or
+    // data.contact.phone here: those fields represent the workflow contact
+    // and must remain the merge-field source/fallback recipient, not become
+    // an accidental recipient override.
+    contactPhone: getAliasedText(data, [
+      "contactPhone",
+      "contact_phone",
+      "recipientPhone",
+      "recipient_phone",
+      "targetPhone",
+      "target_phone",
+      "toPhone",
+      "to_phone",
+      "phoneNumber",
+      "phone_number",
+      "phone",
+    ]) || undefined,
+    contactEmail: getAliasedText(data, [
+      "contactEmail",
+      "contact_email",
+      "recipientEmail",
+      "recipient_email",
+      "targetEmail",
+      "target_email",
+      "toEmail",
+      "to_email",
+      "emailAddress",
+      "email_address",
+      "email",
+    ]) || undefined,
     fromNumber: asText(data.fromNumber) || undefined,
   };
 }
