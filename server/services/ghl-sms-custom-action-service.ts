@@ -50,12 +50,25 @@ function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function asActionText(value: unknown): string {
+  const direct = asText(value);
+  if (direct) return direct;
+  if (!value || typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["value", "selectedValue", "reference", "token", "key", "fieldKey"]) {
+    const nested = asText(record[key]);
+    if (nested) return nested;
+  }
+  return "";
+}
+
 function getAliasedText(
   data: Record<string, unknown>,
   aliases: string[]
 ): string {
   for (const alias of aliases) {
-    const direct = asText(data[alias]);
+    const direct = asActionText(data[alias]);
     if (direct) return direct;
   }
 
@@ -66,7 +79,7 @@ function getAliasedText(
     if (
       normalizedAliases.has(key.toLowerCase().replace(/[^a-z0-9]/g, ""))
     ) {
-      const text = asText(value);
+      const text = asActionText(value);
       if (text) return text;
     }
   }
@@ -159,6 +172,26 @@ function getCustomValue(
     const normalized = normalizeTokenKey(candidate);
     const normalizedEntry = map.get(normalized);
     if (normalizedEntry) return normalizedEntry.value;
+  }
+
+  // The Custom Value picker can preserve a folder/display path in the
+  // reference, such as:
+  // {{custom_values.Alerts and Notifications.send_team_notification_email}}
+  // while the API may expose only the leaf key or display name. Match the
+  // final path segment against all known Custom Value identifiers.
+  const extractedKey = extractTokenKey(key);
+  const leafKey = extractedKey.split(/[.>\/]+/).map(part => part.trim()).filter(Boolean).at(-1) ?? extractedKey;
+  const normalizedLeaf = normalizeTokenKey(leafKey);
+  if (normalizedLeaf) {
+    for (const customValue of customValues) {
+      const identifiers = [customValue.key, customValue.fieldKey, customValue.name]
+        .map(asText)
+        .filter(Boolean);
+      if (identifiers.some(identifier => normalizeTokenKey(identifier) === normalizedLeaf)) {
+        const value = customValue.value;
+        return value === undefined || value === null ? "" : String(value);
+      }
+    }
   }
 
   return undefined;
@@ -660,15 +693,15 @@ export async function sendSavedSms(
 
 export function parseSmsActionInput(data: Record<string, unknown>): ActionInput {
   const explicitKey =
-    asText(data.messageCustomValueKey) ||
-    asText(data.customValueKey) ||
-    asText(data.custom_value_key) ||
-    asText(data.messageKey) ||
-    asText(data.savedMessage);
+    asActionText(data.messageCustomValueKey) ||
+    asActionText(data.customValueKey) ||
+    asActionText(data.custom_value_key) ||
+    asActionText(data.messageKey) ||
+    asActionText(data.savedMessage);
   const messageCustomValueKey =
     explicitKey ||
     Object.values(data)
-      .map(asText)
+      .map(asActionText)
       .map(value => extractCustomValueKey(value))
       .find(value => SMS_CUSTOM_VALUE_KEYS.has(normalizeTokenKey(value))) ||
     "";
@@ -719,7 +752,7 @@ export function parseSmsActionInput(data: Record<string, unknown>): ActionInput 
       "email_address",
       "email",
     ]) || undefined,
-    fromNumber: asText(data.fromNumber) || undefined,
+    fromNumber: asActionText(data.fromNumber) || undefined,
   };
 }
 
