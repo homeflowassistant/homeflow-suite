@@ -55,10 +55,25 @@ function asActionText(value: unknown, depth = 0): string {
   if (direct) return direct;
   if (!value || typeof value !== "object" || depth > 3) return "";
 
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = asActionText(item, depth + 1);
+      if (nested) return nested;
+    }
+    return "";
+  }
+
   const record = value as Record<string, unknown>;
   for (const key of [
     "value",
     "selectedValue",
+    "selected_value",
+    "selectedOption",
+    "selected_option",
+    "customValue",
+    "custom_value",
+    "fieldValue",
+    "field_value",
     "reference",
     "token",
     "path",
@@ -68,6 +83,9 @@ function asActionText(value: unknown, depth = 0): string {
     "text",
     "label",
     "name",
+    "content",
+    "input",
+    "payload",
   ]) {
     const nested = asActionText(record[key], depth + 1);
     if (nested) return nested;

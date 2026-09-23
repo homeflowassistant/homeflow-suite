@@ -22,6 +22,21 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function describePayloadValue(value: unknown): Record<string, unknown> {
+  if (value === null) return { type: "null" };
+  if (value === undefined) return { type: "undefined" };
+  if (typeof value === "string") {
+    return { type: "string", empty: value.trim() === "", length: value.length };
+  }
+  if (Array.isArray(value)) {
+    return { type: "array", length: value.length };
+  }
+  if (typeof value === "object") {
+    return { type: "object", keys: Object.keys(value as Record<string, unknown>) };
+  }
+  return { type: typeof value };
+}
+
 function redactId(value: string): string {
   return value.length > 6 ? `…${value.slice(-6)}` : value ? "[set]" : "[missing]";
 }
@@ -258,6 +273,12 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
         text(actionData.contactID);
       console.log("[GHL SMS Action][INPUT_PARSED]", {
         actionDataKeys: Object.keys(actionData),
+        contactEmailRaw: describePayloadValue(actionData.contactEmail),
+        contactPhoneRaw: describePayloadValue(actionData.contactPhone),
+        nestedFieldContainers: Object.entries(actionData)
+          .filter(([, value]) => Array.isArray(value) || (value && typeof value === "object"))
+          .map(([key, value]) => ({ key, ...describePayloadValue(value) }))
+          .slice(0, 20),
         contactEmailProvided: Boolean(input.contactEmail),
         contactPhoneProvided: Boolean(input.contactPhone),
         contactEmailIsCustomValue: Boolean(input.contactEmail && /custom\s*values?/i.test(input.contactEmail)),
