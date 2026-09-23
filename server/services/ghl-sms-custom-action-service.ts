@@ -164,6 +164,38 @@ function getCustomValue(
   return undefined;
 }
 
+function resolveRecipientValue(
+  value: string | undefined,
+  customValues: Record<string, unknown>[]
+): string | undefined {
+  let resolved = asText(value);
+  if (!resolved) return undefined;
+
+  // A workflow action field mapped to a GHL Custom Value can arrive as the
+  // literal token, for example {{custom_values.recipient_email}}. Resolve
+  // that token from the location's current Custom Values before attempting
+  // the contact lookup. Follow a short chain in case the stored value is
+  // itself another custom-value token.
+  for (let pass = 0; pass < MAX_RENDER_PASSES; pass += 1) {
+    const match = resolved.match(/^\{\{\s*custom_values\.([^}]+?)\s*\}\}$/i);
+    if (!match?.[1]) break;
+    const next = getCustomValue(customValues, match[1]);
+    if (next === undefined || next === resolved) return undefined;
+    resolved = asText(next);
+    if (!resolved) return undefined;
+  }
+
+  // Some workflow versions persist the selected Custom Value as its key
+  // rather than preserving the {{custom_values.*}} wrapper. Accept that form
+  // as well, while leaving ordinary email addresses and phone numbers alone.
+  const directCustomValue = getCustomValue(customValues, resolved);
+  if (directCustomValue !== undefined && directCustomValue !== resolved) {
+    return asText(directCustomValue) || undefined;
+  }
+
+  return resolved || undefined;
+}
+
 function decodeStoredLineBreaks(value: string): string {
   return value
     .replace(/\\r\\n/g, "\n")
@@ -518,9 +550,15 @@ export async function sendSavedSms(
     contactEmailProvided: Boolean(input.contactEmail),
     workflowContactIdProvided: Boolean(workflowContactId),
   });
+  const customValues = await getLocationCustomValues(locationId);
+  const resolvedInput: ActionInput = {
+    ...input,
+    contactEmail: resolveRecipientValue(input.contactEmail, customValues),
+    contactPhone: resolveRecipientValue(input.contactPhone, customValues),
+  };
   const { recipientContact, mergeContact } = await resolveContacts(
     locationId,
-    input,
+    resolvedInput,
     workflowContactId
   );
   console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
@@ -530,7 +568,6 @@ export async function sendSavedSms(
     recipientEmailProvided: Boolean(getContactEmail(recipientContact)),
     mergeContactEmailProvided: Boolean(getContactEmail(mergeContact)),
   });
-  const customValues = await getLocationCustomValues(locationId);
   const template = getCustomValue(customValues, input.messageCustomValueKey);
 
   if (template === undefined) {
