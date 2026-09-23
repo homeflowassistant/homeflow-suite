@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
   updateExistingCustomValuesOnly,
+  ensureGhlCustomValue,
   getInstallation,
   getLocationPickerVariables,
   syncStaffNotificationContact,
@@ -57,8 +58,8 @@ export const DEFAULT_ALERT_TEMPLATES = {
  * 6. Team Notification New Lead Message     → {{custom_values.teamnotification_new_lead_message}}
  * 7. Team Notification New Customer Switch  → {{custom_values.internal_new_customer_notification}}
  * 8. Team Notification New Customer Message → {{custom_values.teamnotification_new_customer_message}}
- * 9. Send Team Notification Phone           → {{custom_values.internal_notifications_phone_number}}
- * 10. Send Team Notification Email          → {{custom_values.internal_notifications_email}}
+ * 9. Send Team Notification Phone           → {{custom_values.send_team_notification_phone}}
+ * 10. Send Team Notification Email          → {{custom_values.send_team_notification_email}}
  * 11. Custom Failed Payment Switch          → {{custom_values.failed_payment_message}}
  * 12. Custom Failed Payment Message         → {{custom_values.custom_failed_payment_message}}
  * 13. Custom Skipped Job Switch             → {{custom_values.skipped_job_message}}
@@ -73,8 +74,8 @@ const CV_KEYS = {
   autoReplyNewCustomerMessage: "autoreply_new_customer_message",
   teamNotifyNewLeadMessage: "teamnotification_new_lead_message",
   teamNotifyNewCustomerMessage: "teamnotification_new_customer_message",
-  teamNotifyPhone: "internal_notifications_phone_number",
-  teamNotifyEmail: "internal_notifications_email",
+  teamNotifyPhone: "send_team_notification_phone",
+  teamNotifyEmail: "send_team_notification_email",
   failedPaymentNotifyMessage: "custom_failed_payment_message",
   skippedJobNotifyMessage: "custom_skipped_job_message",
   subscriptionPausedNotifyMessage: "custom_subscription_pausedunpaused_message",
@@ -151,8 +152,8 @@ export const alertsNotificationsRouter = router({
           { id: "cv_1", source: "custom_value" as const, name: "Company Phone", fieldKey: "custom_values.company_phone", token: "{{custom_values.company_phone}}" },
           { id: "cv_2", source: "custom_value" as const, name: "Auto-Reply New Lead Message", fieldKey: "autoreply_new_lead_message", token: "{{custom_values.autoreply_new_lead_message}}" },
           { id: "cv_3", source: "custom_value" as const, name: "Auto-Reply New Customer Message", fieldKey: "autoreply_new_customer_message", token: "{{custom_values.autoreply_new_customer_message}}" },
-          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "internal_notifications_phone_number", token: "{{custom_values.internal_notifications_phone_number}}" },
-          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "internal_notifications_email", token: "{{custom_values.internal_notifications_email}}" },
+          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "send_team_notification_phone", token: "{{custom_values.send_team_notification_phone}}" },
+          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "send_team_notification_email", token: "{{custom_values.send_team_notification_email}}" },
           { id: "cf_1", source: "contact_custom_field" as const, name: "Dog Count", fieldKey: "contact.dog_count", token: "{{contact.dog_count}}", dataType: "NUMERIC" },
           { id: "cf_2", source: "contact_custom_field" as const, name: "Service Frequency", fieldKey: "contact.service_frequency", token: "{{contact.service_frequency}}", dataType: "TEXT" },
           { id: "cf_3", source: "contact_custom_field" as const, name: "Yard Access Code", fieldKey: "contact.yard_access_code", token: "{{contact.yard_access_code}}", dataType: "TEXT" },
@@ -435,6 +436,19 @@ export const alertsNotificationsRouter = router({
           currentValues.get(CV_KEYS.teamNotifyEmail)?.value ?? "";
         const previousStaffPhone =
           currentValues.get(CV_KEYS.teamNotifyPhone)?.value ?? "";
+
+        // These two values are the stable inputs used by the Staff branch of
+        // the marketplace SMS action. Create them when a location does not
+        // have them yet; subsequent saves update the same records by ID.
+        for (const [key, value] of [
+          [CV_KEYS.teamNotifyEmail, data.teamNotifyEmail],
+          [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
+        ] as const) {
+          const ensured = await ensureGhlCustomValue(locationId, key, value);
+          if (ensured.id === "create_failed" || ensured.id === "skipped_not_found") {
+            throw new Error(`Unable to create or update required Custom Value '${key}'.`);
+          }
+        }
 
         // Update each authoritative Custom Value once while preserving its
         // existing GHL display name. Missing fields are returned explicitly
