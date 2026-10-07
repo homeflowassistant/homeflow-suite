@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   index,
+  integer,
   pgEnum,
   pgTable,
   serial,
@@ -151,3 +152,34 @@ export const customTriggerBindings = pgTable(
 
 export type CustomTriggerBinding = typeof customTriggerBindings.$inferSelect;
 export type InsertCustomTriggerBinding = typeof customTriggerBindings.$inferInsert;
+
+/**
+ * Client-controlled state for optional HomeFlow onboarding steps.
+ * A skipped step is intentionally distinct from a completed configuration.
+ */
+export const onboardingStepStates = pgTable(
+  "onboarding_step_states",
+  {
+    id: serial("id").primaryKey(),
+    locationId: varchar("locationId", { length: 128 }).notNull(),
+    stepId: varchar("stepId", { length: 128 }).notNull(),
+    state: varchar("state", { length: 16 }).notNull(),
+    completedCount: integer("completedCount").default(0).notNull(),
+    totalCount: integer("totalCount").default(0).notNull(),
+    missingRequirementsJson: text("missingRequirementsJson"),
+    lastReason: text("lastReason"),
+    checkedAt: timestamp("checkedAt"),
+    completedAt: timestamp("completedAt"),
+    skippedAt: timestamp("skippedAt"),
+    reviewed: boolean("reviewed").default(false).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  table => ({
+    locationStepUnique: uniqueIndex("onboarding_step_states_location_step_uidx").on(
+      table.locationId,
+      table.stepId
+    ),
+  })
+);
+export type OnboardingStepState = typeof onboardingStepStates.$inferSelect;
+export type InsertOnboardingStepState = typeof onboardingStepStates.$inferInsert;

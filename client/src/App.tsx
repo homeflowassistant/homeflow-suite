@@ -14,6 +14,7 @@ import PricingPage from "./pages/PricingPage";
 import AccountSetupPage from "./pages/AccountSetupPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import ZapierIntegrationPage from "./pages/ZapierIntegrationPage";
+import OnboardingPage from "./pages/OnboardingPage";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path={"/account-setup"} component={AccountSetupPage} />
       <Route path={"/integrations"} component={ZapierIntegrationPage} />
       <Route path={"/integrate"} component={ZapierIntegrationPage} />
+      <Route path={"/onboarding"} component={OnboardingPage} />
       <Route path={"/"}>
         <Redirect to="/add-contacts" />
       </Route>
