@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import "./IntegrationsPage.css";
 
-const GOOGLE_DRIVE_VIDEO_PREVIEW_URL =
-  "https://drive.google.com/file/d/1pQIYOlpQTPqKQwFiPjgKyTEwhHA6DzOV/preview";
+const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/Pw4xD6HYqIo";
 
 function useLocationId() {
   return useMemo(() => {
@@ -98,7 +97,7 @@ export default function IntegrationsPage() {
 
             <div className="integrations-video-wrapper">
               <iframe
-                src={GOOGLE_DRIVE_VIDEO_PREVIEW_URL}
+                src={SWEEP_AND_GO_VIDEO_URL}
                 className="integrations-video-iframe"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen

@@ -124,18 +124,19 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
     case "reactivation": return <ReactivationPage />;
     case "add-on-campaign": return <AddOnCampaignPage />;
     case "alerts-notifications": return <AlertsNotificationsPage />;
-    case "integrations": return <IntegrationsPage />;
-    case "zapier": return <ZapierIntegrationPage />;
+    case "integrations": return <><IntegrationsPage /><ZapierIntegrationPage hideSweepGo /></>;
     default: return null;
   }
 }
 
 function EmbeddedTutorial({ pageId }: { pageId: string }) {
   switch (pageId) {
+    case "account-setup":
+      return <OnboardingTutorial title="HomeFlow Assistant: Account Set Up Explanation" youtubeId="Tb-Wi8ytbbo" />;
     case "pricing":
       return <OnboardingTutorial title="Filling Out Pricing Section Guide" youtubeId="agPFTQ5pJwI" />;
     case "request-scheduling":
-      return <OnboardingTutorial title="Send Custom Holiday Reminders to Clients" youtubeId="4PpMNyAZI-o" />;
+      return <div className="space-y-4"><OnboardingTutorial title="HomeFlow Assistant: Set Up Your Follow Up Sequence Options" youtubeId="N-SBwLPcLwI" /><OnboardingTutorial title="HomeFlow Assistant: Set Up Custom Quote and Terms" youtubeId="cUO_OOIi7h8" description="Use this additional walkthrough when the Custom Quote & Link option is selected." /></div>;
     case "reactivation":
       return <OnboardingTutorial title="Reactivating Inactive Customers With Custom Quotes" youtubeId="ZDnvQ9m5XTg" />;
     case "add-on-campaign":
