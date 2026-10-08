@@ -134,8 +134,6 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
   switch (pageId) {
     case "pricing":
       return <OnboardingTutorial title="Filling Out Pricing Section Guide" youtubeId="agPFTQ5pJwI" />;
-    case "request-scheduling":
-      return <OnboardingTutorial title="Send Custom Holiday Reminders to Clients" youtubeId="4PpMNyAZI-o" />;
     case "reactivation":
       return <OnboardingTutorial title="Reactivating Inactive Customers With Custom Quotes" youtubeId="ZDnvQ9m5XTg" />;
     case "add-on-campaign":
