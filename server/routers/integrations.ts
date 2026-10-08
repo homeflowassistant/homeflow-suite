@@ -6,6 +6,7 @@ import {
   upsertGhlCustomValue,
   updateExistingCustomValuesOnly,
 } from "../ghl-service.js";
+import { getCustomTriggerWebhookForLocation } from "../services/custom-trigger-service.js";
 
 // Custom Value Keys for Integrations
 export const INTEGRATION_CV_KEYS = {
@@ -37,6 +38,13 @@ export const integrationsRouter = router({
 
       try {
         const cvMap = await getLocationCustomValueMap(input.locationId);
+        let generatedWebhookUrl = "";
+        try {
+          const generatedWebhook = await getCustomTriggerWebhookForLocation(input.locationId);
+          generatedWebhookUrl = generatedWebhook.webhookUrl || "";
+        } catch (error) {
+          console.warn("[Integrations] Generated webhook URL unavailable; using the existing GHL value:", error);
+        }
 
         const getValueForKeys = (keys: string[]): string | undefined => {
           for (const k of keys) {
@@ -54,12 +62,13 @@ export const integrationsRouter = router({
           return undefined;
         };
 
-        const webhookUrl = getValueForKeys([
+        const configuredWebhookUrl = getValueForKeys([
           INTEGRATION_CV_KEYS.webhookUrl,
           "homeflow_webhook",
           "{{custom_values.homeflow_webhook}}",
           "webhook_url",
         ]) || "";
+        const webhookUrl = generatedWebhookUrl || configuredWebhookUrl;
 
         const accessToken = getValueForKeys([
           INTEGRATION_CV_KEYS.accessToken,
@@ -84,17 +93,17 @@ export const integrationsRouter = router({
 
   /**
    * Save Integrations settings to GHL custom values.
-   * Updates homeflow_webhook and sg_authorization_key_access_token in GHL.
+   * Updates only the editable access token in GHL. The generated
+   * homeflow_webhook/render link is authoritative and cannot be overwritten
+   * by client input.
    */
   saveSettings: publicProcedure
     .input(integrationsSchema)
     .mutation(async ({ input }) => {
-      const { locationId, webhookUrl, accessToken } = input;
+      const { locationId, accessToken } = input;
 
       const customValuePayload: Record<string, string> = {
-        [INTEGRATION_CV_KEYS.webhookUrl]: webhookUrl,
         [INTEGRATION_CV_KEYS.accessToken]: accessToken,
-        webhook_url: webhookUrl,
         access_token: accessToken,
       };
 
@@ -102,13 +111,7 @@ export const integrationsRouter = router({
         // Step 1: Non-destructively update existing custom values
         await updateExistingCustomValuesOnly(locationId, customValuePayload);
 
-        // Step 2: Upsert primary keys to guarantee creation if not present
-        await upsertGhlCustomValue(
-          locationId,
-          INTEGRATION_CV_KEYS.webhookUrl,
-          webhookUrl
-        );
-
+        // Step 2: Upsert only the editable access-token key.
         await upsertGhlCustomValue(
           locationId,
           INTEGRATION_CV_KEYS.accessToken,

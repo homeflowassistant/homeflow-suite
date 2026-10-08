@@ -41,7 +41,7 @@ describe("onboarding wizard validation", () => {
     expect(page(customQuote, "reactivation").requirements.some(item => item.id === "reactivation-company-image")).toBe(true);
   });
 
-  it("contains exactly the ten requested sequential steps", () => {
+  it("contains exactly the eight requested sequential steps", () => {
     const results = buildOnboardingResults({ ...baseOptions, customValues: [] });
     expect(results.map(item => item.id)).toEqual([
       "account-setup",
@@ -49,14 +49,13 @@ describe("onboarding wizard validation", () => {
       "request-scheduling",
       "reactivation",
       "add-on-campaign",
-      "quick-send",
       "alerts-notifications",
       "integrations",
-      "contacts",
       "zapier",
     ]);
-    expect(results.some(item => item.id === "contacts-custom-fields")).toBe(false);
-    expect(results.some(item => item.id === "campaign-tags")).toBe(false);
+    expect(results).toHaveLength(8);
+    expect(results.some(item => item.id === "contacts")).toBe(false);
+    expect(results.some(item => item.id === "quick-send")).toBe(false);
     expect(results.some(item => item.id === "review-test")).toBe(false);
   });
 

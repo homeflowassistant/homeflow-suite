@@ -22,13 +22,12 @@ import { trpc } from "@/lib/trpc";
 import AccountSetupPage from "@/pages/AccountSetupPage";
 import AddOnCampaignPage from "@/pages/AddOnCampaignPage";
 import AlertsNotificationsPage from "@/pages/AlertsNotificationsPage";
-import ContactsPage from "@/pages/ContactsPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import PricingPage from "@/pages/PricingPage";
-import QuickSendPage from "@/pages/QuickSendPage";
 import ReactivationPage from "@/pages/ReactivationPage";
 import RequestScheduling from "@/pages/RequestScheduling";
 import ZapierIntegrationPage from "@/pages/ZapierIntegrationPage";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
 
 type PageStatus = "complete" | "incomplete" | "blocked" | "skipped";
 
@@ -124,12 +123,27 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
     case "request-scheduling": return <RequestScheduling />;
     case "reactivation": return <ReactivationPage />;
     case "add-on-campaign": return <AddOnCampaignPage />;
-    case "quick-send": return <QuickSendPage />;
     case "alerts-notifications": return <AlertsNotificationsPage />;
     case "integrations": return <IntegrationsPage />;
-    case "contacts": return <ContactsPage />;
     case "zapier": return <ZapierIntegrationPage />;
     default: return null;
+  }
+}
+
+function EmbeddedTutorial({ pageId }: { pageId: string }) {
+  switch (pageId) {
+    case "pricing":
+      return <OnboardingTutorial title="Filling Out Pricing Section Guide" youtubeId="agPFTQ5pJwI" />;
+    case "request-scheduling":
+      return <OnboardingTutorial title="Send Custom Holiday Reminders to Clients" youtubeId="4PpMNyAZI-o" />;
+    case "reactivation":
+      return <OnboardingTutorial title="Reactivating Inactive Customers With Custom Quotes" youtubeId="ZDnvQ9m5XTg" />;
+    case "add-on-campaign":
+      return <OnboardingTutorial title="Set Up and Edit Add On Campaign Messages" youtubeId="xek6VNHbPdw" />;
+    case "alerts-notifications":
+      return <OnboardingTutorial title="Customize Customer and Team Notification Alerts" youtubeId="WWpqJc8t0lE" />;
+    default:
+      return null;
   }
 }
 
@@ -224,7 +238,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="ghl-page min-h-screen bg-slate-50/70 pb-12">
+    <div className="ghl-page bg-slate-50/70 pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Onboarding</h1>
@@ -250,7 +264,10 @@ export default function OnboardingPage() {
 
           <Card className="border-slate-200 bg-white shadow-sm"><CardHeader className="p-5 pb-3 sm:p-7 sm:pb-4"><div className="flex items-start gap-3"><StatusIcon status={currentPage.status} /><div><CardTitle className="text-lg text-slate-900">{currentPage.title}</CardTitle><CardDescription className="mt-1.5 leading-relaxed">{currentPage.description}</CardDescription></div></div></CardHeader><CardContent className="p-5 pt-1 sm:p-7 sm:pt-1"><div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5 text-xs"><span className="font-medium text-slate-600">{currentPage.totalCount === 0 ? "No validation fields" : `${currentPage.completedCount} of ${currentPage.totalCount} checks complete`}</span><span className={currentPage.skippable ? "font-semibold text-slate-600" : "font-semibold text-slate-700"}>{currentPage.skippable ? "Optional step" : "Required step"}</span></div>{currentPage.totalCount > 0 && <button type="button" onClick={() => setDetailsOpen(!detailsOpen)} className="mt-3 flex w-full items-center justify-between text-left text-xs font-semibold text-slate-600 hover:text-slate-900" aria-expanded={detailsOpen}><span>{detailsOpen ? "Hide configuration checks" : `View ${currentPage.missingCount} remaining check${currentPage.missingCount === 1 ? "" : "s"}`}</span>{detailsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>}{detailsOpen && currentPage.totalCount > 0 && <ul className="mt-2 rounded-lg border border-slate-100 px-3">{currentPage.requirements.map(requirement => <RequirementRow key={requirement.id} requirement={requirement} />)}</ul>}</CardContent></Card>
 
-          <div className="overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm"><div className="border-b border-cyan-100 bg-cyan-50 px-5 py-3"><p className="text-sm font-semibold text-cyan-900">Complete Step {currentPage.stepOrder}: {currentPage.title}</p><p className="mt-0.5 text-xs text-cyan-700">This is the existing HomeFlow page. Fill it out and save, or use Next step to record the remaining work and continue.</p></div><div className="max-h-[1000px] overflow-y-auto p-2 sm:p-4"><EmbeddedSetupPage pageId={currentPage.id} /></div></div>
+          <div className="space-y-5">
+            <EmbeddedTutorial pageId={currentPage.id} />
+            <div className="rounded-2xl border border-cyan-200 bg-white shadow-sm"><div className="border-b border-cyan-100 bg-cyan-50 px-5 py-3"><p className="text-sm font-semibold text-cyan-900">Complete Step {currentPage.stepOrder}: {currentPage.title}</p><p className="mt-0.5 text-xs text-cyan-700">This is the existing HomeFlow page. Fill it out and save, or use Next step to record the remaining work and continue.</p></div><div className="p-2 sm:p-4"><EmbeddedSetupPage pageId={currentPage.id} /></div></div>
+          </div>
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between"><Button type="button" variant="outline" disabled={activeIndex === 0 || savingProgress} onClick={() => void goToStep(activeIndex - 1)} className="gap-2 border-slate-300"><ArrowLeft className="h-4 w-4" />Back</Button><div className="flex flex-col gap-2 sm:flex-row"><Button type="button" variant="outline" disabled={!currentPage.skippable || savingProgress || stepStateMutation.isPending} onClick={handleSkip} className="gap-2 border-slate-300">{currentPage.skipped ? "Resume step" : "Skip step"}<SkipForward className="h-4 w-4" /></Button><Button type="button" disabled={savingProgress || recordProgress.isPending} onClick={() => void goToStep(activeIndex + 1)} className="gap-2 bg-cyan-600 text-white hover:bg-cyan-700">{savingProgress ? "Saving progress…" : activeIndex === pages.length - 1 ? "Finish setup" : "Next step"}<ArrowRight className="h-4 w-4" /></Button></div></div>
         </>}

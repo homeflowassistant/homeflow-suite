@@ -150,6 +150,49 @@
   padding-right: 50px;
 }
 
+.integrations-input-readonly {
+  padding-right: 92px;
+  background: #f8fafc;
+  color: #475569;
+  cursor: default;
+}
+
+.integrations-copy-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.integrations-copy-btn:hover:not(:disabled) {
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+.integrations-copy-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.integrations-field-help {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .integrations-input-field:focus {
   border-color: #0284c7;
   box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
