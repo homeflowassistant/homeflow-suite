@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock3, Link2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./AddOnCampaignPage.css";
 
 // ─── Example image ───────────────────────────────────────────────────
@@ -167,6 +168,7 @@ export default function AddOnCampaignPage() {
               3. They approve and you schedule their service
             </p>
           </div>
+          <VideoHelpButton pageTitle="Add-On Campaign" videos={[{ title: "Set Up and Edit Add On Campaign Messages", youtubeId: "xek6VNHbPdw" }]} />
         </header>
 
         {/* ── LITE Info Card ── */}

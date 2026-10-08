@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./PricingPage.css";
 
 // ─── Shared types with the server ────────────────────────────────────
@@ -267,6 +268,7 @@ export default function PricingPage() {
       <div className="pricing-page-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
+          <VideoHelpButton pageTitle="Pricing" videos={[{ title: "Filling Out Pricing Section Guide", youtubeId: "agPFTQ5pJwI" }]} />
           <span className="pricing-required-hint">*required fields</span>
         </div>
         <button

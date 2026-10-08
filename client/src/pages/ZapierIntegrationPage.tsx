@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 
 const DEFAULT_INVITE_URL = "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
 const LOCATION_STORAGE_KEY = "homeflow:last-zapier-location-id";
@@ -425,6 +426,10 @@ export default function ZapierIntegrationPage(props: any = {}) {
   return (
     <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-bold text-slate-900">Zapier Integration</h1>
+          <VideoHelpButton pageTitle="Zapier Integration" videos={[{ title: "HomeFlow Assistant: Setting Up Homeflow Zapier Integration", youtubeId: "vhOby7llMB8" }]} />
+        </div>
         {!hideSweepGo && <>
         {/* ── Sweep & Go Integration Card (Top) ── */}
         <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">

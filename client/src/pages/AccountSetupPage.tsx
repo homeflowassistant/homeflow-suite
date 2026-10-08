@@ -58,6 +58,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 
 type AccountField =
   | "businessName"
@@ -502,9 +503,12 @@ export default function AccountSetupPage() {
       <div className="w-full max-w-none sm:max-w-3xl mx-auto space-y-6 pb-20">
         {/* Header */}
         <div className="text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200">
-          <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
-            Account Set Up
-          </h1>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
+              Account Set Up
+            </h1>
+            <VideoHelpButton pageTitle="Account Setup" videos={[{ title: "HomeFlow Assistant: Account Set Up Explanation", youtubeId: "Tb-Wi8ytbbo" }]} />
+          </div>
           <p className="text-[12px] text-slate-500 mt-1 px-4">
             Fill in your business details below.
           </p>

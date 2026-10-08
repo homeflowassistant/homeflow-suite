@@ -3,6 +3,7 @@ import { Clock3, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import ReactivationQuotePopup from "@/components/ReactivationQuotePopup";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./ReactivationPage.css";
 
 // ─── Example images (place these PNGs in /public) ─────────────────────
@@ -198,6 +199,7 @@ export default function ReactivationPage() {
                 3. They approve a quote and schedule an scoop
               </p>
             </div>
+            <VideoHelpButton pageTitle="Reactivation" videos={[{ title: "Reactivating Inactive Customers With Custom Quotes", youtubeId: "ZDnvQ9m5XTg" }]} />
           </div>
         </header>
 
