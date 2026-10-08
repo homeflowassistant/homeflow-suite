@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Save, Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./IntegrationsPage.css";
 
-const GOOGLE_DRIVE_VIDEO_PREVIEW_URL =
-  "https://drive.google.com/file/d/1pQIYOlpQTPqKQwFiPjgKyTEwhHA6DzOV/preview";
+const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/Pw4xD6HYqIo";
 
 function useLocationId() {
   return useMemo(() => {
@@ -79,6 +79,7 @@ export default function IntegrationsPage() {
         {/* ── Top Page Header ────────────────────────────────────────────── */}
         <div className="integrations-page-header">
           <h1 className="integrations-page-title">Integrations</h1>
+          <VideoHelpButton pageTitle="Sweep & Go Integration" videos={[{ title: "HomeFlow Assistant: Sweep and Go Webhook Setup Guide", youtubeId: "Pw4xD6HYqIo" }]} />
         </div>
 
         {/* ── Top Video Tutorial Section ─────────────────────────────────── */}
@@ -98,7 +99,7 @@ export default function IntegrationsPage() {
 
             <div className="integrations-video-wrapper">
               <iframe
-                src={GOOGLE_DRIVE_VIDEO_PREVIEW_URL}
+                src={SWEEP_AND_GO_VIDEO_URL}
                 className="integrations-video-iframe"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen

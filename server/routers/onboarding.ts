@@ -224,23 +224,13 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
     id: "integrations",
     stepOrder: 7,
     title: "Integrations",
-    description: "Complete the connection required by the selected workflow and review provider status.",
+    description: "Complete the Sweep & Go connection and configure the optional Zapier connection in one place.",
     route: "/integrations",
     required: true,
     requirements: [
       customValue("integration-webhook", "HomeFlow Webhook URL", ["homeflow_webhook"]),
       customValue("integration-access-token", "Sweep & Go Access Token", ["sg_authorization_key_access_token"]),
     ],
-  },
-  {
-    id: "zapier",
-    stepOrder: 8,
-    title: "Zapier Integration",
-    description: "Optional Zapier connection and custom-trigger workflow setup.",
-    route: "/integrations",
-    required: false,
-    skippable: true,
-    requirements: [],
   },
 ];
 

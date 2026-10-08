@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
 import SGLinkPopup from "@/components/SGLinkPopup";
+import VideoHelpButton from "@/components/VideoHelpButton";
 // Example images served from /public via Vite
 const EXAMPLE_EMAIL = "/lite.png";
 const EXAMPLE_SG_ONBOARDING = "/S&G.png";
@@ -385,6 +386,13 @@ export default function RequestScheduling() {
                 3. They approve a quote and you schedule a scope.
               </p>
             </div>
+            <VideoHelpButton
+              pageTitle="Follow Up"
+              videos={[
+                { title: "HomeFlow Assistant: Set Up Your Follow Up Sequence Options", youtubeId: "N-SBwLPcLwI" },
+                { title: "HomeFlow Assistant: Set Up Custom Quote and Terms", youtubeId: "cUO_OOIi7h8", description: "Use this walkthrough when the Custom Quote & Link option is selected." },
+              ]}
+            />
           </div>
           <div className="rs-page-icon">
             <Sparkles className="h-6 w-6 text-primary" />

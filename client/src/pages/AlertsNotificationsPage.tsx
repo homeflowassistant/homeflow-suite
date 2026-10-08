@@ -3,6 +3,7 @@ import { Save, Check, Copy, X, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { CustomVariablePicker } from "@/components/CustomVariablePicker";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./AlertsNotificationsPage.css";
 
 // Dynamic merge tag helpers for the modal
@@ -402,6 +403,7 @@ export default function AlertsNotificationsPage() {
       <div className="alerts-page-header">
         <div>
           <h1 className="alerts-page-title">Alerts & Notifications</h1>
+          <VideoHelpButton pageTitle="Alerts & Notifications" videos={[{ title: "Customize Customer and Team Notification Alerts", youtubeId: "WWpqJc8t0lE" }]} />
         </div>
         <button
           type="button"

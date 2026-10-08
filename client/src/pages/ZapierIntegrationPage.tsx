@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import VideoHelpButton from "@/components/VideoHelpButton";
 
 const DEFAULT_INVITE_URL = "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
 const LOCATION_STORAGE_KEY = "homeflow:last-zapier-location-id";
-const SWEEP_GO_VIDEO_URL = "https://drive.google.com/file/d/1pQIYOlpQTPqKQwFiPjgKyTEwhHA6DzOV/preview";
+const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/Pw4xD6HYqIo";
+const ZAPIER_VIDEO_URL = "https://www.youtube.com/embed/vhOby7llMB8";
 
 type ZapierConnectionResponse = {
   success: boolean;
@@ -107,7 +109,12 @@ function useLocationId() {
   }, []);
 }
 
-export default function ZapierIntegrationPage() {
+type ZapierIntegrationPageProps = {
+  hideSweepGo?: boolean;
+};
+
+export default function ZapierIntegrationPage(props: any = {}) {
+  const hideSweepGo = Boolean((props as ZapierIntegrationPageProps).hideSweepGo);
   const locationId = useLocationId();
   const [copiedKey, setCopiedKey] = useState(false);
   const [zapCreateUrl, setZapCreateUrl] = useState("");
@@ -419,6 +426,11 @@ export default function ZapierIntegrationPage() {
   return (
     <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-bold text-slate-900">Zapier Integration</h1>
+          <VideoHelpButton pageTitle="Zapier Integration" videos={[{ title: "HomeFlow Assistant: Setting Up Homeflow Zapier Integration", youtubeId: "vhOby7llMB8" }]} />
+        </div>
+        {!hideSweepGo && <>
         {/* ── Sweep & Go Integration Card (Top) ── */}
         <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">
           <div className="flex items-center gap-3 mb-6">
@@ -516,7 +528,7 @@ export default function ZapierIntegrationPage() {
               <h3 className="text-xs font-semibold text-slate-800">How to connect Sweep & Go</h3>
               <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
                 <iframe
-                  src={SWEEP_GO_VIDEO_URL}
+                  src={SWEEP_AND_GO_VIDEO_URL}
                   className="w-full h-full border-none"
                   allow="autoplay; encrypted-media; picture-in-picture"
                   allowFullScreen
@@ -529,6 +541,7 @@ export default function ZapierIntegrationPage() {
             </div>
           </div>
         </Card>
+        </>}
 
 
         {/* ── 2. Zapier Integration Outer Card ── */}
@@ -554,7 +567,7 @@ export default function ZapierIntegrationPage() {
                 <h3 className="text-sm font-semibold text-slate-900">What is Zapier + when to use it</h3>
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
                   <iframe
-                    src={SWEEP_GO_VIDEO_URL}
+                  src={ZAPIER_VIDEO_URL}
                     className="w-full h-full border-none"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
