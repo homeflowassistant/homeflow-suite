@@ -199,7 +199,7 @@ export default function ReactivationPage() {
                 3. They approve a quote and schedule an scoop
               </p>
             </div>
-            <VideoHelpButton pageTitle="Reactivation" videos={[{ title: "Reactivating Inactive Customers With Custom Quotes", youtubeId: "ZDnvQ9m5XTg" }]} />
+            <VideoHelpButton pageTitle="Reactivation" videos={[{ title: "Reactivating Inactive Customers With Custom Quotes", youtubeId: "9eKcX8Dbzrs" }]} />
           </div>
         </header>
 

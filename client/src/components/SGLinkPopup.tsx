@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Play, Copy, ExternalLink, Save, Loader2 } from "lucide-react";
 
-const YOUTUBE_VIDEO_URL = "https://www.youtube.com/embed/Y1BzphlS07g";
+const YOUTUBE_VIDEO_URL = "https://www.youtube.com/embed/5CySgZYJ7Qk";
 
 const INSTRUCTIONS = [
   {
@@ -161,8 +161,8 @@ export default function SGLinkPopup({
             Sweep & Go Base Onboarding Link
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Watch the video below to learn how to find your base onboarding
-            link, then paste it in the field below.
+            Watch the video below to learn how to set up your client portal and
+            offers, then paste your base onboarding link in the field below.
           </DialogDescription>
         </div>
 
@@ -176,7 +176,7 @@ export default function SGLinkPopup({
                 <div className="aspect-video w-full">
                   <iframe
                     src={YOUTUBE_VIDEO_URL}
-                    title="How to find your base onboarding link"
+                    title="Setting Up Client Portal and Offers"
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen

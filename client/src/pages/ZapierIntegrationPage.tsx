@@ -9,8 +9,8 @@ import VideoHelpButton from "@/components/VideoHelpButton";
 
 const DEFAULT_INVITE_URL = "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
 const LOCATION_STORAGE_KEY = "homeflow:last-zapier-location-id";
-const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/Pw4xD6HYqIo";
-const ZAPIER_VIDEO_URL = "https://www.youtube.com/embed/vhOby7llMB8";
+const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
+const ZAPIER_VIDEO_URL = "https://www.youtube.com/embed/yDa_zUC2T8c";
 
 type ZapierConnectionResponse = {
   success: boolean;
@@ -428,7 +428,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
       <div className="ghl-inner space-y-8">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold text-slate-900">Zapier Integration</h1>
-          <VideoHelpButton pageTitle="Zapier Integration" videos={[{ title: "HomeFlow Assistant: Setting Up Homeflow Zapier Integration", youtubeId: "vhOby7llMB8" }]} />
+          <VideoHelpButton pageTitle="Zapier Integration" videos={[{ title: "Setting Up HomeFlow Zapier Integration", youtubeId: "yDa_zUC2T8c" }]} />
         </div>
         {!hideSweepGo && <>
         {/* ── Sweep & Go Integration Card (Top) ── */}

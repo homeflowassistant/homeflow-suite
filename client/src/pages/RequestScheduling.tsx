@@ -389,8 +389,9 @@ export default function RequestScheduling() {
             <VideoHelpButton
               pageTitle="Follow Up"
               videos={[
-                { title: "HomeFlow Assistant: Set Up Your Follow Up Sequence Options", youtubeId: "N-SBwLPcLwI" },
-                { title: "HomeFlow Assistant: Set Up Custom Quote and Terms", youtubeId: "cUO_OOIi7h8", description: "Use this walkthrough when the Custom Quote & Link option is selected." },
+                { title: "Set Up Your Follow Up Sequence Options", youtubeId: "z4ApGBizwV8" },
+                { title: "Set Up Custom Quote", youtubeId: "WgOllP4SBIo", description: "Use this walkthrough when the Custom Quote & Link option is selected." },
+                { title: "Setting Up Client Portal and Offers", youtubeId: "5CySgZYJ7Qk", description: "Use this walkthrough to configure the client-facing portal and offers." },
               ]}
             />
           </div>

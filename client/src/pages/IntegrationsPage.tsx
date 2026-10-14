@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import "./IntegrationsPage.css";
 
-const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/Pw4xD6HYqIo";
+const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
 
 function useLocationId() {
   return useMemo(() => {
@@ -79,7 +79,7 @@ export default function IntegrationsPage() {
         {/* ── Top Page Header ────────────────────────────────────────────── */}
         <div className="integrations-page-header">
           <h1 className="integrations-page-title">Integrations</h1>
-          <VideoHelpButton pageTitle="Sweep & Go Integration" videos={[{ title: "HomeFlow Assistant: Sweep and Go Webhook Setup Guide", youtubeId: "Pw4xD6HYqIo" }]} />
+          <VideoHelpButton pageTitle="Sweep & Go Integration" videos={[{ title: "Sweep and Go Webhook Setup Guide", youtubeId: "J7q-qJZ1xxU" }]} />
         </div>
 
         {/* ── Top Video Tutorial Section ─────────────────────────────────── */}

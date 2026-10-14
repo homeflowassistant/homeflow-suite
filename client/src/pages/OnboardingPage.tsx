@@ -134,15 +134,15 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
     case "account-setup":
       return <OnboardingTutorial title="HomeFlow Assistant: Account Set Up Explanation" youtubeId="Tb-Wi8ytbbo" />;
     case "pricing":
-      return <OnboardingTutorial title="Filling Out Pricing Section Guide" youtubeId="agPFTQ5pJwI" />;
+      return <OnboardingTutorial title="Filling Out Pricing Section Guide" youtubeId="UOhfOagLc1o" />;
     case "request-scheduling":
-      return <div className="space-y-4"><OnboardingTutorial title="HomeFlow Assistant: Set Up Your Follow Up Sequence Options" youtubeId="N-SBwLPcLwI" /><OnboardingTutorial title="HomeFlow Assistant: Set Up Custom Quote and Terms" youtubeId="cUO_OOIi7h8" description="Use this additional walkthrough when the Custom Quote & Link option is selected." /></div>;
+      return <div className="space-y-4"><OnboardingTutorial title="Set Up Your Follow Up Sequence Options" youtubeId="z4ApGBizwV8" /><OnboardingTutorial title="Set Up Custom Quote" youtubeId="WgOllP4SBIo" description="Use this additional walkthrough when the Custom Quote & Link option is selected." /><OnboardingTutorial title="Setting Up Client Portal and Offers" youtubeId="5CySgZYJ7Qk" description="Use this walkthrough to configure the client-facing portal and offers." /></div>;
     case "reactivation":
-      return <OnboardingTutorial title="Reactivating Inactive Customers With Custom Quotes" youtubeId="ZDnvQ9m5XTg" />;
+      return <OnboardingTutorial title="Reactivating Inactive Customers With Custom Quotes" youtubeId="9eKcX8Dbzrs" />;
     case "add-on-campaign":
-      return <OnboardingTutorial title="Set Up and Edit Add On Campaign Messages" youtubeId="xek6VNHbPdw" />;
+      return <OnboardingTutorial title="Set Up and Edit Add-On Campaign Messages" youtubeId="9LX1BaEtkV0" />;
     case "alerts-notifications":
-      return <OnboardingTutorial title="Customize Customer and Team Notification Alerts" youtubeId="WWpqJc8t0lE" />;
+      return <OnboardingTutorial title="Customize Customer and Team Notification Alerts" youtubeId="EMm8cAp1ZuI" />;
     default:
       return null;
   }

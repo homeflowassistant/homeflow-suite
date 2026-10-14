@@ -268,7 +268,7 @@ export default function PricingPage() {
       <div className="pricing-page-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
-          <VideoHelpButton pageTitle="Pricing" videos={[{ title: "Filling Out Pricing Section Guide", youtubeId: "agPFTQ5pJwI" }]} />
+          <VideoHelpButton pageTitle="Pricing" videos={[{ title: "Filling Out Pricing Section Guide", youtubeId: "UOhfOagLc1o" }]} />
           <span className="pricing-required-hint">*required fields</span>
         </div>
         <button

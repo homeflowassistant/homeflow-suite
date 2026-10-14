@@ -168,7 +168,7 @@ export default function AddOnCampaignPage() {
               3. They approve and you schedule their service
             </p>
           </div>
-          <VideoHelpButton pageTitle="Add-On Campaign" videos={[{ title: "Set Up and Edit Add On Campaign Messages", youtubeId: "xek6VNHbPdw" }]} />
+          <VideoHelpButton pageTitle="Add-On Campaign" videos={[{ title: "Set Up and Edit Add-On Campaign Messages", youtubeId: "9LX1BaEtkV0" }]} />
         </header>
 
         {/* ── LITE Info Card ── */}

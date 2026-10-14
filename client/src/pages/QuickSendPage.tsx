@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CSVUploadFlow from "@/components/CSVUploadFlow";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import "./QuickSendPage.css";
 
 // ─── Merge Fields ────────────────────────────────────────────────────
@@ -589,7 +590,10 @@ export default function QuickSendPage() {
       <div className="qs-shell">
         {/* ── Page Header ── */}
         <header className="qs-page-header">
-          <h1 className="qs-main-title">Quick Send</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="qs-main-title">Quick Send</h1>
+            <VideoHelpButton pageTitle="Quick Send" videos={[{ title: "Send Quick Send Messages to Clients", youtubeId: "n4q2Bm7g0wk" }]} />
+          </div>
           <p className="qs-description">
             Quick Send lets you send a one-time text message to customers.
             Perfect for promoting add-ons, seasonal reminders, referral offers,

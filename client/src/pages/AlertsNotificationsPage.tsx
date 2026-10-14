@@ -403,7 +403,7 @@ export default function AlertsNotificationsPage() {
       <div className="alerts-page-header">
         <div>
           <h1 className="alerts-page-title">Alerts & Notifications</h1>
-          <VideoHelpButton pageTitle="Alerts & Notifications" videos={[{ title: "Customize Customer and Team Notification Alerts", youtubeId: "WWpqJc8t0lE" }]} />
+          <VideoHelpButton pageTitle="Alerts & Notifications" videos={[{ title: "Customize Customer and Team Notification Alerts", youtubeId: "EMm8cAp1ZuI" }]} />
         </div>
         <button
           type="button"
