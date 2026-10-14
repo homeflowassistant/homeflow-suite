@@ -316,6 +316,7 @@ export const reactivationRouter = router({
           businessLogo: get(CV.businessLogo) || get(CV.companyLogo),
           businessName: get(CV.businessName) || get(CV.companyName),
           businessOwnerName: get(CV.businessOwnerName),
+          quoteTitle: get(CV.quoteTitle),
           // Bio is read from company_description (primary source)
           bioText: get(CV.companyDescription),
           companyImage: get(CV.companyImage),
