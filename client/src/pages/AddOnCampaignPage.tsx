@@ -159,7 +159,7 @@ export default function AddOnCampaignPage() {
     <div className="aoc-main">
       <div className="aoc-shell">
         {/* ── Page Header ── */}
-        <header className="aoc-page-header">
+        <header className="aoc-page-header homeflow-sticky-header">
           <div className="flex items-center justify-between gap-3">
             <h1 className="aoc-main-title">Add-On Campaign</h1>
             <TopSaveButton
@@ -372,18 +372,6 @@ export default function AddOnCampaignPage() {
             </div>
           </div>
         </section>
-
-        {/* ── Save Settings Bar ── */}
-        <div className="aoc-save-bar">
-          <button
-            type="button"
-            className="aoc-save-btn"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving…" : "Save Settings"}
-          </button>
-        </div>
       </div>
     </div>
   );

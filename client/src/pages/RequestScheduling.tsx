@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CheckCircle2,
-  Link2,
-  Clock3,
-  Sparkles,
-  Star,
-  Save,
-} from "lucide-react";
+import { CheckCircle2, Link2, Clock3, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -360,7 +353,7 @@ export default function RequestScheduling() {
   return (
     <div className="rs-main">
       <div className="rs-shell">
-        <header className="rs-page-header">
+        <header className="rs-page-header homeflow-sticky-header">
           <div>
             <p className="rs-page-label">Lead Follow-Up Options</p>
             <h1 className="rs-page-title">How it works</h1>
@@ -497,22 +490,6 @@ export default function RequestScheduling() {
             })}
           </div>
         </section>
-
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => void handleSavePage()}
-            disabled={
-              saveLeadOptionMutation.isPending ||
-              saveTimingMutation.isPending ||
-              locationSettingsQuery.isLoading
-            }
-          >
-            <Save className="h-4 w-4" />
-            {timingSaveStatus === "saving" ? "Saving..." : "Save"}
-          </button>
-        </div>
 
         <section className="rs-card rs-scheduling-section">
           <div className="rs-section-heading">

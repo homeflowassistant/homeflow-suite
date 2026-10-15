@@ -8,7 +8,6 @@ import {
   EyeOff,
   Link2,
   RefreshCw,
-  Save,
   ShieldCheck,
   Zap,
 } from "lucide-react";
@@ -516,16 +515,18 @@ export default function ZapierIntegrationPage(props: any = {}) {
   return (
     <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className="homeflow-sticky-header flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-slate-900">
               Zapier Integration
             </h1>
-            <TopSaveButton
-              onClick={() => void handleSaveSweepGo()}
-              isSaving={isSavingSweepGo}
-              label="Save"
-            />
+            {!hideSweepGo && (
+              <TopSaveButton
+                onClick={() => void handleSaveSweepGo()}
+                isSaving={isSavingSweepGo}
+                label="Save"
+              />
+            )}
           </div>
           <VideoHelpButton
             pageTitle="Zapier Integration"
@@ -663,18 +664,6 @@ export default function ZapierIntegrationPage(props: any = {}) {
                         )}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      type="button"
-                      onClick={handleSaveSweepGo}
-                      disabled={isSavingSweepGo}
-                      className="bg-sky-600 hover:bg-sky-700 text-white font-semibold gap-2 px-5 h-9 text-xs rounded-lg shadow-sm"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      {isSavingSweepGo ? "Saving..." : "Save"}
-                    </Button>
                   </div>
                 </div>
 

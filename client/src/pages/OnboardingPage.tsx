@@ -484,7 +484,7 @@ export default function OnboardingPage() {
   return (
     <div className="ghl-page bg-slate-50/70 pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
-        <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <header className="homeflow-sticky-header rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               Onboarding

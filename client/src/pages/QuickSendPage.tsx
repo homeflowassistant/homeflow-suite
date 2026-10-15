@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Link2,
-  Save,
   Loader2,
   ChevronDown,
   Search,
@@ -590,7 +589,7 @@ export default function QuickSendPage() {
     <div className="qs-main">
       <div className="qs-shell">
         {/* ── Page Header ── */}
-        <header className="qs-page-header">
+        <header className="qs-page-header homeflow-sticky-header">
           <div className="flex items-center justify-between gap-3">
             <h1 className="qs-main-title">Quick Send</h1>
             <TopSaveButton
@@ -670,34 +669,6 @@ export default function QuickSendPage() {
               >
                 <ChevronDown size={14} />
                 Choose Value
-              </button>
-            </div>
-
-            {/* Save Button */}
-            <div className="qs-save-bar">
-              <button
-                type="button"
-                className="qs-save-btn"
-                onClick={() => {
-                  if (!message.trim()) {
-                    showToast("Please enter a message before saving.", true);
-                    return;
-                  }
-                  setShowModal(true);
-                }}
-                disabled={isSaving || saveMutation.isPending}
-              >
-                {isSaving || saveMutation.isPending ? (
-                  <>
-                    <Loader2 className="qs-spinner" size={18} />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Save and Send to...
-                  </>
-                )}
               </button>
             </div>
           </div>

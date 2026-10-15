@@ -529,3 +529,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 2px 12px;
 }
+
+/* Shared page header behavior. Popup headers and popup Save buttons do not use this class. */
+.homeflow-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  isolation: isolate;
+  background: color-mix(in oklch, var(--background) 96%, transparent);
+  backdrop-filter: blur(10px);
+}

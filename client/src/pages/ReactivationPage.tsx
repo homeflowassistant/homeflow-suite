@@ -187,7 +187,7 @@ export default function ReactivationPage() {
     <div className="rs-main reac-page">
       <div className="rs-shell reac-shell">
         {/* ── Page Header ── */}
-        <header className="rs-page-header reac-page-header">
+        <header className="rs-page-header reac-page-header homeflow-sticky-header">
           <div className="flex w-full items-start justify-between gap-3">
             <div>
               <h1 className="reac-main-title">Reactivation</h1>
@@ -434,18 +434,6 @@ export default function ReactivationPage() {
             </div>
           </div>
         </section>
-
-        {/* ── Save Settings Bar ── */}
-        <div className="reac-save-bar">
-          <button
-            type="button"
-            className="reac-save-btn"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving…" : "Save Settings"}
-          </button>
-        </div>
       </div>
 
       {/* Reactivation Custom Quote Popup (Dedicated Reactivation Clone) */}

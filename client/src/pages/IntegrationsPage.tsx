@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Save, Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
@@ -86,7 +86,7 @@ export default function IntegrationsPage() {
     <div className="integrations-page-shell">
       <div className="integrations-page-container">
         {/* ── Top Page Header ────────────────────────────────────────────── */}
-        <div className="integrations-page-header">
+        <div className="integrations-page-header homeflow-sticky-header">
           <div className="flex items-center gap-3">
             <h1 className="integrations-page-title">Integrations</h1>
             <TopSaveButton
@@ -230,18 +230,6 @@ export default function IntegrationsPage() {
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div className="integrations-bottom-actions">
-              <button
-                type="button"
-                className="integrations-save-btn"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save"}
-              </button>
             </div>
           </div>
         </section>

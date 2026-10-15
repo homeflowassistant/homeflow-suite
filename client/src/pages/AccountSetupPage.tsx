@@ -50,7 +50,6 @@ import {
   CheckCircle2,
   Loader2,
   BadgeCheck,
-  Save,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -497,17 +496,6 @@ export default function AccountSetupPage() {
     [settingsQuery.data]
   );
 
-  const unsavedFields = useMemo(() => {
-    // Nothing is unsaved until the initial GHL load has completed — until
-    // then we don't know the stored baseline.
-    if (!savedValues) return [] as AccountField[];
-    return FIELDS.filter(
-      meta =>
-        (values[meta.key] ?? "") !==
-        (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
-    ).map(meta => meta.key);
-  }, [values, savedValues]);
-
   const handleSaveAll = useCallback(async () => {
     if (!locationId) return;
     if (saveFieldMutation.isPending || logoUploading) return;
@@ -594,7 +582,7 @@ export default function AccountSetupPage() {
       {/* Extra bottom clearance keeps the Save action fully reachable inside the GHL iframe. */}
       <div className="w-full max-w-none sm:max-w-3xl mx-auto space-y-6 pb-20">
         {/* Header */}
-        <div className="text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200">
+        <div className="homeflow-sticky-header text-center py-2 bg-blue-100/70 rounded-lg border border-blue-200">
           <div className="flex items-center justify-center gap-3">
             <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
               Account Set Up
@@ -771,40 +759,6 @@ export default function AccountSetupPage() {
             </div>
           );
         })}
-
-        {/* Manual Save button — bottom action area, same pattern as the
-            other settings pages (e.g. Integrations). Auto-save on typing is
-            still active, so the button is a convenience / consistency
-            affordance: one click guarantees every field is in GHL. */}
-        <div className="flex flex-col items-center gap-2 py-3">
-          {unsavedFields.length > 0 && !isSavingAll && (
-            <p className="text-[11px] text-amber-600">
-              You have unsaved changes in {unsavedFields.length} field
-              {unsavedFields.length === 1 ? "" : "s"}. Click Save to sync them
-              to your sub-account.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={handleSaveAll}
-            disabled={
-              isSavingAll || saveFieldMutation.isPending || logoUploading
-            }
-            className="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSavingAll ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save size={16} />
-                Save
-              </>
-            )}
-          </button>
-        </div>
       </div>
     </div>
   );

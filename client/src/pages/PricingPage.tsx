@@ -328,7 +328,7 @@ export default function PricingPage() {
   return (
     <div className="pricing-page-shell">
       {/* ── Top page header ─────────────────────────────────────────── */}
-      <div className="pricing-page-header">
+      <div className="pricing-page-header homeflow-sticky-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
           <VideoHelpButton

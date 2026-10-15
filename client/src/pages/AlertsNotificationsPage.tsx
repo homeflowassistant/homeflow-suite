@@ -449,7 +449,7 @@ export default function AlertsNotificationsPage() {
   return (
     <div className="alerts-page-shell">
       {/* ── Top Page Header ────────────────────────────────────────────── */}
-      <div className="alerts-page-header">
+      <div className="alerts-page-header homeflow-sticky-header">
         <div>
           <h1 className="alerts-page-title">Alerts & Notifications</h1>
           <VideoHelpButton
