@@ -1363,6 +1363,12 @@ export async function updateCustomValuesOnInstall(
       },
       { name: "Initial Outreach Scheduling", value: "24 Hours" },
       { name: "follow_up_limit", value: "3" },
+      { name: "initial_clean_up_required_true_or_false", value: "True" },
+      { name: "notification_channel__pick_one_sms_email_call", value: "sms" },
+      {
+        name: "email_sending_subdomain_after_the_",
+        value: "@send.homeflowassistant.com",
+      },
       { name: "send_quote_automatically", value: "True" },
       { name: "onetime_line_item_price_1", value: "$0.00" },
       { name: "recurring_line_item_price_1", value: "$0.00" },

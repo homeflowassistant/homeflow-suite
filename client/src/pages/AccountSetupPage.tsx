@@ -82,6 +82,7 @@ type AccountField =
   | "onTheWayNotifications"
   | "jobCompletedNotifications"
   | "offScheduleNotifications"
+  | "notificationChannel"
   | "crmSelection";
 
 interface FieldMeta {
@@ -210,6 +211,18 @@ const FIELDS: FieldMeta[] = [
     icon: <Phone size={15} />,
   },
   {
+    key: "notificationChannel",
+    label: "Notification Channel",
+    placeholder: "Select a channel",
+    icon: <Bell size={15} />,
+    help: "Choose the channel used for customer notifications. SMS is the recommended default.",
+    options: [
+      { label: "SMS", value: "sms" },
+      { label: "Email", value: "email" },
+      { label: "Call", value: "call" },
+    ],
+  },
+  {
     key: "receiveNewLeadNotifications",
     label: "Receive New Lead Notifications",
     placeholder: "Select an option",
@@ -288,10 +301,11 @@ export default function AccountSetupPage() {
     stateTwoLetterAbbrev: "",
     internalNotificationsEmail: "",
     internalNotificationsPhone: "",
-    receiveNewLeadNotifications: "",
-    onTheWayNotifications: "",
-    jobCompletedNotifications: "",
-    offScheduleNotifications: "",
+    receiveNewLeadNotifications: "True",
+    onTheWayNotifications: "True",
+    jobCompletedNotifications: "True",
+    offScheduleNotifications: "True",
+    notificationChannel: "sms",
     crmSelection: "",
   });
   // Drives the conditional upload UI for the Business Logo field:
@@ -323,6 +337,7 @@ export default function AccountSetupPage() {
     onTheWayNotifications: "idle",
     jobCompletedNotifications: "idle",
     offScheduleNotifications: "idle",
+    notificationChannel: "idle",
     crmSelection: "idle",
   });
 
@@ -405,10 +420,11 @@ export default function AccountSetupPage() {
       stateTwoLetterAbbrev: s.stateTwoLetterAbbrev,
       internalNotificationsEmail: s.internalNotificationsEmail,
       internalNotificationsPhone: s.internalNotificationsPhone,
-      receiveNewLeadNotifications: s.receiveNewLeadNotifications,
-      onTheWayNotifications: s.onTheWayNotifications,
-      jobCompletedNotifications: s.jobCompletedNotifications,
-      offScheduleNotifications: s.offScheduleNotifications,
+      receiveNewLeadNotifications: s.receiveNewLeadNotifications || "True",
+      onTheWayNotifications: s.onTheWayNotifications || "True",
+      jobCompletedNotifications: s.jobCompletedNotifications || "True",
+      offScheduleNotifications: s.offScheduleNotifications || "True",
+      notificationChannel: s.notificationChannel || "sms",
       crmSelection: s.crmSelection,
     });
     setStoredLogo(s.businessLogo);
@@ -451,6 +467,7 @@ export default function AccountSetupPage() {
     onTheWayNotifications: null,
     jobCompletedNotifications: null,
     offScheduleNotifications: null,
+    notificationChannel: null,
     crmSelection: null,
   });
 
@@ -536,6 +553,7 @@ export default function AccountSetupPage() {
         onTheWayNotifications: "onTheWayNotifications",
         jobCompletedNotifications: "jobCompletedNotifications",
         offScheduleNotifications: "offScheduleNotifications",
+        notificationChannel: "notificationChannel",
         crmSelection: "crmSelection",
       }) as const
     )[field];
@@ -682,126 +700,143 @@ export default function AccountSetupPage() {
         {FIELDS.map(meta => {
           const status = saveStatus[meta.key];
           return (
-            <div
-              key={meta.key}
-              className="bg-card rounded-xl border border-border p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <Label
-                  htmlFor={meta.key}
-                  className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-                >
-                  <span className="text-blue-600">{meta.icon}</span>
-                  {meta.label}
-                </Label>
-                <StatusChip status={status} />
-              </div>
-              {meta.help && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="text-[11px] text-slate-400 italic mb-1.5 cursor-help flex items-center gap-1">
-                      <BadgeCheck size={11} />
-                      {meta.help}
-                    </p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">{meta.help}</p>
-                  </TooltipContent>
-                </Tooltip>
+            <div key={meta.key}>
+              {meta.key === "notificationChannel" && (
+                <div className="mb-2 rounded-xl border border-cyan-200 bg-cyan-50/70 p-4 shadow-sm">
+                  <h2 className="text-sm font-bold text-cyan-900">
+                    Customer Notifications (Sweep and Go Users Only)
+                  </h2>
+                  <p className="mt-1 text-xs leading-relaxed text-cyan-900/80">
+                    Select which notifications you&apos;d like Sweep and Go to
+                    automatically send your customers. We&apos;ll configure
+                    these settings for each customer we onboard on your behalf.
+                    These notifications are sent directly through Sweep and Go,
+                    not HomeFlow Assistant.
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-cyan-900">
+                    Available notifications: On the Way, Job Completed, and Off
+                    Schedule.
+                  </p>
+                </div>
               )}
-              {meta.options ? (
-                <select
-                  id={meta.key}
-                  value={values[meta.key]}
-                  onChange={e => handleValueChange(meta.key, e.target.value)}
-                  disabled={
-                    saveFieldMutation.isPending || settingsQuery.isLoading
-                  }
-                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">{meta.placeholder}</option>
-                  {meta.options.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : meta.isImage &&
-                meta.key === "businessLogo" &&
-                (!storedLogo || typedLogo === "") &&
-                !logoUploading ? (
-                /* File upload option — only visible while the custom value
+              <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <Label
+                    htmlFor={meta.key}
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span className="text-blue-600">{meta.icon}</span>
+                    {meta.label}
+                  </Label>
+                  <StatusChip status={status} />
+                </div>
+                {meta.help && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[11px] text-slate-400 italic mb-1.5 cursor-help flex items-center gap-1">
+                        <BadgeCheck size={11} />
+                        {meta.help}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">{meta.help}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {meta.options ? (
+                  <select
+                    id={meta.key}
+                    value={values[meta.key]}
+                    onChange={e => handleValueChange(meta.key, e.target.value)}
+                    disabled={
+                      saveFieldMutation.isPending || settingsQuery.isLoading
+                    }
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">{meta.placeholder}</option>
+                    {meta.options.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : meta.isImage &&
+                  meta.key === "businessLogo" &&
+                  (!storedLogo || typedLogo === "") &&
+                  !logoUploading ? (
+                  /* File upload option — only visible while the custom value
                    is empty. The chosen image is uploaded to the GHL Media
                    Library first, then the hosted URL is stored in BOTH
                    homeflow_business_logo and company_logo. */
-                <LogoUploadBox
-                  onUpload={async base64 => {
-                    if (!locationId) return;
-                    if (settingsQuery.isLoading || settingsQuery.isError) {
-                      toast.error(
-                        "Unable to verify your saved settings right now — please try again in a moment."
-                      );
-                      return;
-                    }
-                    setLogoUploading(true);
-                    dataSavedFieldRef.current = "businessLogo";
-                    setSaveStatus(prev => ({
-                      ...prev,
-                      businessLogo: "saving",
-                    }));
-                    try {
-                      const res = await saveFieldMutation.mutateAsync({
-                        locationId,
-                        field: "businessLogo",
-                        value: base64,
-                      });
-                      setStoredLogo(res.saved.value);
+                  <LogoUploadBox
+                    onUpload={async base64 => {
+                      if (!locationId) return;
+                      if (settingsQuery.isLoading || settingsQuery.isError) {
+                        toast.error(
+                          "Unable to verify your saved settings right now — please try again in a moment."
+                        );
+                        return;
+                      }
+                      setLogoUploading(true);
+                      dataSavedFieldRef.current = "businessLogo";
                       setSaveStatus(prev => ({
                         ...prev,
-                        businessLogo: "saved",
+                        businessLogo: "saving",
                       }));
-                      toast.success(
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 size={14} />
-                          Logo uploaded and saved — it will be used by your
-                          campaigns.
-                        </span>
-                      );
-                      settingsQuery.refetch();
-                    } catch (error) {
-                      const errorMsg =
-                        error instanceof Error
-                          ? error.message
-                          : "Unknown error";
-                      toast.error(`Error saving logo: ${errorMsg}`);
-                      setSaveStatus(prev => ({
-                        ...prev,
-                        businessLogo: "error",
-                      }));
-                    } finally {
-                      setLogoUploading(false);
+                      try {
+                        const res = await saveFieldMutation.mutateAsync({
+                          locationId,
+                          field: "businessLogo",
+                          value: base64,
+                        });
+                        setStoredLogo(res.saved.value);
+                        setSaveStatus(prev => ({
+                          ...prev,
+                          businessLogo: "saved",
+                        }));
+                        toast.success(
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 size={14} />
+                            Logo uploaded and saved — it will be used by your
+                            campaigns.
+                          </span>
+                        );
+                        settingsQuery.refetch();
+                      } catch (error) {
+                        const errorMsg =
+                          error instanceof Error
+                            ? error.message
+                            : "Unknown error";
+                        toast.error(`Error saving logo: ${errorMsg}`);
+                        setSaveStatus(prev => ({
+                          ...prev,
+                          businessLogo: "error",
+                        }));
+                      } finally {
+                        setLogoUploading(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <Input
+                    id={meta.key}
+                    type={meta.isUrl ? "url" : "text"}
+                    value={values[meta.key]}
+                    onChange={e => {
+                      if (meta.key === "businessLogo")
+                        setTypedLogo(e.target.value);
+                      handleValueChange(meta.key, e.target.value);
+                    }}
+                    disabled={
+                      saveFieldMutation.isPending ||
+                      settingsQuery.isLoading ||
+                      logoUploading
                     }
-                  }}
-                />
-              ) : (
-                <Input
-                  id={meta.key}
-                  type={meta.isUrl ? "url" : "text"}
-                  value={values[meta.key]}
-                  onChange={e => {
-                    if (meta.key === "businessLogo")
-                      setTypedLogo(e.target.value);
-                    handleValueChange(meta.key, e.target.value);
-                  }}
-                  disabled={
-                    saveFieldMutation.isPending ||
-                    settingsQuery.isLoading ||
-                    logoUploading
-                  }
-                  className="mt-1 h-9"
-                  placeholder={meta.placeholder}
-                />
-              )}
+                    className="mt-1 h-9"
+                    placeholder={meta.placeholder}
+                  />
+                )}
+              </div>
             </div>
           );
         })}

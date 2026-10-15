@@ -60,6 +60,7 @@ const accountSetupDataSchema = z.object({
   onTheWayNotifications: z.string().trim().max(20).optional(),
   jobCompletedNotifications: z.string().trim().max(20).optional(),
   offScheduleNotifications: z.string().trim().max(20).optional(),
+  notificationChannel: z.enum(["sms", "email", "call"]).optional(),
   crmSelection: z.string().trim().max(100).optional(),
 });
 
@@ -93,6 +94,7 @@ const FIELD_KEY_MAP: Record<keyof AccountSetupData, string[]> = {
   onTheWayNotifications: ["on_the_way_notifications_truefalse"],
   jobCompletedNotifications: ["job_completed_notifications_truefalse"],
   offScheduleNotifications: ["off_schedule_notifications_truefalse"],
+  notificationChannel: ["notification_channel__pick_one_sms_email_call"],
   crmSelection: ["confirmation_page_link"],
 };
 
@@ -117,6 +119,7 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
   "onTheWayNotifications",
   "jobCompletedNotifications",
   "offScheduleNotifications",
+  "notificationChannel",
   "crmSelection",
 ];
 
@@ -232,12 +235,16 @@ const getAccountSetupSettingsProcedure = publicProcedure
         internalNotificationsPhone:
           get("internal_notifications_phone_number") ||
           get("send_team_notification_phone"),
-        receiveNewLeadNotifications: get(
-          "receive_newlead_notifications_true_or_false"
-        ),
-        onTheWayNotifications: get("on_the_way_notifications_truefalse"),
-        jobCompletedNotifications: get("job_completed_notifications_truefalse"),
-        offScheduleNotifications: get("off_schedule_notifications_truefalse"),
+        receiveNewLeadNotifications:
+          get("receive_newlead_notifications_true_or_false") || "True",
+        onTheWayNotifications:
+          get("on_the_way_notifications_truefalse") || "True",
+        jobCompletedNotifications:
+          get("job_completed_notifications_truefalse") || "True",
+        offScheduleNotifications:
+          get("off_schedule_notifications_truefalse") || "True",
+        notificationChannel:
+          get("notification_channel__pick_one_sms_email_call") || "sms",
         crmSelection: get("confirmation_page_link"),
       };
     } catch (err) {
@@ -266,6 +273,7 @@ const getAccountSetupSettingsProcedure = publicProcedure
         onTheWayNotifications: empty(),
         jobCompletedNotifications: empty(),
         offScheduleNotifications: empty(),
+        notificationChannel: "sms",
         crmSelection: empty(),
       };
     }

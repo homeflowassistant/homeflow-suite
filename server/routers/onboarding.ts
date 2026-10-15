@@ -134,6 +134,39 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
   customValue("reactivation-offer", "Reactivation Campaign Offer", [
     "discountfree_offer_for_reengagement_campaigns",
   ]),
+  customValue("legal-business-name", "Legal Business Name", [
+    "legal_business_name",
+  ]),
+  customValue("business-address", "Business Address", ["business_address"]),
+  customValue("state-two-letter-abbrev", "Service State", [
+    "state_two_letter_abbrev",
+  ]),
+  customValue("internal-notifications-email", "Internal Notification Email", [
+    "internal_notifications_email",
+    "send_team_notification_email",
+  ]),
+  customValue("internal-notifications-phone", "Internal Notification Phone", [
+    "internal_notifications_phone_number",
+    "send_team_notification_phone",
+  ]),
+  customValue(
+    "receive-new-lead-notifications",
+    "Receive New Lead Notifications",
+    ["receive_newlead_notifications_true_or_false"]
+  ),
+  customValue("on-the-way-notifications", "On the Way Notifications", [
+    "on_the_way_notifications_truefalse",
+  ]),
+  customValue("job-completed-notifications", "Job Completed Notifications", [
+    "job_completed_notifications_truefalse",
+  ]),
+  customValue("off-schedule-notifications", "Off Schedule Notifications", [
+    "off_schedule_notifications_truefalse",
+  ]),
+  customValue("notification-channel", "Notification Channel", [
+    "notification_channel__pick_one_sms_email_call",
+  ]),
+  customValue("crm-selection", "CRM Selection", ["confirmation_page_link"]),
 ];
 
 const FOLLOW_UP_VALUES: Requirement[] = [
