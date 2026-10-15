@@ -1010,7 +1010,7 @@ export default function ReactivationQuotePopup({
       tosLink: q.tosLink || "",
       offers: [
         {
-          name: q.offer2Title || "2 Weeks FREE",
+          name: q.offer2Title ?? "2 Weeks FREE",
           price: "$XX.XX",
           description: q.offer2Description || prev.offers[0]?.description || "",
           image: q.offer2Image || prev.offers[0]?.image || DEFAULT_DOG_PHOTO,
@@ -1062,8 +1062,8 @@ export default function ReactivationQuotePopup({
           quoteTitle: formData.bioTitle || undefined,
           bioText: formData.bioDescription || undefined,
           companyImage: formData.teamPhoto ?? undefined,
-          offer2Title: formData.offers[0]?.name || "2 Weeks FREE",
-          offer2Description: formData.offers[0]?.description || undefined,
+          offer2Title: formData.offers[0]?.name ?? "",
+          offer2Description: formData.offers[0]?.description ?? "",
           offer2Image: formData.offers[0]?.image ?? undefined,
           sendQuoteAutomatically: true,
           tosLink: formData.tosLink || "",

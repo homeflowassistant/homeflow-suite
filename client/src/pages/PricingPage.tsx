@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { Save, Loader2 } from "lucide-react";
+import { Copy, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
 import "./PricingPage.css";
 
 // ─── Shared types with the server ────────────────────────────────────
@@ -44,6 +45,68 @@ const INITIAL_DURATION_LINES = [
   "5 Months",
   "6 Months",
 ] as const;
+
+const PRICING_SECTION_INSTRUCTION =
+  "If this service is provided, replace the X's with your service pricing. Leave blank or enter: “Not Currently Offered” if the service isn’t currently offered. Please contact support if you need assistance.";
+
+const INITIAL_PRICING_TEMPLATES = {
+  "Charge by Bag":
+    "Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
+  "Charge by time since last scoop": [
+    "One week OR less (1 dog): $XX-$XX",
+    "Two weeks (1 dog): $XX-$XX",
+    "Three weeks (1 dog): $XX-$XX",
+    "One month (1 dog): $XX-$XX",
+    "Two months (1 dog): $XX-$XX",
+    "3-4 months (1 dog): $XX-$XX",
+    "5-6 months (1 dog): $XX-$XX",
+    "7-9 months (1 dog): $XX-$XX",
+    "10+ months (1 dog): $XX-$XX",
+  ].join("\n"),
+  "Charge flat rate":
+    "Initial service is XX when you sign up for recurring service",
+} as const;
+
+const ONE_TIME_PRICING_TEMPLATES = {
+  "Charge by Bag":
+    "One-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
+  "Charge by time since last scoop":
+    INITIAL_PRICING_TEMPLATES["Charge by time since last scoop"],
+  "Charge flat rate": "One-time service is a flat XX",
+} as const;
+
+function PricingTemplateButtons({
+  templates,
+  onApply,
+}: {
+  templates: Record<string, string>;
+  onApply: (value: string) => void;
+}) {
+  const applyTemplate = (value: string) => {
+    onApply(value);
+    void navigator.clipboard?.writeText(value).catch(() => undefined);
+  };
+
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-semibold text-slate-500">
+        Copy template:
+      </span>
+      {Object.entries(templates).map(([label, value]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => applyTemplate(value)}
+          className="inline-flex items-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-800 transition hover:bg-cyan-100"
+          title={`Copy ${label} template`}
+        >
+          <Copy className="h-3 w-3" />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // ─── Reusable building blocks ────────────────────────────────────────
 
@@ -268,7 +331,15 @@ export default function PricingPage() {
       <div className="pricing-page-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
-          <VideoHelpButton pageTitle="Pricing" videos={[{ title: "Filling Out Pricing Section Guide", youtubeId: "UOhfOagLc1o" }]} />
+          <VideoHelpButton
+            pageTitle="Pricing"
+            videos={[
+              {
+                title: "Filling Out Pricing Section Guide",
+                youtubeId: "UOhfOagLc1o",
+              },
+            ]}
+          />
           <span className="pricing-required-hint">*required fields</span>
         </div>
         <button
@@ -288,6 +359,11 @@ export default function PricingPage() {
         </div>
       ) : (
         <div className="pricing-page-content">
+          <OnboardingTutorial
+            title="Filling Out Pricing Section Guide"
+            youtubeId="UOhfOagLc1o"
+            description="Watch this walkthrough before entering your initial, one-time, and recurring pricing."
+          />
           {/* ── Section 1: Initial Service Pricing ─────────────────── */}
           <section className="pricing-section">
             <div className="pricing-card">
@@ -295,8 +371,7 @@ export default function PricingPage() {
                 Initial Service Pricing
               </h2>
               <p className="pricing-section-instruction">
-                If this service is provided, replace the X's with your service
-                pricing. Please contact support if you need assistance.
+                {PRICING_SECTION_INSTRUCTION}
               </p>
               <div className="pricing-grid-3">
                 {dogBoxes.map(dog => (
@@ -304,6 +379,10 @@ export default function PricingPage() {
                     <PawLabel>
                       {dog} Dog{dog > 1 ? "s" : ""}
                     </PawLabel>
+                    <PricingTemplateButtons
+                      templates={INITIAL_PRICING_TEMPLATES}
+                      onApply={value => updateInitialEntry(dog - 1, value)}
+                    />
                     <textarea
                       className="pricing-faq-textarea"
                       value={
@@ -330,8 +409,7 @@ export default function PricingPage() {
                 One-Time Service Pricing
               </h2>
               <p className="pricing-section-instruction">
-                If this service is provided, replace the X's with your service
-                pricing. Please contact support if you need assistance.
+                {PRICING_SECTION_INSTRUCTION}
               </p>
               <div className="pricing-grid-3">
                 {dogBoxes.map(dog => (
@@ -339,6 +417,10 @@ export default function PricingPage() {
                     <PawLabel>
                       {dog} Dog{dog > 1 ? "s" : ""}
                     </PawLabel>
+                    <PricingTemplateButtons
+                      templates={ONE_TIME_PRICING_TEMPLATES}
+                      onApply={value => updateOneTimeEntry(dog - 1, value)}
+                    />
                     <textarea
                       className="pricing-faq-textarea"
                       value={

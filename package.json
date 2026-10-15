@@ -13,7 +13,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "backfill:homeflow-defaults": "tsx scripts/backfill-homeflow-defaults.ts"
   },
   "dependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",

@@ -14,37 +14,37 @@ import {
 export const DEFAULT_ALERT_TEMPLATES = {
   autoReplyNewLeadEnabled: true,
   autoReplyNewLeadMessage:
-    "Thanks for contacting {{location.name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!",
+    "Thanks for contacting {{custom_values.company_name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!",
 
   autoReplyNewCustomerEnabled: true,
   autoReplyNewCustomerMessage:
-    "Thanks for signing up with {{location.name}}!\nWe look forward to keeping your yard clean and enjoyable year-round.",
+    "Thanks for signing up with {{custom_values.company_name}}!\nWe look forward to keeping your yard clean and enjoyable year-round.",
 
   teamNotifyNewLeadEnabled: true,
   teamNotifyNewLeadMessage:
-    "New Lead Received:\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nCity: {{address}}\nDogs: {{dogs}}\nFrequency: {{frequency}}\nGive them a call!",
+    "New Lead Received!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nGive them a call.",
 
   teamNotifyNewCustomerEnabled: true,
   teamNotifyNewCustomerMessage:
-    "New Customer Sign Up!\nName:\nPhone:\nEmail:\nCity:\n\nPlease assign the customer to a route",
+    "New Customer Sign Up!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nPlease assign them to a route.",
 
   teamNotifyPhone: "",
   teamNotifyEmail: "",
 
   failedPaymentNotifyEnabled: true,
   failedPaymentNotifyMessage:
-    "Hi John, we were unable to process your recent payment.\nTo avoid any interruption in service, please update your payment method using the secure link below:",
+    "Hi {{contact.first_name}}, we were unable to process your recent payment. To avoid any interruption in service, please update your payment method using the secure link below:\n{{custom_values.add_payment_link}}",
 
   skippedJobNotifyEnabled: true,
   skippedJobNotifyMessage:
-    "Hi John, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
+    "Hi {{contact.first_name}}, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
 
   subscriptionPausedNotifyEnabled: true,
   subscriptionPausedNotifyMessage:
-    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested.\nThank you for trusting {{location.name}}!",
+    "Hi {{contact.first_name}}, your service has been unpaused, and your recurring cleanups will resume starting next week as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
 
   subscriptionUnpausedNotifyMessage:
-    "Hi John, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{location.name}}!",
+    "Hi {{contact.first_name}}, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
 };
 
 /**
@@ -121,23 +121,21 @@ export type AlertsNotificationsSettings = z.infer<
  * sequences (two characters: backslash and n), rather than actual newline
  * characters.
  */
-export function formatCustomTextWithNewlines(text: string | undefined | null): string {
+export function formatCustomTextWithNewlines(
+  text: string | undefined | null
+): string {
   if (!text) return "";
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/\n/g, "\\n");
+  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\\n");
 }
 
 /**
  * Decodes GHL's stored literal "\\n" sequences for display in the editor.
  */
-export function parseCustomTextWithNewlines(text: string | undefined | null): string {
+export function parseCustomTextWithNewlines(
+  text: string | undefined | null
+): string {
   if (!text) return "";
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/\\n/g, "\n");
+  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\\n/g, "\n");
 }
 
 export const alertsNotificationsRouter = router({
@@ -145,35 +143,106 @@ export const alertsNotificationsRouter = router({
    * Fetch live Custom Values & Contact Custom Fields metadata for the tag picker.
    */
   getPickerVariables: publicProcedure
-    .input(z.object({ locationId: z.string().min(1, "Location ID is required") }))
+    .input(
+      z.object({ locationId: z.string().min(1, "Location ID is required") })
+    )
     .query(async ({ input }) => {
       const defaultDemoItems = {
         items: [
-          { id: "cv_1", source: "custom_value" as const, name: "Company Phone", fieldKey: "custom_values.company_phone", token: "{{custom_values.company_phone}}" },
-          { id: "cv_2", source: "custom_value" as const, name: "Auto-Reply New Lead Message", fieldKey: "autoreply_new_lead_message", token: "{{custom_values.autoreply_new_lead_message}}" },
-          { id: "cv_3", source: "custom_value" as const, name: "Auto-Reply New Customer Message", fieldKey: "autoreply_new_customer_message", token: "{{custom_values.autoreply_new_customer_message}}" },
-          { id: "cv_4", source: "custom_value" as const, name: "Team Notification Phone", fieldKey: "send_team_notification_phone", token: "{{custom_values.send_team_notification_phone}}" },
-          { id: "cv_5", source: "custom_value" as const, name: "Team Notification Email", fieldKey: "send_team_notification_email", token: "{{custom_values.send_team_notification_email}}" },
-          { id: "cf_1", source: "contact_custom_field" as const, name: "Dog Count", fieldKey: "contact.dog_count", token: "{{contact.dog_count}}", dataType: "NUMERIC" },
-          { id: "cf_2", source: "contact_custom_field" as const, name: "Service Frequency", fieldKey: "contact.service_frequency", token: "{{contact.service_frequency}}", dataType: "TEXT" },
-          { id: "cf_3", source: "contact_custom_field" as const, name: "Yard Access Code", fieldKey: "contact.yard_access_code", token: "{{contact.yard_access_code}}", dataType: "TEXT" },
-          { id: "cf_4", source: "contact_custom_field" as const, name: "Preferred Day", fieldKey: "contact.preferred_day", token: "{{contact.preferred_day}}", dataType: "SINGLE_OPTIONS" },
+          {
+            id: "cv_1",
+            source: "custom_value" as const,
+            name: "Company Phone",
+            fieldKey: "custom_values.company_phone",
+            token: "{{custom_values.company_phone}}",
+          },
+          {
+            id: "cv_2",
+            source: "custom_value" as const,
+            name: "Auto-Reply New Lead Message",
+            fieldKey: "autoreply_new_lead_message",
+            token: "{{custom_values.autoreply_new_lead_message}}",
+          },
+          {
+            id: "cv_3",
+            source: "custom_value" as const,
+            name: "Auto-Reply New Customer Message",
+            fieldKey: "autoreply_new_customer_message",
+            token: "{{custom_values.autoreply_new_customer_message}}",
+          },
+          {
+            id: "cv_4",
+            source: "custom_value" as const,
+            name: "Team Notification Phone",
+            fieldKey: "send_team_notification_phone",
+            token: "{{custom_values.send_team_notification_phone}}",
+          },
+          {
+            id: "cv_5",
+            source: "custom_value" as const,
+            name: "Team Notification Email",
+            fieldKey: "send_team_notification_email",
+            token: "{{custom_values.send_team_notification_email}}",
+          },
+          {
+            id: "cf_1",
+            source: "contact_custom_field" as const,
+            name: "Dog Count",
+            fieldKey: "contact.dog_count",
+            token: "{{contact.dog_count}}",
+            dataType: "NUMERIC",
+          },
+          {
+            id: "cf_2",
+            source: "contact_custom_field" as const,
+            name: "Service Frequency",
+            fieldKey: "contact.service_frequency",
+            token: "{{contact.service_frequency}}",
+            dataType: "TEXT",
+          },
+          {
+            id: "cf_3",
+            source: "contact_custom_field" as const,
+            name: "Yard Access Code",
+            fieldKey: "contact.yard_access_code",
+            token: "{{contact.yard_access_code}}",
+            dataType: "TEXT",
+          },
+          {
+            id: "cf_4",
+            source: "contact_custom_field" as const,
+            name: "Preferred Day",
+            fieldKey: "contact.preferred_day",
+            token: "{{contact.preferred_day}}",
+            dataType: "SINGLE_OPTIONS",
+          },
         ],
-        sourceStatus: { customValues: "success" as const, contactCustomFields: "success" as const },
+        sourceStatus: {
+          customValues: "success" as const,
+          contactCustomFields: "success" as const,
+        },
       };
 
-      if (!input.locationId || input.locationId === "preview" || input.locationId === "test-location") {
+      if (
+        !input.locationId ||
+        input.locationId === "preview" ||
+        input.locationId === "test-location"
+      ) {
         return defaultDemoItems;
       }
 
       try {
         const installation = await getInstallation(input.locationId);
         if (!installation) {
-          console.warn(`[AlertsNotifications] No installation record found for location: ${input.locationId}. Returning fallback picker variables.`);
+          console.warn(
+            `[AlertsNotifications] No installation record found for location: ${input.locationId}. Returning fallback picker variables.`
+          );
           return defaultDemoItems;
         }
 
-        const liveVariables = await getLocationPickerVariables(input.locationId);
+        const liveVariables = await getLocationPickerVariables(
+          input.locationId
+        );
         if (liveVariables.items && liveVariables.items.length > 0) {
           return liveVariables;
         }
@@ -220,7 +289,12 @@ export const alertsNotificationsRouter = router({
           const val = getValueForKeys(keys);
           if (!val) return fallback;
           const clean = val.trim().toLowerCase();
-          return clean === "on" || clean === "true" || clean === "1" || clean === "yes";
+          return (
+            clean === "on" ||
+            clean === "true" ||
+            clean === "1" ||
+            clean === "yes"
+          );
         };
 
         const parseStr = (keys: string[], fallback: string): string => {
@@ -233,7 +307,11 @@ export const alertsNotificationsRouter = router({
 
         return {
           autoReplyNewLeadEnabled: parseBool(
-            [CV_KEYS.autoReplyNewLeadEnabled, "autoreplies_to_new_leads", "auto_reply_new_lead_enabled"],
+            [
+              CV_KEYS.autoReplyNewLeadEnabled,
+              "autoreplies_to_new_leads",
+              "auto_reply_new_lead_enabled",
+            ],
             DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled
           ),
           autoReplyNewLeadMessage: parseMessage(
@@ -396,14 +474,30 @@ export const alertsNotificationsRouter = router({
       const { locationId, ...data } = input;
 
       // Formatted text message payloads with explicit '\n' line breaks preserved
-      const autoReplyNewLeadMessage = formatCustomTextWithNewlines(data.autoReplyNewLeadMessage);
-      const autoReplyNewCustomerMessage = formatCustomTextWithNewlines(data.autoReplyNewCustomerMessage);
-      const teamNotifyNewLeadMessage = formatCustomTextWithNewlines(data.teamNotifyNewLeadMessage);
-      const teamNotifyNewCustomerMessage = formatCustomTextWithNewlines(data.teamNotifyNewCustomerMessage);
-      const failedPaymentNotifyMessage = formatCustomTextWithNewlines(data.failedPaymentNotifyMessage);
-      const skippedJobNotifyMessage = formatCustomTextWithNewlines(data.skippedJobNotifyMessage);
-      const subscriptionPausedNotifyMessage = formatCustomTextWithNewlines(data.subscriptionPausedNotifyMessage);
-      const subscriptionUnpausedNotifyMessage = formatCustomTextWithNewlines(data.subscriptionUnpausedNotifyMessage);
+      const autoReplyNewLeadMessage = formatCustomTextWithNewlines(
+        data.autoReplyNewLeadMessage
+      );
+      const autoReplyNewCustomerMessage = formatCustomTextWithNewlines(
+        data.autoReplyNewCustomerMessage
+      );
+      const teamNotifyNewLeadMessage = formatCustomTextWithNewlines(
+        data.teamNotifyNewLeadMessage
+      );
+      const teamNotifyNewCustomerMessage = formatCustomTextWithNewlines(
+        data.teamNotifyNewCustomerMessage
+      );
+      const failedPaymentNotifyMessage = formatCustomTextWithNewlines(
+        data.failedPaymentNotifyMessage
+      );
+      const skippedJobNotifyMessage = formatCustomTextWithNewlines(
+        data.skippedJobNotifyMessage
+      );
+      const subscriptionPausedNotifyMessage = formatCustomTextWithNewlines(
+        data.subscriptionPausedNotifyMessage
+      );
+      const subscriptionUnpausedNotifyMessage = formatCustomTextWithNewlines(
+        data.subscriptionUnpausedNotifyMessage
+      );
 
       // Exact GHL Custom Value Key Mappings matching client requirements
       const customValuePayload: Record<string, string> = {
@@ -416,18 +510,31 @@ export const alertsNotificationsRouter = router({
         [CV_KEYS.teamNotifyEmail]: data.teamNotifyEmail,
         [CV_KEYS.failedPaymentNotifyMessage]: failedPaymentNotifyMessage,
         [CV_KEYS.skippedJobNotifyMessage]: skippedJobNotifyMessage,
-        [CV_KEYS.subscriptionPausedNotifyMessage]: subscriptionPausedNotifyMessage,
-        [CV_KEYS.subscriptionUnpausedNotifyMessage]: subscriptionUnpausedNotifyMessage,
+        [CV_KEYS.subscriptionPausedNotifyMessage]:
+          subscriptionPausedNotifyMessage,
+        [CV_KEYS.subscriptionUnpausedNotifyMessage]:
+          subscriptionUnpausedNotifyMessage,
 
         // Toggle States (On/Off Switches - saved as True/False as requested by client)
-        [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled ? "True" : "False",
-        [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled ? "True" : "False",
-        [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled ? "True" : "False",
-        [CV_KEYS.teamNotifyNewCustomerEnabled]: data.teamNotifyNewCustomerEnabled ? "True" : "False",
-        [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled ? "True" : "False",
-        [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled ? "True" : "False",
-        [CV_KEYS.subscriptionPausedNotifyEnabled]: data.subscriptionPausedNotifyEnabled ? "True" : "False",
-
+        [CV_KEYS.autoReplyNewLeadEnabled]: data.autoReplyNewLeadEnabled
+          ? "True"
+          : "False",
+        [CV_KEYS.autoReplyNewCustomerEnabled]: data.autoReplyNewCustomerEnabled
+          ? "True"
+          : "False",
+        [CV_KEYS.teamNotifyNewLeadEnabled]: data.teamNotifyNewLeadEnabled
+          ? "True"
+          : "False",
+        [CV_KEYS.teamNotifyNewCustomerEnabled]:
+          data.teamNotifyNewCustomerEnabled ? "True" : "False",
+        [CV_KEYS.failedPaymentNotifyEnabled]: data.failedPaymentNotifyEnabled
+          ? "True"
+          : "False",
+        [CV_KEYS.skippedJobNotifyEnabled]: data.skippedJobNotifyEnabled
+          ? "True"
+          : "False",
+        [CV_KEYS.subscriptionPausedNotifyEnabled]:
+          data.subscriptionPausedNotifyEnabled ? "True" : "False",
       };
 
       try {
@@ -445,27 +552,26 @@ export const alertsNotificationsRouter = router({
           [CV_KEYS.teamNotifyPhone, data.teamNotifyPhone],
         ] as const) {
           const ensured = await ensureGhlCustomValue(locationId, key, value);
-          if (ensured.id === "create_failed" || ensured.id === "skipped_not_found") {
-            throw new Error(`Unable to create or update required Custom Value '${key}'.`);
+          if (
+            ensured.id === "create_failed" ||
+            ensured.id === "skipped_not_found"
+          ) {
+            throw new Error(
+              `Unable to create or update required Custom Value '${key}'.`
+            );
           }
         }
 
         // Update each authoritative Custom Value once while preserving its
         // existing GHL display name. Missing fields are returned explicitly
         // so the page cannot report a false successful save.
-        const { missingKeys, failedKeys } = await updateExistingCustomValuesOnly(
-          locationId,
-          customValuePayload
-        );
+        const { missingKeys, failedKeys } =
+          await updateExistingCustomValuesOnly(locationId, customValuePayload);
 
         if (missingKeys.length > 0 || failedKeys.length > 0) {
           const details = [
-            missingKeys.length > 0
-              ? `missing: ${missingKeys.join(", ")}`
-              : "",
-            failedKeys.length > 0
-              ? `failed: ${failedKeys.join(", ")}`
-              : "",
+            missingKeys.length > 0 ? `missing: ${missingKeys.join(", ")}` : "",
+            failedKeys.length > 0 ? `failed: ${failedKeys.join(", ")}` : "",
           ]
             .filter(Boolean)
             .join("; ");

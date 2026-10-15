@@ -41,6 +41,8 @@ const CV = {
   // Follow-Up page writes: "Lite" | "SG-Link" | "Custom-Link"
   // Reactivation page writes: "Lite" | "Custom-Link"
   leadFollowupOptions: "lead_followup_options",
+  // Canonical Reactivation-only option key required by the client workflow.
+  reactivationOptions: "reactivation_options",
 
   // One-Time Service Outreach Scheduling — Reactivation-only key
   onetimeServiceScheduling: "onetime_service_reactivation_scheduling",
@@ -168,6 +170,7 @@ const saveCustomValuesSettingsProcedure = publicProcedure
 
     await updateExistingCustomValuesOnly(locationId, {
       [CV.leadFollowupOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
+      [CV.reactivationOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
       [CV.onetimeServiceScheduling]: input.onetimeTiming,
     });
 
@@ -236,9 +239,19 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         quote_title: d.quoteTitle ?? "",
         [CV.companyDescription]: d.bioText ?? "",
         [CV.companyImage]: companyImageUrl,
+        // Keep the existing lead keys and also populate the one-time and
+        // recurring keys consumed by the reactivation quote workflows. An
+        // explicit empty string is intentional and must remain empty so the
+        // optional sign-up offer can be omitted.
         leads_line_item_2: d.offer2Title ?? "2 Weeks FREE",
         leads_line_item_description_2: d.offer2Description ?? "",
         leads_line_item_image_2: offer2ImageUrl,
+        onetime_line_item_1: d.offer2Title ?? "2 Weeks FREE",
+        onetime_line_item_description_1: d.offer2Description ?? "",
+        onetime_line_item_image_1: offer2ImageUrl,
+        recurring_line_item_1: d.offer2Title ?? "2 Weeks FREE",
+        recurring_line_item_description_1: d.offer2Description ?? "",
+        recurring_line_item_image_1: offer2ImageUrl,
         discountfree_offer_for_reengagement_campaigns:
           d.offer2Title ?? "2 Weeks FREE",
         [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically
@@ -300,9 +313,24 @@ export const reactivationRouter = router({
         return result;
       };
 
+      const hasKey = (key: string): boolean => {
+        let found = false;
+        customValueMap.forEach((_entry, apiKey) => {
+          const norm = apiKey.toLowerCase().replace(/^location\./, "");
+          if (
+            norm === key.toLowerCase() ||
+            apiKey.toLowerCase() === key.toLowerCase()
+          ) {
+            found = true;
+          }
+        });
+        return found;
+      };
+
       // Derive the reactivation option from the shared lead_followup_options key.
       // Only "Lite" and "Custom-Link" are valid for this page.
-      const savedOption = get(CV.leadFollowupOptions);
+      const savedOption =
+        get(CV.reactivationOptions) || get(CV.leadFollowupOptions);
       let reactivationOption: ReactivationOption = "Lite";
       if (savedOption === "Custom-Link")
         reactivationOption = "Custom Quote & Link";
@@ -321,8 +349,12 @@ export const reactivationRouter = router({
           bioText: get(CV.companyDescription),
           companyImage: get(CV.companyImage),
           discountOffer: get(CV.discountOffer),
-          offer2Title:
-            get("leads_line_item_2") || get(CV.discountOffer) || "2 Weeks FREE",
+          offer2Title: (() => {
+            const savedOffer = hasKey("onetime_line_item_1")
+              ? get("onetime_line_item_1")
+              : get("leads_line_item_2") || get(CV.discountOffer);
+            return savedOffer === "" ? "" : savedOffer || "2 Weeks FREE";
+          })(),
           offer2Description: get("leads_line_item_description_2"),
           offer2Image: get("leads_line_item_image_2"),
           sendQuoteAutomatically: get(CV.sendQuoteAutomatically) !== "false",

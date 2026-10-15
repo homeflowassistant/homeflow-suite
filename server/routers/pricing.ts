@@ -795,7 +795,7 @@ export const pricingRouter = router({
             text: z.string(),
           })
         ),
-        crossSells: z.string(),
+        crossSells: z.string().optional().default(""),
       })
     )
     .mutation(async ({ input }) => {

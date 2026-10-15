@@ -44,6 +44,23 @@ const accountSetupDataSchema = z.object({
   facebookPageLink: z.string().trim().max(2000).optional(),
   leadCampaignOffer: z.string().trim().max(5000).optional(),
   reengagementOffer: z.string().trim().max(5000).optional(),
+  legalBusinessName: z.string().trim().max(500).optional(),
+  businessAddress: z.string().trim().max(1000).optional(),
+  stateTwoLetterAbbrev: z
+    .string()
+    .trim()
+    .refine(
+      value => value === "" || /^[A-Za-z]{2}$/.test(value),
+      "State must be a two-letter abbreviation."
+    )
+    .optional(),
+  internalNotificationsEmail: z.string().trim().max(500).optional(),
+  internalNotificationsPhone: z.string().trim().max(100).optional(),
+  receiveNewLeadNotifications: z.string().trim().max(20).optional(),
+  onTheWayNotifications: z.string().trim().max(20).optional(),
+  jobCompletedNotifications: z.string().trim().max(20).optional(),
+  offScheduleNotifications: z.string().trim().max(20).optional(),
+  crmSelection: z.string().trim().max(100).optional(),
 });
 
 export type AccountSetupData = z.infer<typeof accountSetupDataSchema>;
@@ -61,6 +78,22 @@ const FIELD_KEY_MAP: Record<keyof AccountSetupData, string[]> = {
   facebookPageLink: ["facebook_page_link"],
   leadCampaignOffer: ["discountfree_offer_for_lead_campaigns"],
   reengagementOffer: ["discountfree_offer_for_reengagement_campaigns"],
+  legalBusinessName: ["legal_business_name"],
+  businessAddress: ["business_address"],
+  stateTwoLetterAbbrev: ["state_two_letter_abbrev"],
+  internalNotificationsEmail: [
+    "internal_notifications_email",
+    "send_team_notification_email",
+  ],
+  internalNotificationsPhone: [
+    "internal_notifications_phone_number",
+    "send_team_notification_phone",
+  ],
+  receiveNewLeadNotifications: ["receive_newlead_notifications_true_or_false"],
+  onTheWayNotifications: ["on_the_way_notifications_truefalse"],
+  jobCompletedNotifications: ["job_completed_notifications_truefalse"],
+  offScheduleNotifications: ["off_schedule_notifications_truefalse"],
+  crmSelection: ["confirmation_page_link"],
 };
 
 // Order matters: logo upload is processed before the other text updates,
@@ -75,6 +108,16 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
   "facebookPageLink",
   "leadCampaignOffer",
   "reengagementOffer",
+  "legalBusinessName",
+  "businessAddress",
+  "stateTwoLetterAbbrev",
+  "internalNotificationsEmail",
+  "internalNotificationsPhone",
+  "receiveNewLeadNotifications",
+  "onTheWayNotifications",
+  "jobCompletedNotifications",
+  "offScheduleNotifications",
+  "crmSelection",
 ];
 
 /**
@@ -180,6 +223,22 @@ const getAccountSetupSettingsProcedure = publicProcedure
         facebookPageLink: get("facebook_page_link"),
         leadCampaignOffer: get("discountfree_offer_for_lead_campaigns"),
         reengagementOffer: get("discountfree_offer_for_reengagement_campaigns"),
+        legalBusinessName: get("legal_business_name"),
+        businessAddress: get("business_address"),
+        stateTwoLetterAbbrev: get("state_two_letter_abbrev"),
+        internalNotificationsEmail:
+          get("internal_notifications_email") ||
+          get("send_team_notification_email"),
+        internalNotificationsPhone:
+          get("internal_notifications_phone_number") ||
+          get("send_team_notification_phone"),
+        receiveNewLeadNotifications: get(
+          "receive_newlead_notifications_true_or_false"
+        ),
+        onTheWayNotifications: get("on_the_way_notifications_truefalse"),
+        jobCompletedNotifications: get("job_completed_notifications_truefalse"),
+        offScheduleNotifications: get("off_schedule_notifications_truefalse"),
+        crmSelection: get("confirmation_page_link"),
       };
     } catch (err) {
       console.warn(
@@ -198,6 +257,16 @@ const getAccountSetupSettingsProcedure = publicProcedure
         facebookPageLink: empty(),
         leadCampaignOffer: empty(),
         reengagementOffer: empty(),
+        legalBusinessName: empty(),
+        businessAddress: empty(),
+        stateTwoLetterAbbrev: empty(),
+        internalNotificationsEmail: empty(),
+        internalNotificationsPhone: empty(),
+        receiveNewLeadNotifications: empty(),
+        onTheWayNotifications: empty(),
+        jobCompletedNotifications: empty(),
+        offScheduleNotifications: empty(),
+        crmSelection: empty(),
       };
     }
   });

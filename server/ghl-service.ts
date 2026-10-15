@@ -136,8 +136,7 @@ export async function getLocationCustomValues(
 ): Promise<Record<string, unknown>[]> {
   const { accessToken } = await getAccessTokenAndInstallation(locationId);
   const response = await fetchJson<
-    | Record<string, unknown>
-    | Record<string, unknown>[]
+    Record<string, unknown> | Record<string, unknown>[]
   >(
     `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
     accessToken,
@@ -146,11 +145,11 @@ export async function getLocationCustomValues(
 
   if (Array.isArray(response)) return response;
 
-  return ((response.customValues ??
+  return (response.customValues ??
     response.custom_values ??
     response.values ??
     response.data ??
-    []) as Record<string, unknown>[]);
+    []) as Record<string, unknown>[];
 }
 
 async function getAccessTokenAndInstallation(locationId: string) {
@@ -229,8 +228,12 @@ export function resolveCustomValue(
         typeof c.fieldKey === "string" && c.fieldKey
           ? extractCustomValueKey(c.fieldKey)
           : undefined;
-      const k = unwrapped ?? (typeof c.fieldKey === "string" ? c.fieldKey : "") ?? "";
-      const n = (typeof c.name === "string" && c.name) || (typeof c.key === "string" ? c.key : "") || "";
+      const k =
+        unwrapped ?? (typeof c.fieldKey === "string" ? c.fieldKey : "") ?? "";
+      const n =
+        (typeof c.name === "string" && c.name) ||
+        (typeof c.key === "string" ? c.key : "") ||
+        "";
       const loKey = key.toLowerCase();
       return (
         k.toLowerCase() === loKey ||
@@ -435,7 +438,7 @@ export function findCustomValueId(
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (allNorms.some((n) => n.includes("unpaused"))) {
+    if (allNorms.some(n => n.includes("unpaused"))) {
       canonicalKeys.push(
         "custom_subscription_unpaused_message",
         "account_unpaused_message",
@@ -444,7 +447,7 @@ export function findCustomValueId(
       isSubscriptionCard = true;
     } else if (
       allNorms.some(
-        (n) =>
+        n =>
           n === "customsubscriptionpausedmessage" ||
           n === "custom_subscription_paused_message" ||
           n.includes("customsubscriptionpaused")
@@ -457,7 +460,7 @@ export function findCustomValueId(
       isSubscriptionCard = true;
     } else if (
       allNorms.some(
-        (n) =>
+        n =>
           n === "subscriptionpausedmessage" ||
           n === "subscription_paused_message" ||
           (n.includes("subscriptionpaused") && !n.includes("custom"))
@@ -472,8 +475,12 @@ export function findCustomValueId(
 
     return [
       ...canonicalKeys,
-      !isSubscriptionCard && typeof unwrapped === "string" ? unwrapped : undefined,
-      !isSubscriptionCard && typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      !isSubscriptionCard && typeof unwrapped === "string"
+        ? unwrapped
+        : undefined,
+      !isSubscriptionCard && typeof cv.fieldKey === "string"
+        ? cv.fieldKey
+        : undefined,
       !isSubscriptionCard && typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
     ].filter(Boolean) as string[];
@@ -707,7 +714,7 @@ export async function updateExistingCustomValuesOnly(
     // GHL returns fieldKey wrapped in merge-field syntax, e.g.
     // "{{ custom_values.lead_followup_options }}" — unwrap it so plain keys
     // like "lead_followup_options" can be matched directly.
-      const unwrapped =
+    const unwrapped =
       typeof cv.fieldKey === "string" && cv.fieldKey
         ? extractCustomValueKey(cv.fieldKey)
         : undefined;
@@ -725,7 +732,7 @@ export async function updateExistingCustomValuesOnly(
     const canonicalKeys: string[] = [];
     let isSubscriptionCard = false;
 
-    if (allNorms.some((n) => n.includes("unpaused"))) {
+    if (allNorms.some(n => n.includes("unpaused"))) {
       canonicalKeys.push(
         "custom_subscription_unpaused_message",
         "account_unpaused_message",
@@ -734,7 +741,7 @@ export async function updateExistingCustomValuesOnly(
       isSubscriptionCard = true;
     } else if (
       allNorms.some(
-        (n) =>
+        n =>
           n === "customsubscriptionpausedmessage" ||
           n === "custom_subscription_paused_message" ||
           n.includes("customsubscriptionpaused")
@@ -747,7 +754,7 @@ export async function updateExistingCustomValuesOnly(
       isSubscriptionCard = true;
     } else if (
       allNorms.some(
-        (n) =>
+        n =>
           n === "subscriptionpausedmessage" ||
           n === "subscription_paused_message" ||
           (n.includes("subscriptionpaused") && !n.includes("custom"))
@@ -762,8 +769,12 @@ export async function updateExistingCustomValuesOnly(
 
     const keys = [
       ...canonicalKeys,
-      !isSubscriptionCard && typeof unwrapped === "string" ? unwrapped : undefined,
-      !isSubscriptionCard && typeof cv.fieldKey === "string" ? cv.fieldKey : undefined,
+      !isSubscriptionCard && typeof unwrapped === "string"
+        ? unwrapped
+        : undefined,
+      !isSubscriptionCard && typeof cv.fieldKey === "string"
+        ? cv.fieldKey
+        : undefined,
       !isSubscriptionCard && typeof cv.key === "string" ? cv.key : undefined,
       typeof cv.name === "string" ? cv.name : undefined,
     ].filter(Boolean) as string[];
@@ -793,9 +804,9 @@ export async function updateExistingCustomValuesOnly(
     if (!entry) {
       const fuzzyId = findCustomValueId(cvs, key);
       if (fuzzyId) {
-        const matched = cvs.find(
-          c => (c.id || c._id) === fuzzyId
-        ) as Record<string, unknown> | undefined;
+        const matched = cvs.find(c => (c.id || c._id) === fuzzyId) as
+          | Record<string, unknown>
+          | undefined;
         if (matched) {
           const matchedName =
             typeof matched.name === "string" && matched.name
@@ -881,7 +892,11 @@ export async function upsertGhlCustomValue(
     nameAliases.push("lead_followup_option");
   }
 
-  if (normName.includes("subscription") || normName.includes("unpaused") || normName.includes("paused")) {
+  if (
+    normName.includes("subscription") ||
+    normName.includes("unpaused") ||
+    normName.includes("paused")
+  ) {
     if (normName.includes("unpaused")) {
       nameAliases.push("custom_subscription_unpaused_message");
       nameAliases.push("account_unpaused_message");
@@ -1009,8 +1024,63 @@ export async function ensureGhlCustomValue(
   }
 
   const errorBody = await response.text();
-  console.error(`[GHL] POST failed for custom value '${name}': ${response.status} ${errorBody}`);
+  console.error(
+    `[GHL] POST failed for custom value '${name}': ${response.status} ${errorBody}`
+  );
   return { id: "create_failed", name, value };
+}
+
+/**
+ * Seed a default without overwriting a value already configured by the
+ * client. This is used by installation and repair flows, not by explicit
+ * user saves.
+ */
+export async function seedDefaultGhlCustomValue(
+  locationId: string,
+  name: string,
+  value: string
+): Promise<{
+  action: "created" | "filled_empty" | "preserved" | "failed";
+  id: string;
+  name: string;
+  value: string;
+}> {
+  try {
+    const accessToken = await getValidAccessToken(locationId);
+    const customValues = await fetchAllCustomValues(locationId, accessToken);
+    const existingId = findCustomValueId(customValues, name);
+    if (!existingId) {
+      const created = await ensureGhlCustomValue(locationId, name, value);
+      return {
+        action: created.id === "create_failed" ? "failed" : "created",
+        ...created,
+      };
+    }
+
+    const existing = customValues.find(cv => (cv.id || cv._id) === existingId);
+    const currentValue =
+      existing?.value == null ? "" : String(existing.value).trim();
+    if (currentValue !== "") {
+      return {
+        action: "preserved",
+        id: existingId,
+        name: typeof existing?.name === "string" ? existing.name : name,
+        value: String(existing?.value ?? ""),
+      };
+    }
+
+    const updated = await upsertGhlCustomValue(locationId, name, value);
+    return {
+      action: updated.id === "skipped_not_found" ? "failed" : "filled_empty",
+      ...updated,
+    };
+  } catch (error) {
+    console.error(
+      `[GHL] Failed to seed default custom value '${name}':`,
+      error
+    );
+    return { action: "failed", id: "failed", name, value };
+  }
 }
 
 // ─── Token Exchange ──────────────────────────────────────────────────
@@ -1135,6 +1205,13 @@ export async function getInstallation(
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+/** Return all stored installations for the administrative backfill command. */
+export async function listInstallations(): Promise<GHLInstallation[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ghlInstallations);
 }
 
 /**
@@ -1276,30 +1353,44 @@ export async function updateCustomValuesOnInstall(
       `[GHL Install] Fetched details for location ${locationId}: Owner="${ownerFirstName}", Business="${locationName}"`
     );
 
-    // Seed default custom values
-    const customValuesToUpdate = [
+    // Seed defaults without overwriting values already configured by the
+    // client. The helper creates missing values, fills empty values, and
+    // preserves non-empty values so reinstalling the app is safe.
+    const customValuesToSeed = [
       {
         name: "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
         value: "Lite",
       },
       { name: "Initial Outreach Scheduling", value: "24 Hours" },
       { name: "follow_up_limit", value: "3" },
+      { name: "send_quote_automatically", value: "True" },
+      { name: "onetime_line_item_price_1", value: "$0.00" },
+      { name: "recurring_line_item_price_1", value: "$0.00" },
+      { name: "reactivation_options", value: "Lite" },
+      { name: "autoreplies_to_new_leads", value: "True" },
+      { name: "autoreply_to_new_customers", value: "True" },
+      { name: "internal_new_lead_notification", value: "True" },
+      { name: "internal_new_customer_notification", value: "True" },
+      { name: "failed_payment_message", value: "True" },
+      { name: "skipped_job_message", value: "True" },
+      { name: "subscription_pausedunpaused_message", value: "True" },
+      { name: "receive_newlead_notifications_true_or_false", value: "True" },
+      { name: "on_the_way_notifications_truefalse", value: "True" },
+      { name: "job_completed_notifications_truefalse", value: "True" },
+      { name: "off_schedule_notifications_truefalse", value: "True" },
     ];
 
-    const updatePromises = customValuesToUpdate.map(cv =>
-      upsertGhlCustomValue(locationId, cv.name, cv.value)
-        .then(() =>
-          console.log(
-            `[GHL Install] Successfully updated custom value: "${cv.name}"`
-          )
-        )
-        .catch(err =>
-          console.error(
-            `[GHL Install] Failed to update custom value "${cv.name}":`,
-            err
-          )
-        )
-    );
+    const updatePromises = customValuesToSeed.map(async cv => {
+      const result = await seedDefaultGhlCustomValue(
+        locationId,
+        cv.name,
+        cv.value
+      );
+      console.log(`[GHL Install] Seeded custom value "${cv.name}"`, {
+        action: result.action,
+      });
+      return result;
+    });
 
     await Promise.all(updatePromises);
     console.log(
@@ -1635,10 +1726,18 @@ export async function syncStaffNotificationContact(
     });
     if (!response.ok) continue;
 
-    const body = (await response.json()) as { contacts?: Array<Record<string, unknown>> };
+    const body = (await response.json()) as {
+      contacts?: Array<Record<string, unknown>>;
+    };
     const match = (body.contacts ?? []).find(contact => {
-      const contactName = String(contact.name ?? `${contact.firstName ?? ""} ${contact.lastName ?? ""}`).trim().toLowerCase();
-      const contactEmail = String(contact.email ?? "").trim().toLowerCase();
+      const contactName = String(
+        contact.name ?? `${contact.firstName ?? ""} ${contact.lastName ?? ""}`
+      )
+        .trim()
+        .toLowerCase();
+      const contactEmail = String(contact.email ?? "")
+        .trim()
+        .toLowerCase();
       const contactPhone = normalizePhone(String(contact.phone ?? ""));
       if (searchText === "Staff") return contactName === "staff";
       return (
@@ -1678,7 +1777,9 @@ export async function syncStaffNotificationContact(
     );
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`Failed to update Staff contact: ${response.status} ${body}`);
+      throw new Error(
+        `Failed to update Staff contact: ${response.status} ${body}`
+      );
     }
     await addTagToContact(locationId, existingContactId, STAFF_CONTACT_TAG);
     console.log("[GHL Staff Contact] Updated Staff contact", {
@@ -1687,7 +1788,11 @@ export async function syncStaffNotificationContact(
       emailProvided: Boolean(normalizedEmail),
       phoneProvided: Boolean(normalizedPhone),
     });
-    return { contactId: existingContactId, email: normalizedEmail, phone: normalizedPhone };
+    return {
+      contactId: existingContactId,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+    };
   }
 
   const result = await createContact(locationId, {
@@ -2075,11 +2180,15 @@ export async function getLocationPickerVariables(
     Version: GHL_API_VERSION,
   };
 
-  const [customValuesRes, customFieldsResPrimary, customFieldsResSecondary] = await Promise.allSettled([
-    fetch(customValuesUrl, { method: "GET", headers }),
-    fetch(customFieldsUrlPrimary, { method: "GET", headers }),
-    fetch(customFieldsUrlSecondary, { method: "GET", headers: { ...headers, Version: "v3" } }),
-  ]);
+  const [customValuesRes, customFieldsResPrimary, customFieldsResSecondary] =
+    await Promise.allSettled([
+      fetch(customValuesUrl, { method: "GET", headers }),
+      fetch(customFieldsUrlPrimary, { method: "GET", headers }),
+      fetch(customFieldsUrlSecondary, {
+        method: "GET",
+        headers: { ...headers, Version: "v3" },
+      }),
+    ]);
 
   const items: PickerVariable[] = [];
   let cvStatus: "success" | "error" = "error";
@@ -2088,26 +2197,40 @@ export async function getLocationPickerVariables(
   // 1. Process Custom Values
   if (customValuesRes.status === "fulfilled" && customValuesRes.value.ok) {
     try {
-      const data = (await customValuesRes.value.json()) as Record<string, unknown>;
-      const rawValues = (data.customValues || data.custom_values || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+      const data = (await customValuesRes.value.json()) as Record<
+        string,
+        unknown
+      >;
+      const rawValues = (data.customValues ||
+        data.custom_values ||
+        (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
       if (Array.isArray(rawValues)) {
         cvStatus = "success";
         for (const cv of rawValues) {
-          const rawKey = typeof cv.fieldKey === "string" && cv.fieldKey.trim()
-            ? cv.fieldKey
-            : typeof cv.key === "string" && cv.key.trim()
-              ? cv.key
-              : typeof cv.name === "string" && cv.name.trim()
-                ? cv.name
-                : "";
+          const rawKey =
+            typeof cv.fieldKey === "string" && cv.fieldKey.trim()
+              ? cv.fieldKey
+              : typeof cv.key === "string" && cv.key.trim()
+                ? cv.key
+                : typeof cv.name === "string" && cv.name.trim()
+                  ? cv.name
+                  : "";
 
           if (!rawKey) continue;
 
           const token = normalizeCustomValueToken(rawKey);
           if (!token) continue;
 
-          const id = typeof cv.id === "string" && cv.id ? cv.id : typeof cv._id === "string" ? cv._id : token;
-          const name = typeof cv.name === "string" && cv.name.trim() ? cv.name.trim() : rawKey;
+          const id =
+            typeof cv.id === "string" && cv.id
+              ? cv.id
+              : typeof cv._id === "string"
+                ? cv._id
+                : token;
+          const name =
+            typeof cv.name === "string" && cv.name.trim()
+              ? cv.name.trim()
+              : rawKey;
 
           items.push({
             id: `cv_${id}`,
@@ -2124,44 +2247,58 @@ export async function getLocationPickerVariables(
   }
 
   // 2. Process Contact Custom Fields (Primary or Secondary)
-  const activeFieldsRes = customFieldsResPrimary.status === "fulfilled" && customFieldsResPrimary.value.ok
-    ? customFieldsResPrimary.value
-    : customFieldsResSecondary.status === "fulfilled" && customFieldsResSecondary.value.ok
-      ? customFieldsResSecondary.value
-      : null;
+  const activeFieldsRes =
+    customFieldsResPrimary.status === "fulfilled" &&
+    customFieldsResPrimary.value.ok
+      ? customFieldsResPrimary.value
+      : customFieldsResSecondary.status === "fulfilled" &&
+          customFieldsResSecondary.value.ok
+        ? customFieldsResSecondary.value
+        : null;
 
   if (activeFieldsRes) {
     try {
       const data = (await activeFieldsRes.json()) as Record<string, unknown>;
-      const rawFields = (data.customFields || data.custom_fields || data.fields || (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+      const rawFields = (data.customFields ||
+        data.custom_fields ||
+        data.fields ||
+        (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
       if (Array.isArray(rawFields)) {
         cfStatus = "success";
         for (const cf of rawFields) {
-          const rawKey = typeof cf.fieldKey === "string" && cf.fieldKey.trim()
-            ? cf.fieldKey
-            : typeof cf.key === "string" && cf.key.trim()
-              ? cf.key
-              : typeof cf.name === "string" && cf.name.trim()
-                ? cf.name
-                : "";
+          const rawKey =
+            typeof cf.fieldKey === "string" && cf.fieldKey.trim()
+              ? cf.fieldKey
+              : typeof cf.key === "string" && cf.key.trim()
+                ? cf.key
+                : typeof cf.name === "string" && cf.name.trim()
+                  ? cf.name
+                  : "";
 
           if (!rawKey) continue;
 
           const token = normalizeContactFieldToken(rawKey);
           if (!token) continue;
 
-          const id = typeof cf.id === "string" && cf.id ? cf.id : typeof cf._id === "string" ? cf._id : token;
-          const name = typeof cf.name === "string" && cf.name.trim()
-            ? cf.name.trim()
-            : typeof cf.displayName === "string" && cf.displayName.trim()
-              ? cf.displayName.trim()
-              : rawKey;
+          const id =
+            typeof cf.id === "string" && cf.id
+              ? cf.id
+              : typeof cf._id === "string"
+                ? cf._id
+                : token;
+          const name =
+            typeof cf.name === "string" && cf.name.trim()
+              ? cf.name.trim()
+              : typeof cf.displayName === "string" && cf.displayName.trim()
+                ? cf.displayName.trim()
+                : rawKey;
 
-          const dataType = typeof cf.dataType === "string" && cf.dataType
-            ? cf.dataType
-            : typeof cf.fieldType === "string" && cf.fieldType
-              ? cf.fieldType
-              : undefined;
+          const dataType =
+            typeof cf.dataType === "string" && cf.dataType
+              ? cf.dataType
+              : typeof cf.fieldType === "string" && cf.fieldType
+                ? cf.fieldType
+                : undefined;
 
           items.push({
             id: `cf_${id}`,
@@ -2174,7 +2311,10 @@ export async function getLocationPickerVariables(
         }
       }
     } catch (e) {
-      console.warn("[GHL Picker] Failed parsing Contact Custom Fields response:", e);
+      console.warn(
+        "[GHL Picker] Failed parsing Contact Custom Fields response:",
+        e
+      );
     }
   }
 

@@ -220,9 +220,7 @@ function CustomValuePicker({
     const q = query.trim().toLowerCase();
     if (!q) return tags;
     return tags.filter(
-      t =>
-        t.name.toLowerCase().includes(q) ||
-        t.tag.toLowerCase().includes(q)
+      t => t.name.toLowerCase().includes(q) || t.tag.toLowerCase().includes(q)
     );
   }, [query, tags]);
 
@@ -625,15 +623,14 @@ function QuoteFormFields({
   // steals focus), so the text lands at the user's typing location.
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const cursorPosRef = useRef<number>(0);
-  const resolveQuery =
-    trpc.requestScheduling.resolveCustomValue.useQuery(
-      { locationId, key: pendingKey ?? "" },
-      {
-        enabled: pendingKey !== null && pendingKey !== "",
-        retry: 1,
-        staleTime: 5 * 60 * 1000,
-      }
-    );
+  const resolveQuery = trpc.requestScheduling.resolveCustomValue.useQuery(
+    { locationId, key: pendingKey ?? "" },
+    {
+      enabled: pendingKey !== null && pendingKey !== "",
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
 
   // When the live value arrives, insert it at the saved caret position
   // (state update + restored selection) and clear the pending key.
@@ -642,9 +639,7 @@ function QuoteFormFields({
     if (resolveQuery.data === undefined) return;
     const value = resolveQuery.data.value;
     const text =
-      typeof value === "string" && value.trim() !== ""
-        ? value.trim()
-        : null;
+      typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 
     setFormData(prev => {
       if (!text) return prev;
@@ -687,7 +682,7 @@ function QuoteFormFields({
     // Capture where the cursor is inside the description right before
     // the picker dropdown opens (it moves focus to its search input).
     const ta = descriptionRef.current;
-    cursorPosRef.current = ta?.selectionStart ?? (ta?.value?.length ?? 0);
+    cursorPosRef.current = ta?.selectionStart ?? ta?.value?.length ?? 0;
     setPendingKey(key);
   }, []);
   const offerImageRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -947,9 +942,7 @@ function QuoteFormFields({
           </label>
           <CustomValuePicker
             tags={customValueTags}
-            onInsert={selectedKey =>
-              insertResolvedValue(selectedKey)
-            }
+            onInsert={selectedKey => insertResolvedValue(selectedKey)}
           />
         </div>
         <textarea
@@ -1331,16 +1324,15 @@ export default function CustomQuoteLinkPopup({
   // ── Fetch latest saved values from GHL custom values on every open ──
   // staleTime: 0 makes the data always stale, so tRPC re-fetches from GHL
   // every time the popup opens (never serves a cached snapshot).
-  const settingsQuery =
-    trpc.requestScheduling.getQuoteSettings.useQuery(
-      { locationId },
-      {
-        enabled: !!locationId && open,
-        staleTime: 0,
-        refetchOnMount: true,
-        retry: 1,
-      }
-    );
+  const settingsQuery = trpc.requestScheduling.getQuoteSettings.useQuery(
+    { locationId },
+    {
+      enabled: !!locationId && open,
+      staleTime: 0,
+      refetchOnMount: true,
+      retry: 1,
+    }
+  );
 
   // ── Fetch the subaccount's available custom values for the picker ──
   const customValueTagsQuery =
@@ -1375,7 +1367,7 @@ export default function CustomQuoteLinkPopup({
           image: ghl.offer1Image || DEFAULT_FORM.offers[0].image,
         },
         {
-          name: ghl.offer2Title || DEFAULT_FORM.offers[1].name,
+          name: ghl.offer2Title ?? DEFAULT_FORM.offers[1].name,
           price: DEFAULT_FORM.offers[1].price,
           description:
             ghl.offer2Description || DEFAULT_FORM.offers[1].description,
@@ -1383,8 +1375,7 @@ export default function CustomQuoteLinkPopup({
         },
       ],
       galleryImages: DEFAULT_FORM.galleryImages.map(
-        (def, i) =>
-          ghl[`image${i + 1}` as keyof typeof ghl] || def
+        (def, i) => ghl[`image${i + 1}` as keyof typeof ghl] || def
       ) as [string, string, string, string, string, string],
       testimonialHeadshots: DEFAULT_FORM.testimonialHeadshots.map(
         (def, i) => ghl[`review${i + 1}Photo` as keyof typeof ghl] || def
@@ -1422,8 +1413,8 @@ export default function CustomQuoteLinkPopup({
           offer1Description: formData.offers[0]?.description || undefined,
           offer1Image: formData.offers[0]?.image ?? undefined,
           // Offer 2 (Leads Line Item 2)
-          offer2Title: formData.offers[1]?.name || "2 Weeks FREE",
-          offer2Description: formData.offers[1]?.description || undefined,
+          offer2Title: formData.offers[1]?.name ?? "",
+          offer2Description: formData.offers[1]?.description ?? "",
           offer2Image: formData.offers[1]?.image ?? undefined,
           sendQuoteAutomatically: true,
           tosLink: formData.tosLink || "",
@@ -1472,9 +1463,9 @@ export default function CustomQuoteLinkPopup({
 
   const handleClose = (open: boolean) => {
     if (!open) {
-    // Reset to defaults so the next open re-fetches the latest
-    // GHL values instead of reusing stale in-memory state.
-    setFormData(DEFAULT_FORM);
+      // Reset to defaults so the next open re-fetches the latest
+      // GHL values instead of reusing stale in-memory state.
+      setFormData(DEFAULT_FORM);
     }
     onOpenChange(open);
   };

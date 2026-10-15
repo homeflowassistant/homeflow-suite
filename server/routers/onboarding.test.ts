@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildOnboardingResults, type OnboardingPageResult } from "./onboarding.js";
+import {
+  buildOnboardingResults,
+  type OnboardingPageResult,
+} from "./onboarding.js";
 
 function page(results: OnboardingPageResult[], id: string) {
   const found = results.find(item => item.id === id);
@@ -29,20 +32,48 @@ describe("onboarding wizard validation", () => {
     });
     const accountSetup = page(results, "account-setup");
     expect(accountSetup.status).toBe("incomplete");
-    expect(accountSetup.requirements.find(item => item.id === "business-name-homeflow")?.status).toBe("incomplete");
-    expect(accountSetup.requirements.find(item => item.id === "business-email")?.reason).toContain("missing");
+    expect(
+      accountSetup.requirements.find(
+        item => item.id === "business-name-homeflow"
+      )?.status
+    ).toBe("incomplete");
+    expect(
+      accountSetup.requirements.find(item => item.id === "business-email")
+        ?.reason
+    ).toContain("missing");
   });
 
   it("adds custom quote requirements only when Custom Quote & Link is selected", () => {
-    const base = buildOnboardingResults({ ...baseOptions, customValues: [customValue("lead_followup_options", "Lite")] });
-    const customQuote = buildOnboardingResults({ ...baseOptions, customValues: [customValue("lead_followup_options", "Custom-Link")] });
-    expect(page(base, "request-scheduling").requirements.some(item => item.id === "quote-company-name")).toBe(false);
-    expect(page(customQuote, "request-scheduling").requirements.some(item => item.id === "quote-company-name")).toBe(true);
-    expect(page(customQuote, "reactivation").requirements.some(item => item.id === "reactivation-company-image")).toBe(true);
+    const base = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [customValue("lead_followup_options", "Lite")],
+    });
+    const customQuote = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [customValue("lead_followup_options", "Custom-Link")],
+    });
+    expect(
+      page(base, "request-scheduling").requirements.some(
+        item => item.id === "quote-company-name"
+      )
+    ).toBe(false);
+    expect(
+      page(customQuote, "request-scheduling").requirements.some(
+        item => item.id === "quote-company-name"
+      )
+    ).toBe(true);
+    expect(
+      page(customQuote, "reactivation").requirements.some(
+        item => item.id === "reactivation-company-image"
+      )
+    ).toBe(true);
   });
 
-  it("contains exactly the seven requested sequential steps", () => {
-    const results = buildOnboardingResults({ ...baseOptions, customValues: [] });
+  it("contains the requested sequential steps including Facebook mapping", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [],
+    });
     expect(results.map(item => item.id)).toEqual([
       "account-setup",
       "pricing",
@@ -51,8 +82,9 @@ describe("onboarding wizard validation", () => {
       "add-on-campaign",
       "alerts-notifications",
       "integrations",
+      "facebook-mapping",
     ]);
-    expect(results).toHaveLength(7);
+    expect(results).toHaveLength(8);
     expect(results.some(item => item.id === "contacts")).toBe(false);
     expect(results.some(item => item.id === "quick-send")).toBe(false);
     expect(results.some(item => item.id === "review-test")).toBe(false);
@@ -66,8 +98,14 @@ describe("onboarding wizard validation", () => {
       customFieldsAvailable: false,
       connected: false,
     });
-    expect(results.filter(item => item.required && item.status === "blocked").length).toBeGreaterThan(0);
-    expect(page(results, "account-setup").requirements.every(item => item.status === "blocked")).toBe(true);
+    expect(
+      results.filter(item => item.required && item.status === "blocked").length
+    ).toBeGreaterThan(0);
+    expect(
+      page(results, "account-setup").requirements.every(
+        item => item.status === "blocked"
+      )
+    ).toBe(true);
   });
 
   it("rejects placeholder pricing values", () => {
@@ -80,11 +118,19 @@ describe("onboarding wizard validation", () => {
       ],
     });
     expect(page(results, "pricing").status).toBe("incomplete");
-    expect(page(results, "pricing").requirements.find(item => item.id === "pricing-initial-recurring")?.reason).toContain("placeholder");
+    expect(
+      page(results, "pricing").requirements.find(
+        item => item.id === "pricing-initial-recurring"
+      )?.reason
+    ).toContain("placeholder");
   });
 
   it("treats an optional campaign as skipped rather than complete", () => {
-    const results = buildOnboardingResults({ ...baseOptions, customValues: [], skippedStepIds: new Set(["reactivation"]) });
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [],
+      skippedStepIds: new Set(["reactivation"]),
+    });
     expect(page(results, "reactivation").status).toBe("skipped");
     expect(page(results, "reactivation").complete).toBe(false);
     expect(page(results, "reactivation").skipped).toBe(true);

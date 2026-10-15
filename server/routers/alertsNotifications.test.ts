@@ -18,7 +18,9 @@ describe("GHL Picker Variable Normalization", () => {
   });
 
   it("normalizes raw contact custom field keys correctly", () => {
-    expect(normalizeContactFieldToken("dog_count")).toBe("{{contact.dog_count}}");
+    expect(normalizeContactFieldToken("dog_count")).toBe(
+      "{{contact.dog_count}}"
+    );
     expect(normalizeContactFieldToken("contact.yard_access")).toBe(
       "{{contact.yard_access}}"
     );
@@ -36,10 +38,16 @@ describe("GHL Picker Variable Normalization", () => {
 
 describe("Alerts & Notifications Router Defaults", () => {
   it("provides default alert templates with correct initial message values", async () => {
-    const { DEFAULT_ALERT_TEMPLATES } = await import("./alertsNotifications.js");
+    const { DEFAULT_ALERT_TEMPLATES } = await import(
+      "./alertsNotifications.js"
+    );
     expect(DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled).toBe(true);
-    expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toContain("service pause has been removed");
-    expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain("recurring cleanups have been unpaused");
+    expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toContain(
+      "service has been unpaused"
+    );
+    expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain(
+      "recurring cleanups have been unpaused"
+    );
   });
 
   it("exports exact custom value keys for subscription toggle and message text fields", async () => {
@@ -70,9 +78,18 @@ describe("Subscription Card Custom-Value Persistence Mapping", () => {
       },
     ];
 
-    const toggleId = findCustomValueId(mockGhlCustomValues, "subscription_paused_message");
-    const pausedTextId = findCustomValueId(mockGhlCustomValues, "custom_subscription_paused_message");
-    const unpausedTextId = findCustomValueId(mockGhlCustomValues, "custom_subscription_unpaused_message");
+    const toggleId = findCustomValueId(
+      mockGhlCustomValues,
+      "subscription_paused_message"
+    );
+    const pausedTextId = findCustomValueId(
+      mockGhlCustomValues,
+      "custom_subscription_paused_message"
+    );
+    const unpausedTextId = findCustomValueId(
+      mockGhlCustomValues,
+      "custom_subscription_unpaused_message"
+    );
 
     expect(toggleId).toBe("cv_toggle_123");
     expect(pausedTextId).toBe("cv_paused_text_456");
@@ -87,31 +104,39 @@ describe("Subscription Card Custom-Value Persistence Mapping", () => {
 
 describe("Line Break Normalization for Custom Text Values", () => {
   it("normalizes CRLF and CR line breaks into explicit LF '\\n' characters", async () => {
-    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+    const { formatCustomTextWithNewlines } = await import(
+      "./alertsNotifications.js"
+    );
 
     const multiLineInput = "Line 1\r\nLine 2\rLine 3\nLine 4";
-    const expectedOutput = "Line 1\nLine 2\nLine 3\nLine 4";
+    const expectedOutput = "Line 1\\nLine 2\\nLine 3\\nLine 4";
 
     expect(formatCustomTextWithNewlines(multiLineInput)).toBe(expectedOutput);
   });
 
   it("preserves multiple consecutive line breaks with exact '\\n' count", async () => {
-    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+    const { formatCustomTextWithNewlines } = await import(
+      "./alertsNotifications.js"
+    );
 
     const doubleLineBreak = "Paragraph 1\r\n\r\nParagraph 2";
-    expect(formatCustomTextWithNewlines(doubleLineBreak)).toBe("Paragraph 1\n\nParagraph 2");
+    expect(formatCustomTextWithNewlines(doubleLineBreak)).toBe(
+      "Paragraph 1\\n\\nParagraph 2"
+    );
 
     const tripleLineBreak = "Header\n\n\nBody text";
-    expect(formatCustomTextWithNewlines(tripleLineBreak)).toBe("Header\n\n\nBody text");
+    expect(formatCustomTextWithNewlines(tripleLineBreak)).toBe(
+      "Header\\n\\n\\nBody text"
+    );
   });
 
   it("handles empty or null inputs gracefully", async () => {
-    const { formatCustomTextWithNewlines } = await import("./alertsNotifications.js");
+    const { formatCustomTextWithNewlines } = await import(
+      "./alertsNotifications.js"
+    );
 
     expect(formatCustomTextWithNewlines("")).toBe("");
     expect(formatCustomTextWithNewlines(null)).toBe("");
     expect(formatCustomTextWithNewlines(undefined)).toBe("");
   });
 });
-
-

@@ -39,6 +39,9 @@ import {
   Building2,
   Link2,
   Facebook,
+  MapPin,
+  Bell,
+  ListChecks,
   Mail,
   Phone,
   CreditCard,
@@ -69,7 +72,17 @@ type AccountField =
   | "paymentLink"
   | "facebookPageLink"
   | "leadCampaignOffer"
-  | "reengagementOffer";
+  | "reengagementOffer"
+  | "legalBusinessName"
+  | "businessAddress"
+  | "stateTwoLetterAbbrev"
+  | "internalNotificationsEmail"
+  | "internalNotificationsPhone"
+  | "receiveNewLeadNotifications"
+  | "onTheWayNotifications"
+  | "jobCompletedNotifications"
+  | "offScheduleNotifications"
+  | "crmSelection";
 
 interface FieldMeta {
   key: AccountField;
@@ -78,6 +91,7 @@ interface FieldMeta {
   icon: React.ReactNode;
   isUrl?: boolean;
   isImage?: boolean;
+  options?: { label: string; value: string }[];
   help?: string;
 }
 
@@ -151,6 +165,90 @@ const FIELDS: FieldMeta[] = [
     icon: <Tag size={15} />,
     help: "Offer Used in Lite/Custom Reactivation Campaigns.",
   },
+  {
+    key: "legalBusinessName",
+    label: "Legal Business Name",
+    placeholder: "Exact name shown on your EIN paperwork",
+    icon: <Building2 size={15} />,
+    help: "For sole proprietors, use the legal first and last name only. Do not enter a DBA.",
+  },
+  {
+    key: "businessAddress",
+    label: "Business Address",
+    placeholder: "Address shown on your EIN paperwork",
+    icon: <MapPin size={15} />,
+    help: "Use the address shown on your EIN paperwork.",
+  },
+  {
+    key: "stateTwoLetterAbbrev",
+    label: "Service State",
+    placeholder: "UT",
+    icon: <MapPin size={15} />,
+    help: "Enter the two-letter state abbreviation where you provide service.",
+  },
+  {
+    key: "crmSelection",
+    label: "Which CRM do you use?",
+    placeholder: "Select a CRM",
+    icon: <ListChecks size={15} />,
+    options: [
+      { label: "S&G (Stripe)", value: "thank-you-strip" },
+      { label: "S&G (Card Pointe)", value: "thank-you-pointe" },
+      { label: "All other CRMs", value: "thank-you" },
+    ],
+  },
+  {
+    key: "internalNotificationsEmail",
+    label: "Internal Notification Email",
+    placeholder: "team@yourbusiness.com",
+    icon: <Mail size={15} />,
+  },
+  {
+    key: "internalNotificationsPhone",
+    label: "Internal Notification Phone",
+    placeholder: "(555) 123-4567",
+    icon: <Phone size={15} />,
+  },
+  {
+    key: "receiveNewLeadNotifications",
+    label: "Receive New Lead Notifications",
+    placeholder: "Select an option",
+    icon: <Bell size={15} />,
+    options: [
+      { label: "True", value: "True" },
+      { label: "False", value: "False" },
+    ],
+  },
+  {
+    key: "onTheWayNotifications",
+    label: "On the Way Notifications",
+    placeholder: "Select an option",
+    icon: <Bell size={15} />,
+    options: [
+      { label: "True", value: "True" },
+      { label: "False", value: "False" },
+    ],
+  },
+  {
+    key: "jobCompletedNotifications",
+    label: "Job Completed Notifications",
+    placeholder: "Select an option",
+    icon: <Bell size={15} />,
+    options: [
+      { label: "True", value: "True" },
+      { label: "False", value: "False" },
+    ],
+  },
+  {
+    key: "offScheduleNotifications",
+    label: "Off Schedule Notifications",
+    placeholder: "Select an option",
+    icon: <Bell size={15} />,
+    options: [
+      { label: "True", value: "True" },
+      { label: "False", value: "False" },
+    ],
+  },
 ];
 
 function useLocationId() {
@@ -185,6 +283,16 @@ export default function AccountSetupPage() {
     facebookPageLink: "",
     leadCampaignOffer: "",
     reengagementOffer: "",
+    legalBusinessName: "",
+    businessAddress: "",
+    stateTwoLetterAbbrev: "",
+    internalNotificationsEmail: "",
+    internalNotificationsPhone: "",
+    receiveNewLeadNotifications: "",
+    onTheWayNotifications: "",
+    jobCompletedNotifications: "",
+    offScheduleNotifications: "",
+    crmSelection: "",
   });
   // Drives the conditional upload UI for the Business Logo field:
   // the file upload option appears whenever the logo custom value is
@@ -206,6 +314,16 @@ export default function AccountSetupPage() {
     facebookPageLink: "idle",
     leadCampaignOffer: "idle",
     reengagementOffer: "idle",
+    legalBusinessName: "idle",
+    businessAddress: "idle",
+    stateTwoLetterAbbrev: "idle",
+    internalNotificationsEmail: "idle",
+    internalNotificationsPhone: "idle",
+    receiveNewLeadNotifications: "idle",
+    onTheWayNotifications: "idle",
+    jobCompletedNotifications: "idle",
+    offScheduleNotifications: "idle",
+    crmSelection: "idle",
   });
 
   // ── Fetch latest saved values from GHL custom values on every open ──
@@ -282,6 +400,16 @@ export default function AccountSetupPage() {
       facebookPageLink: s.facebookPageLink,
       leadCampaignOffer: s.leadCampaignOffer,
       reengagementOffer: s.reengagementOffer,
+      legalBusinessName: s.legalBusinessName,
+      businessAddress: s.businessAddress,
+      stateTwoLetterAbbrev: s.stateTwoLetterAbbrev,
+      internalNotificationsEmail: s.internalNotificationsEmail,
+      internalNotificationsPhone: s.internalNotificationsPhone,
+      receiveNewLeadNotifications: s.receiveNewLeadNotifications,
+      onTheWayNotifications: s.onTheWayNotifications,
+      jobCompletedNotifications: s.jobCompletedNotifications,
+      offScheduleNotifications: s.offScheduleNotifications,
+      crmSelection: s.crmSelection,
     });
     setStoredLogo(s.businessLogo);
     // Keep the typed tracker in sync with what GHL currently holds so the
@@ -314,6 +442,16 @@ export default function AccountSetupPage() {
     facebookPageLink: null,
     leadCampaignOffer: null,
     reengagementOffer: null,
+    legalBusinessName: null,
+    businessAddress: null,
+    stateTwoLetterAbbrev: null,
+    internalNotificationsEmail: null,
+    internalNotificationsPhone: null,
+    receiveNewLeadNotifications: null,
+    onTheWayNotifications: null,
+    jobCompletedNotifications: null,
+    offScheduleNotifications: null,
+    crmSelection: null,
   });
 
   const handleValueChange = useCallback(
@@ -389,6 +527,16 @@ export default function AccountSetupPage() {
         facebookPageLink: "facebookPageLink",
         leadCampaignOffer: "leadCampaignOffer",
         reengagementOffer: "reengagementOffer",
+        legalBusinessName: "legalBusinessName",
+        businessAddress: "businessAddress",
+        stateTwoLetterAbbrev: "stateTwoLetterAbbrev",
+        internalNotificationsEmail: "internalNotificationsEmail",
+        internalNotificationsPhone: "internalNotificationsPhone",
+        receiveNewLeadNotifications: "receiveNewLeadNotifications",
+        onTheWayNotifications: "onTheWayNotifications",
+        jobCompletedNotifications: "jobCompletedNotifications",
+        offScheduleNotifications: "offScheduleNotifications",
+        crmSelection: "crmSelection",
       }) as const
     )[field];
 
@@ -507,7 +655,15 @@ export default function AccountSetupPage() {
             <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
               Account Set Up
             </h1>
-            <VideoHelpButton pageTitle="Account Setup" videos={[{ title: "HomeFlow Assistant: Account Set Up Explanation", youtubeId: "Tb-Wi8ytbbo" }]} />
+            <VideoHelpButton
+              pageTitle="Account Setup"
+              videos={[
+                {
+                  title: "HomeFlow Assistant: Account Set Up Explanation",
+                  youtubeId: "Tb-Wi8ytbbo",
+                },
+              ]}
+            />
           </div>
           <p className="text-[12px] text-slate-500 mt-1 px-4">
             Fill in your business details below.
@@ -553,10 +709,27 @@ export default function AccountSetupPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
-              {meta.isImage &&
-              meta.key === "businessLogo" &&
-              (!storedLogo || typedLogo === "") &&
-              !logoUploading ? (
+              {meta.options ? (
+                <select
+                  id={meta.key}
+                  value={values[meta.key]}
+                  onChange={e => handleValueChange(meta.key, e.target.value)}
+                  disabled={
+                    saveFieldMutation.isPending || settingsQuery.isLoading
+                  }
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">{meta.placeholder}</option>
+                  {meta.options.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : meta.isImage &&
+                meta.key === "businessLogo" &&
+                (!storedLogo || typedLogo === "") &&
+                !logoUploading ? (
                 /* File upload option — only visible while the custom value
                    is empty. The chosen image is uploaded to the GHL Media
                    Library first, then the hosted URL is stored in BOTH

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Link2, Clock3, Sparkles, Star } from "lucide-react";
+import {
+  CheckCircle2,
+  Link2,
+  Clock3,
+  Sparkles,
+  Star,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
@@ -143,7 +150,6 @@ export default function RequestScheduling() {
       { enabled: !!locationId }
     );
 
-
   // Auto-save mutation: persists ONLY the Lead Follow-Up option to the GHL
   // subaccount's `lead_followup_options` custom value immediately whenever
   // the user selects or changes an option — no manual Save button needed.
@@ -257,67 +263,50 @@ export default function RequestScheduling() {
     locationSettingsQuery.data,
   ]);
 
-  // Auto-save: persist the Lead Follow-Up option to the GHL subaccount's
-  // `lead_followup_options` custom value immediately whenever the user
-  // selects or changes an option. Skips no-op updates and saves only after
-  // GHL has finished loading so a fetch failure cannot overwrite the
-  // stored value with an uninitialized default.
-  useEffect(() => {
-    if (!locationId) return;
+  const handleSavePage = useCallback(async () => {
     if (
-      locationSettingsQuery.data?.leadFollowUpOption === selectedOption &&
-      !autoSaveLeadOptionMutation.isPending &&
-      !autoSaveLeadOptionMutation.isError
+      !locationId ||
+      locationSettingsQuery.isLoading ||
+      locationSettingsQuery.isError
     ) {
+      showToast(
+        "Saved values could not be verified. Refresh the page and try again.",
+        true
+      );
       return;
     }
-    // If the settings query is still loading, wait for it to resolve first
-    // so the initial page-open value takes precedence over the default.
-    if (locationSettingsQuery.isLoading) return;
-    // A failed GHL fetch would leave the query without data — in that case
-    // keep the default selection in the UI but do NOT auto-save, as the
-    // stored value could not be verified.
-    if (locationSettingsQuery.isError) return;
-
-    autoSaveLeadOptionMutation.mutate({
-      locationId,
-      leadFollowUpOption: selectedOption,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, locationId]);
-
-  // Auto-save: persist the Initial Outreach Scheduling timing to the GHL
-  // subaccount's `initial_request_scheduling` custom value immediately
-  // whenever the slider value changes. Skips no-op updates and saves only
-  // after GHL has finished loading so a fetch failure cannot overwrite the
-  // stored value with an uninitialized default. Updates the inline status
-  // chip (Saving... → Saved ✓) while the update is in flight.
-  useEffect(() => {
-    if (!locationId) return;
-    if (
-      locationSettingsQuery.data?.initialRequestScheduling &&
-      TIMING_LABELS[initialTiming] ===
-        locationSettingsQuery.data.initialRequestScheduling &&
-      !autoSaveTimingMutation.isPending &&
-      !autoSaveTimingMutation.isError
-    ) {
-      return;
-    }
-    // If the settings query is still loading, wait for it to resolve first
-    // so the initial page-open value takes precedence over the default.
-    if (locationSettingsQuery.isLoading) return;
-    // A failed GHL fetch would leave the query without data — in that case
-    // keep the default timing in the UI but do NOT auto-save, as the stored
-    // value could not be verified.
-    if (locationSettingsQuery.isError) return;
 
     setTimingSaveStatus("saving");
-    autoSaveTimingMutation.mutate({
-      locationId,
-      initialRequestScheduling: TIMING_LABELS[initialTiming],
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTiming, locationId]);
+    try {
+      await autoSaveLeadOptionMutation.mutateAsync({
+        locationId,
+        leadFollowUpOption: selectedOption,
+      });
+      await autoSaveTimingMutation.mutateAsync({
+        locationId,
+        initialRequestScheduling: TIMING_LABELS[initialTiming],
+      });
+      setTimingSaveStatus("saved");
+      await locationSettingsQuery.refetch();
+      showToast("Follow Up settings saved.");
+    } catch (error) {
+      setTimingSaveStatus("error");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to save Follow Up settings.",
+        true
+      );
+    }
+  }, [
+    autoSaveLeadOptionMutation,
+    autoSaveTimingMutation,
+    initialTiming,
+    locationId,
+    locationSettingsQuery,
+    selectedOption,
+    showToast,
+  ]);
 
   // Redirect handlers for Email / SMS template buttons
   const handleGoToEmailTemplates = () => {
@@ -389,9 +378,22 @@ export default function RequestScheduling() {
             <VideoHelpButton
               pageTitle="Follow Up"
               videos={[
-                { title: "Set Up Your Follow Up Sequence Options", youtubeId: "z4ApGBizwV8" },
-                { title: "Set Up Custom Quote", youtubeId: "WgOllP4SBIo", description: "Use this walkthrough when the Custom Quote & Link option is selected." },
-                { title: "Setting Up Client Portal and Offers", youtubeId: "5CySgZYJ7Qk", description: "Use this walkthrough to configure the client-facing portal and offers." },
+                {
+                  title: "Set Up Your Follow Up Sequence Options",
+                  youtubeId: "z4ApGBizwV8",
+                },
+                {
+                  title: "Set Up Custom Quote",
+                  youtubeId: "WgOllP4SBIo",
+                  description:
+                    "Use this walkthrough when the Custom Quote & Link option is selected.",
+                },
+                {
+                  title: "Setting Up Client Portal and Offers",
+                  youtubeId: "5CySgZYJ7Qk",
+                  description:
+                    "Use this walkthrough to configure the client-facing portal and offers.",
+                },
               ]}
             />
           </div>
@@ -493,6 +495,22 @@ export default function RequestScheduling() {
           </div>
         </section>
 
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => void handleSavePage()}
+            disabled={
+              autoSaveLeadOptionMutation.isPending ||
+              autoSaveTimingMutation.isPending ||
+              locationSettingsQuery.isLoading
+            }
+          >
+            <Save className="h-4 w-4" />
+            {timingSaveStatus === "saving" ? "Saving..." : "Save"}
+          </button>
+        </div>
+
         <section className="rs-card rs-scheduling-section">
           <div className="rs-section-heading">
             <div>
@@ -504,7 +522,7 @@ export default function RequestScheduling() {
             </div>
             <span className="rs-current-selection">
               {TIMING_LABELS[initialTiming]}
-              {/* Inline save status for the auto-saved timing selection */}
+              {/* Inline status for the explicit page Save action */}
               {timingSaveStatus === "saving" ? (
                 <span className="rs-status-chip rs-status-saving">
                   Saving...
@@ -652,7 +670,7 @@ export default function RequestScheduling() {
               Would you like to view your workflow templates?
               <br />
               You will be redirected to a new page. Any Lead Follow-Up option
-              you selected on this page is saved automatically.
+              you selected on this page is saved when you click Save.
             </p>
             <div className="rs-templates-buttons">
               <button
@@ -672,7 +690,6 @@ export default function RequestScheduling() {
             </div>
           </div>
         </section>
-
       </div>
 
       {/* Custom Quote & Link Popup */}
