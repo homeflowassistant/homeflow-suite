@@ -1,13 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Link2, RefreshCw, Save, ShieldCheck, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Link2,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 
-const DEFAULT_INVITE_URL = "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
+const DEFAULT_INVITE_URL =
+  "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
 const LOCATION_STORAGE_KEY = "homeflow:last-zapier-location-id";
 const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
 const ZAPIER_VIDEO_URL = "https://www.youtube.com/embed/yDa_zUC2T8c";
@@ -53,7 +73,9 @@ type CustomTriggerWebhookResponse = {
   message?: string;
 };
 
-async function readResponseBody(response: Response): Promise<{ json?: unknown; text: string }> {
+async function readResponseBody(
+  response: Response
+): Promise<{ json?: unknown; text: string }> {
   const text = await response.text();
 
   if (!text) {
@@ -76,7 +98,9 @@ function getInviteUrl(): string {
 }
 
 function getApiUrl(path: string): string {
-  const apiBase = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  const apiBase = (import.meta.env.VITE_API_URL || "")
+    .trim()
+    .replace(/\/+$/, "");
   return `${apiBase}${path}`;
 }
 
@@ -84,7 +108,9 @@ function buildZapCreateUrl(locationId: string): string {
   const cliName = getZapierCliName().trim();
   if (!cliName) return "";
 
-  const url = new URL(`https://api.zapier.com/v1/embed/${encodeURIComponent(cliName)}/create`);
+  const url = new URL(
+    `https://api.zapier.com/v1/embed/${encodeURIComponent(cliName)}/create`
+  );
   url.searchParams.set("steps[0][app]", "WebhookAPI");
   url.searchParams.set("steps[0][action]", "hook");
   url.searchParams.set("steps[1][app]", cliName);
@@ -114,16 +140,24 @@ type ZapierIntegrationPageProps = {
 };
 
 export default function ZapierIntegrationPage(props: any = {}) {
-  const hideSweepGo = Boolean((props as ZapierIntegrationPageProps).hideSweepGo);
+  const hideSweepGo = Boolean(
+    (props as ZapierIntegrationPageProps).hideSweepGo
+  );
   const locationId = useLocationId();
   const [copiedKey, setCopiedKey] = useState(false);
   const [zapCreateUrl, setZapCreateUrl] = useState("");
-  const [connection, setConnection] = useState<ZapierConnectionResponse | null>(null);
+  const [connection, setConnection] = useState<ZapierConnectionResponse | null>(
+    null
+  );
   const [visibleConnectionKey, setVisibleConnectionKey] = useState<string>("");
-  const [customTriggerWebhook, setCustomTriggerWebhook] = useState<CustomTriggerWebhookResponse | null>(null);
+  const [customTriggerWebhook, setCustomTriggerWebhook] =
+    useState<CustomTriggerWebhookResponse | null>(null);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
-  const [webhookUrlSource, setWebhookUrlSource] = useState<"custom-value" | "database-fallback" | "loading">("loading");
-  const [isLoadingCustomTriggerWebhook, setIsLoadingCustomTriggerWebhook] = useState(false);
+  const [webhookUrlSource, setWebhookUrlSource] = useState<
+    "custom-value" | "database-fallback" | "loading"
+  >("loading");
+  const [isLoadingCustomTriggerWebhook, setIsLoadingCustomTriggerWebhook] =
+    useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
@@ -165,7 +199,11 @@ export default function ZapierIntegrationPage(props: any = {}) {
   }, [sweepGoSettingsQuery.data, customTriggerWebhook?.webhookUrl]);
 
   const handleSaveSweepGo = async () => {
-    if (!locationId || locationId === "preview" || locationId === "test-location") {
+    if (
+      !locationId ||
+      locationId === "preview" ||
+      locationId === "test-location"
+    ) {
       toast.info(
         "Preview / Test Mode: Settings saved locally. Add ?locationId={{location.id}} in GHL to sync with live sub-accounts."
       );
@@ -184,7 +222,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
       await sweepGoSettingsQuery.refetch();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save Sweep & Go settings"
+        err instanceof Error
+          ? err.message
+          : "Failed to save Sweep & Go settings"
       );
     } finally {
       setIsSavingSweepGo(false);
@@ -200,24 +240,39 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
   const loadConnection = async () => {
     if (!locationId) {
-      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
+      toast.error(
+        "Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL."
+      );
       return;
     }
     setIsLoading(true);
     try {
-      const response = await fetch(getApiUrl(`/api/zapier/connection?locationId=${encodeURIComponent(locationId)}`), {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await fetch(
+        getApiUrl(
+          `/api/zapier/connection?locationId=${encodeURIComponent(locationId)}`
+        ),
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
       const body = await readResponseBody(response);
-      const data = (body.json ?? {}) as ZapierConnectionResponse & { message?: string };
+      const data = (body.json ?? {}) as ZapierConnectionResponse & {
+        message?: string;
+      };
       if (!response.ok || !data.success) {
-        throw new Error(data.message || body.text || "Failed to load Zapier connection.");
+        throw new Error(
+          data.message || body.text || "Failed to load Zapier connection."
+        );
       }
       setConnection(data);
       setVisibleConnectionKey(data.connectionKey || "");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load Zapier connection.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load Zapier connection."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -232,13 +287,19 @@ export default function ZapierIntegrationPage(props: any = {}) {
     setIsLoadingCustomTriggerWebhook(true);
     try {
       const response = await fetch(
-        getApiUrl(`/api/custom-trigger/webhook?locationId=${encodeURIComponent(locationId)}`),
+        getApiUrl(
+          `/api/custom-trigger/webhook?locationId=${encodeURIComponent(locationId)}`
+        ),
         { method: "GET", credentials: "include" }
       );
       const body = await readResponseBody(response);
       const data = (body.json ?? {}) as CustomTriggerWebhookResponse;
       if (!response.ok || !data.success) {
-        throw new Error(data.message || body.text || "Failed to load the custom-trigger webhook URL.");
+        throw new Error(
+          data.message ||
+            body.text ||
+            "Failed to load the custom-trigger webhook URL."
+        );
       }
       setCustomTriggerWebhook(data);
       if (!sweepGoSettingsQuery.data?.webhookUrl?.trim()) {
@@ -247,7 +308,11 @@ export default function ZapierIntegrationPage(props: any = {}) {
       }
       await sweepGoSettingsQuery.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load the custom-trigger webhook URL.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load the custom-trigger webhook URL."
+      );
     } finally {
       setIsLoadingCustomTriggerWebhook(false);
     }
@@ -265,7 +330,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
   const handleCopyConnectionKey = async () => {
     if (!visibleConnectionKey) {
-      toast.error("No raw connection key is available. Rotate the key to generate a new one.");
+      toast.error(
+        "No raw connection key is available. Rotate the key to generate a new one."
+      );
       return;
     }
 
@@ -302,7 +369,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
   const handleCreateZap = () => {
     if (!zapCreateUrl) {
-      toast.error("Set VITE_ZAPIER_APP_CLI_NAME before opening the Zap editor.");
+      toast.error(
+        "Set VITE_ZAPIER_APP_CLI_NAME before opening the Zap editor."
+      );
       return;
     }
 
@@ -311,7 +380,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
   const handleRotateKey = async () => {
     if (!locationId) {
-      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
+      toast.error(
+        "Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL."
+      );
       return;
     }
     // Show confirmation modal first
@@ -338,16 +409,19 @@ export default function ZapierIntegrationPage(props: any = {}) {
       };
 
       if (!response.ok || !data.success || !data.connectionKey) {
-        throw new Error(data.message || body.text || "Failed to rotate Zapier key.");
+        throw new Error(
+          data.message || body.text || "Failed to rotate Zapier key."
+        );
       }
 
       setVisibleConnectionKey(data.connectionKey);
-      setConnection((prev) =>
+      setConnection(prev =>
         prev
           ? {
               ...prev,
               connectionKey: data.connectionKey || null,
-              connectionKeyPreview: data.connectionKeyPreview || prev.connectionKeyPreview,
+              connectionKeyPreview:
+                data.connectionKeyPreview || prev.connectionKeyPreview,
               zapierEnabled: true,
             }
           : prev
@@ -355,7 +429,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
       toast.success(data.message || "Zapier key rotated successfully.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to rotate key.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to rotate key."
+      );
     } finally {
       setIsRotating(false);
       setShowRotateConfirm(false);
@@ -365,7 +441,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
   const handleRevoke = async () => {
     if (!locationId) {
-      toast.error("Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL.");
+      toast.error(
+        "Missing locationId. Open HomeFlow from a GHL sub-account or add ?locationId=<GHL_LOCATION_ID> to the URL."
+      );
       return;
     }
 
@@ -378,13 +456,19 @@ export default function ZapierIntegrationPage(props: any = {}) {
         body: JSON.stringify({ locationId }),
       });
       const body = await readResponseBody(response);
-      const data = (body.json ?? {}) as { success: boolean; message?: string; zapierEnabled?: boolean };
+      const data = (body.json ?? {}) as {
+        success: boolean;
+        message?: string;
+        zapierEnabled?: boolean;
+      };
       if (!response.ok || !data.success) {
-        throw new Error(data.message || body.text || "Failed to revoke Zapier access.");
+        throw new Error(
+          data.message || body.text || "Failed to revoke Zapier access."
+        );
       }
 
       setVisibleConnectionKey("");
-      setConnection((prev) =>
+      setConnection(prev =>
         prev
           ? {
               ...prev,
@@ -396,7 +480,11 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
       toast.success(data.message || "Zapier access revoked.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to revoke Zapier access.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to revoke Zapier access."
+      );
     } finally {
       setIsRevoking(false);
     }
@@ -409,7 +497,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
           <div className="w-16 h-16 rounded-full bg-cyan-100 flex items-center justify-center mx-auto">
             <Zap className="h-7 w-7 text-cyan-600" />
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">Zapier Integration</h1>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Zapier Integration
+          </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
             This page is designed to be embedded inside GoHighLevel. Add it as a
             Custom Menu Link with the{" "}
@@ -427,122 +517,190 @@ export default function ZapierIntegrationPage(props: any = {}) {
     <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold text-slate-900">Zapier Integration</h1>
-          <VideoHelpButton pageTitle="Zapier Integration" videos={[{ title: "Setting Up HomeFlow Zapier Integration", youtubeId: "yDa_zUC2T8c" }]} />
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-slate-900">
+              Zapier Integration
+            </h1>
+            <TopSaveButton
+              onClick={() => void handleSaveSweepGo()}
+              isSaving={isSavingSweepGo}
+              label="Save"
+            />
+          </div>
+          <VideoHelpButton
+            pageTitle="Zapier Integration"
+            videos={[
+              {
+                title: "Setting Up HomeFlow Zapier Integration",
+                youtubeId: "yDa_zUC2T8c",
+              },
+            ]}
+          />
         </div>
-        {!hideSweepGo && <>
-        {/* ── Sweep & Go Integration Card (Top) ── */}
-        <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
-              <Link2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 leading-tight">Sweep & Go Integration</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Connect your Sweep & Go account to HomeFlow.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            {/* Left Column: Form Inputs & Save Button */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-800" htmlFor="sweepgo-webhook-url">
-                    Webhook URL
-                  </label>
-                  <span className={customTriggerWebhook?.status === "ready" ? "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"}>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    {customTriggerWebhook?.status === "ready" ? "Connected" : "Waiting for workflow"}
-                  </span>
+        {!hideSweepGo && (
+          <>
+            {/* ── Sweep & Go Integration Card (Top) ── */}
+            <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
+                  <Link2 className="h-5 w-5" />
                 </div>
-                <Input
-                  id="sweepgo-webhook-url"
-                  type="text"
-                  readOnly
-                  placeholder={isLoadingCustomTriggerWebhook ? "Loading webhook URL…" : "Webhook URL unavailable"}
-                  value={webhookUrl}
-                  className="h-10 text-xs border-slate-300 bg-slate-50 font-mono focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
-                  aria-describedby="sweepgo-webhook-url-help"
-                />
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={handleCopyWebhookUrl} disabled={!webhookUrl.trim()} className="gap-2 h-8 text-xs px-3">
-                    {copiedWebhookUrl ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copiedWebhookUrl ? "Copied" : "Copy URL"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => void loadCustomTriggerWebhook()} disabled={isLoadingCustomTriggerWebhook} className="gap-2 h-8 text-xs px-3">
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoadingCustomTriggerWebhook ? "animate-spin" : ""}`} />
-                    {isLoadingCustomTriggerWebhook ? "Refreshing..." : "Refresh"}
-                  </Button>
-                </div>
-                <p id="sweepgo-webhook-url-help" className="text-[11px] text-slate-500 leading-relaxed pt-1.5">
-                  {webhookUrlSource === "custom-value"
-                    ? "Loaded from the GHL homeflow_webhook custom value."
-                    : webhookUrlSource === "database-fallback"
-                      ? "GHL custom value was empty, so this URL was loaded from HomeFlow storage."
-                      : "The URL will load automatically for this sub-account."}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 mb-1.5" htmlFor="sweepgo-access-token">
-                  Access Token / API Key
-                </label>
-                <div className="relative">
-                  <Input
-                    id="sweepgo-access-token"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter Access Token / API Key"
-                    value={accessToken}
-                    onChange={(e) => setAccessToken(e.target.value)}
-                    className="h-10 text-xs border-slate-300 pr-10 focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? "Hide token" : "Show token"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                    Sweep & Go Integration
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Connect your Sweep & Go account to HomeFlow.
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button
-                  type="button"
-                  onClick={handleSaveSweepGo}
-                  disabled={isSavingSweepGo}
-                  className="bg-sky-600 hover:bg-sky-700 text-white font-semibold gap-2 px-5 h-9 text-xs rounded-lg shadow-sm"
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  {isSavingSweepGo ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* Left Column: Form Inputs & Save Button */}
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                      <label
+                        className="block text-xs font-semibold text-slate-800"
+                        htmlFor="sweepgo-webhook-url"
+                      >
+                        Webhook URL
+                      </label>
+                      <span
+                        className={
+                          customTriggerWebhook?.status === "ready"
+                            ? "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"
+                            : "inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"
+                        }
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {customTriggerWebhook?.status === "ready"
+                          ? "Connected"
+                          : "Waiting for workflow"}
+                      </span>
+                    </div>
+                    <Input
+                      id="sweepgo-webhook-url"
+                      type="text"
+                      readOnly
+                      placeholder={
+                        isLoadingCustomTriggerWebhook
+                          ? "Loading webhook URL…"
+                          : "Webhook URL unavailable"
+                      }
+                      value={webhookUrl}
+                      className="h-10 text-xs border-slate-300 bg-slate-50 font-mono focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                      aria-describedby="sweepgo-webhook-url-help"
+                    />
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCopyWebhookUrl}
+                        disabled={!webhookUrl.trim()}
+                        className="gap-2 h-8 text-xs px-3"
+                      >
+                        {copiedWebhookUrl ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        {copiedWebhookUrl ? "Copied" : "Copy URL"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void loadCustomTriggerWebhook()}
+                        disabled={isLoadingCustomTriggerWebhook}
+                        className="gap-2 h-8 text-xs px-3"
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${isLoadingCustomTriggerWebhook ? "animate-spin" : ""}`}
+                        />
+                        {isLoadingCustomTriggerWebhook
+                          ? "Refreshing..."
+                          : "Refresh"}
+                      </Button>
+                    </div>
+                    <p
+                      id="sweepgo-webhook-url-help"
+                      className="text-[11px] text-slate-500 leading-relaxed pt-1.5"
+                    >
+                      {webhookUrlSource === "custom-value"
+                        ? "Loaded from the GHL homeflow_webhook custom value."
+                        : webhookUrlSource === "database-fallback"
+                          ? "GHL custom value was empty, so this URL was loaded from HomeFlow storage."
+                          : "The URL will load automatically for this sub-account."}
+                    </p>
+                  </div>
 
-            {/* Right Column: Video Embed & Caption */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-slate-800">How to connect Sweep & Go</h3>
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
-                <iframe
-                  src={SWEEP_AND_GO_VIDEO_URL}
-                  className="w-full h-full border-none"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  title="How to connect Sweep & Go"
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
-                This short video shows you how to find your webhook URL and access token in Sweep & Go and connect it to HomeFlow.
-              </p>
-            </div>
-          </div>
-        </Card>
-        </>}
+                  <div>
+                    <label
+                      className="block text-xs font-semibold text-slate-800 mb-1.5"
+                      htmlFor="sweepgo-access-token"
+                    >
+                      Access Token / API Key
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="sweepgo-access-token"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter Access Token / API Key"
+                        value={accessToken}
+                        onChange={e => setAccessToken(e.target.value)}
+                        className="h-10 text-xs border-slate-300 pr-10 focus-visible:ring-sky-500 rounded-lg placeholder:text-slate-400"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                        onClick={() => setShowPassword(!showPassword)}
+                        title={showPassword ? "Hide token" : "Show token"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      type="button"
+                      onClick={handleSaveSweepGo}
+                      disabled={isSavingSweepGo}
+                      className="bg-sky-600 hover:bg-sky-700 text-white font-semibold gap-2 px-5 h-9 text-xs rounded-lg shadow-sm"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      {isSavingSweepGo ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Right Column: Video Embed & Caption */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-slate-800">
+                    How to connect Sweep & Go
+                  </h3>
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
+                    <iframe
+                      src={SWEEP_AND_GO_VIDEO_URL}
+                      className="w-full h-full border-none"
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      title="How to connect Sweep & Go"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
+                    This short video shows you how to find your webhook URL and
+                    access token in Sweep & Go and connect it to HomeFlow.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </>
+        )}
 
         {/* ── 2. Zapier Integration Outer Card ── */}
         <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl p-6 sm:p-7 space-y-6">
@@ -552,9 +710,12 @@ export default function ZapierIntegrationPage(props: any = {}) {
               <Zap className="h-5 w-5 fill-orange-500 text-orange-500" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 leading-tight">Zapier Integration</h2>
+              <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                Zapier Integration
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Use Zapier to send contacts into HomeFlow from other CRMs, forms, and lead sources.
+                Use Zapier to send contacts into HomeFlow from other CRMs,
+                forms, and lead sources.
               </p>
             </div>
           </div>
@@ -564,10 +725,12 @@ export default function ZapierIntegrationPage(props: any = {}) {
             {/* Left Column: Video */}
             <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3 flex flex-col justify-between">
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900">What is Zapier + when to use it</h3>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  What is Zapier + when to use it
+                </h3>
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
                   <iframe
-                  src={ZAPIER_VIDEO_URL}
+                    src={ZAPIER_VIDEO_URL}
                     className="w-full h-full border-none"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
@@ -576,7 +739,8 @@ export default function ZapierIntegrationPage(props: any = {}) {
                 </div>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed pt-1">
-                Learn how Zapier works, common use cases, and when to use it to send leads into HomeFlow.
+                Learn how Zapier works, common use cases, and when to use it to
+                send leads into HomeFlow.
               </p>
             </div>
 
@@ -585,44 +749,79 @@ export default function ZapierIntegrationPage(props: any = {}) {
               {/* Connection Key */}
               <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Connection Key</h3>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Connection Key
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Copy the raw key or rotate it only when you need a fresh credential.
+                    Copy the raw key or rotate it only when you need a fresh
+                    credential.
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-500">Raw key</label>
+                  <label className="text-xs font-medium text-slate-500">
+                    Raw key
+                  </label>
                   <Input
                     readOnly
-                    value={visibleConnectionKey || connection?.connectionKeyPreview || "No active key"}
+                    value={
+                      visibleConnectionKey ||
+                      connection?.connectionKeyPreview ||
+                      "No active key"
+                    }
                     className="font-mono text-xs h-9"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Button type="button" variant="outline" className="gap-2 h-8 text-xs px-3" onClick={handleCopyConnectionKey}>
-                    {copiedKey ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 h-8 text-xs px-3"
+                    onClick={handleCopyConnectionKey}
+                  >
+                    {copiedKey ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
                     {copiedKey ? "Copied" : "Copy Key"}
                   </Button>
-                  <Button type="button" variant="outline" className="gap-2 h-8 text-xs px-3" onClick={handleRotateKey} disabled={isRotating || !locationId}>
-                    <RefreshCw className={`h-3.5 w-3.5 ${isRotating ? "animate-spin" : ""}`} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 h-8 text-xs px-3"
+                    onClick={handleRotateKey}
+                    disabled={isRotating || !locationId}
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${isRotating ? "animate-spin" : ""}`}
+                    />
                     {isRotating ? "Rotating..." : "Rotate Key"}
                   </Button>
                 </div>
                 <p className="text-[11px] text-slate-500 pt-0.5">
-                  The key is stored securely in hashed form for validation, and the raw value is kept so you can copy it later.
+                  The key is stored securely in hashed form for validation, and
+                  the raw value is kept so you can copy it later.
                 </p>
               </div>
 
               {/* Zapier Access */}
               <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Zapier Access</h3>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Zapier Access
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Open the invite flow or jump straight into the Zap builder.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <span className={connection?.zapierEnabled ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700" : "inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600"}>
+                  <span
+                    className={
+                      connection?.zapierEnabled
+                        ? "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"
+                        : "inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                    }
+                  >
                     {connection?.zapierEnabled ? "Enabled" : "Disabled"}
                   </span>
                   <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
@@ -631,21 +830,46 @@ export default function ZapierIntegrationPage(props: any = {}) {
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Button type="button" onClick={handleIntegrate} className="gap-2 h-9 text-xs px-4 bg-sky-600 hover:bg-sky-700 text-white font-medium" disabled={!locationId}>
+                  <Button
+                    type="button"
+                    onClick={handleIntegrate}
+                    className="gap-2 h-9 text-xs px-4 bg-sky-600 hover:bg-sky-700 text-white font-medium"
+                    disabled={!locationId}
+                  >
                     <ExternalLink className="h-3.5 w-3.5" />
                     Open Zapier Invite
                   </Button>
-                  <Button type="button" variant="outline" onClick={handleCreateZap} className="gap-2 h-9 text-xs px-3" disabled={!locationId || !zapCreateUrl}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCreateZap}
+                    className="gap-2 h-9 text-xs px-3"
+                    disabled={!locationId || !zapCreateUrl}
+                  >
                     <Zap className="h-3.5 w-3.5" />
                     Create Zap
                   </Button>
-                  <Button type="button" variant="outline" className="gap-2 h-9 text-xs px-3" disabled={isLoading || !locationId} onClick={() => void loadConnection()}>
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 h-9 text-xs px-3"
+                    disabled={isLoading || !locationId}
+                    onClick={() => void loadConnection()}
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`}
+                    />
                     Refresh
                   </Button>
                 </div>
 
-                <Button type="button" variant="destructive" className="gap-2 h-8 text-xs px-3" onClick={handleRevoke} disabled={isRevoking || !locationId}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="gap-2 h-8 text-xs px-3"
+                  onClick={handleRevoke}
+                  disabled={isRevoking || !locationId}
+                >
                   <AlertTriangle className="h-3.5 w-3.5" />
                   {isRevoking ? "Revoking..." : "Revoke Access"}
                 </Button>
@@ -655,13 +879,18 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
           {/* Row 2: Steps to connect in Zapier */}
           <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Steps to connect in Zapier</h3>
+            <h3 className="text-base font-bold text-slate-900">
+              Steps to connect in Zapier
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
                 <div className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    1
+                  </span>
                   <p className="font-semibold text-xs text-slate-900 leading-snug">
-                    Open the Zapier invite, accept the invitation, and then start creating the Zap.
+                    Open the Zapier invite, accept the invitation, and then
+                    start creating the Zap.
                   </p>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal pl-8">
@@ -671,7 +900,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
                 <div className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    2
+                  </span>
                   <p className="font-semibold text-xs text-slate-900 leading-snug">
                     In Zapier, select the HomeFlow app in the Action step.
                   </p>
@@ -683,7 +914,9 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
                 <div className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    3
+                  </span>
                   <p className="font-semibold text-xs text-slate-900 leading-snug">
                     Connect your account by adding the connection key.
                   </p>
@@ -695,13 +928,16 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
                 <div className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    4
+                  </span>
                   <p className="font-semibold text-xs text-slate-900 leading-snug">
                     Map the Zap trigger fields to the contact fields.
                   </p>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal pl-8">
-                  Every field mapped on the Add Contact page is available in the action.
+                  Every field mapped on the Add Contact page is available in the
+                  action.
                 </p>
               </div>
             </div>
@@ -710,9 +946,12 @@ export default function ZapierIntegrationPage(props: any = {}) {
           {/* Row 3: Available Fields Grid */}
           <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Available Fields</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                Available Fields
+              </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                These are the fields available in HomeFlow. Use them when mapping your Zap in Zapier.
+                These are the fields available in HomeFlow. Use them when
+                mapping your Zap in Zapier.
               </p>
             </div>
             <div className="grid gap-2 text-xs sm:grid-cols-2">
@@ -729,8 +968,11 @@ export default function ZapierIntegrationPage(props: any = {}) {
                 "Last Scooped",
                 "Frequency",
                 "Marketing Allowed",
-              ].map((label) => (
-                <div key={label} className="flex items-center rounded-lg border border-slate-200 bg-slate-50/70 px-3.5 py-2 font-medium text-slate-700">
+              ].map(label => (
+                <div
+                  key={label}
+                  className="flex items-center rounded-lg border border-slate-200 bg-slate-50/70 px-3.5 py-2 font-medium text-slate-700"
+                >
                   {label}
                 </div>
               ))}
@@ -743,9 +985,12 @@ export default function ZapierIntegrationPage(props: any = {}) {
           <div className="flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-slate-900 leading-tight">Security model</h4>
+              <h4 className="text-sm font-bold text-slate-900 leading-tight">
+                Security model
+              </h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Account credentials stay server-side. The key is hashed for validation, while the raw key is retained for user copying.
+                Account credentials stay server-side. The key is hashed for
+                validation, while the raw key is retained for user copying.
               </p>
             </div>
           </div>
@@ -755,10 +1000,13 @@ export default function ZapierIntegrationPage(props: any = {}) {
       {showRotateConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-2 text-lg font-semibold text-slate-900">Rotate Zapier Connection Key</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-900">
+              Rotate Zapier Connection Key
+            </h3>
             <p className="mb-4 text-sm text-slate-600">
-              Rotating the connection key will immediately invalidate any existing Zaps that use
-              the previous key. You will need to update any Zap that relied on the old key.
+              Rotating the connection key will immediately invalidate any
+              existing Zaps that use the previous key. You will need to update
+              any Zap that relied on the old key.
             </p>
 
             <div className="mb-4 flex items-start gap-3">
@@ -766,16 +1014,27 @@ export default function ZapierIntegrationPage(props: any = {}) {
                 id="rotate-confirm"
                 type="checkbox"
                 checked={rotateConfirmed}
-                onChange={(e) => setRotateConfirmed(e.target.checked)}
+                onChange={e => setRotateConfirmed(e.target.checked)}
                 className="mt-1 h-4 w-4"
               />
-              <label htmlFor="rotate-confirm" className="text-sm text-slate-700">
-                I understand that rotating the key will invalidate existing Zaps and I want to proceed.
+              <label
+                htmlFor="rotate-confirm"
+                className="text-sm text-slate-700"
+              >
+                I understand that rotating the key will invalidate existing Zaps
+                and I want to proceed.
               </label>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => { setShowRotateConfirm(false); setRotateConfirmed(false); }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowRotateConfirm(false);
+                  setRotateConfirmed(false);
+                }}
+              >
                 Cancel
               </Button>
               <Button

@@ -3,6 +3,7 @@ import { Save, Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 import "./IntegrationsPage.css";
 
 const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
@@ -10,7 +11,9 @@ const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
 function useLocationId() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("locationId") || params.get("location_id") || "test-location";
+    return (
+      params.get("locationId") || params.get("location_id") || "test-location"
+    );
   }, []);
 }
 
@@ -40,7 +43,11 @@ export default function IntegrationsPage() {
 
   // Save handler
   const handleSave = async () => {
-    if (!locationId || locationId === "preview" || locationId === "test-location") {
+    if (
+      !locationId ||
+      locationId === "preview" ||
+      locationId === "test-location"
+    ) {
       toast.info(
         "Preview / Test Mode: Settings saved locally. Add ?locationId={{location.id}} in GHL to sync with live sub-accounts."
       );
@@ -59,7 +66,9 @@ export default function IntegrationsPage() {
       await settingsQuery.refetch();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save integrations settings"
+        err instanceof Error
+          ? err.message
+          : "Failed to save integrations settings"
       );
     } finally {
       setIsSaving(false);
@@ -78,8 +87,23 @@ export default function IntegrationsPage() {
       <div className="integrations-page-container">
         {/* ── Top Page Header ────────────────────────────────────────────── */}
         <div className="integrations-page-header">
-          <h1 className="integrations-page-title">Integrations</h1>
-          <VideoHelpButton pageTitle="Sweep & Go Integration" videos={[{ title: "Sweep and Go Webhook Setup Guide", youtubeId: "J7q-qJZ1xxU" }]} />
+          <div className="flex items-center gap-3">
+            <h1 className="integrations-page-title">Integrations</h1>
+            <TopSaveButton
+              onClick={() => void handleSave()}
+              isSaving={isSaving}
+              label="Save"
+            />
+          </div>
+          <VideoHelpButton
+            pageTitle="Sweep & Go Integration"
+            videos={[
+              {
+                title: "Sweep and Go Webhook Setup Guide",
+                youtubeId: "J7q-qJZ1xxU",
+              },
+            ]}
+          />
         </div>
 
         {/* ── Top Video Tutorial Section ─────────────────────────────────── */}
@@ -90,9 +114,12 @@ export default function IntegrationsPage() {
                 <Video className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="integrations-card-title">Setup Video Tutorial</h2>
+                <h2 className="integrations-card-title">
+                  Setup Video Tutorial
+                </h2>
                 <p className="integrations-card-subtitle">
-                  Watch the step-by-step video below to learn how to configure your webhook and access key.
+                  Watch the step-by-step video below to learn how to configure
+                  your webhook and access key.
                 </p>
               </div>
             </div>
@@ -117,9 +144,12 @@ export default function IntegrationsPage() {
                 <Link2 className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="integrations-card-title">API & Webhook Configuration</h2>
+                <h2 className="integrations-card-title">
+                  API & Webhook Configuration
+                </h2>
                 <p className="integrations-card-subtitle">
-                  Manage your sub-account webhook endpoint and authorization credentials.
+                  Manage your sub-account webhook endpoint and authorization
+                  credentials.
                 </p>
               </div>
             </div>
@@ -128,7 +158,10 @@ export default function IntegrationsPage() {
               {/* Field 1: Webhook URL */}
               <div className="integrations-item-block">
                 <div className="integrations-label-row">
-                  <label className="integrations-item-label" htmlFor="webhook-url-input">
+                  <label
+                    className="integrations-item-label"
+                    htmlFor="webhook-url-input"
+                  >
                     Render / Webhook Link
                   </label>
                 </div>
@@ -150,17 +183,26 @@ export default function IntegrationsPage() {
                     title="Copy render/webhook link"
                     aria-label="Copy render/webhook link"
                   >
-                    {copiedWebhook ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copiedWebhook ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
                     {copiedWebhook ? "Copied" : "Copy"}
                   </button>
                 </div>
-                <p className="integrations-field-help">This link is generated by HomeFlow and cannot be edited here.</p>
+                <p className="integrations-field-help">
+                  This link is generated by HomeFlow and cannot be edited here.
+                </p>
               </div>
 
               {/* Field 2: Access Token / API Key */}
               <div className="integrations-item-block">
                 <div className="integrations-label-row">
-                  <label className="integrations-item-label" htmlFor="access-token-input">
+                  <label
+                    className="integrations-item-label"
+                    htmlFor="access-token-input"
+                  >
                     Enter Access Token / API Key
                   </label>
                 </div>
@@ -171,16 +213,20 @@ export default function IntegrationsPage() {
                     className="integrations-input-field has-pw-toggle"
                     placeholder="Enter Access Token / API Key here"
                     value={accessToken}
-                    onChange={(e) => setAccessToken(e.target.value)}
+                    onChange={e => setAccessToken(e.target.value)}
                   />
                   <button
                     type="button"
                     className="integrations-toggle-pw-btn"
-                    onClick={() => setShowPassword((prev) => !prev)}
+                    onClick={() => setShowPassword(prev => !prev)}
                     title={showPassword ? "Hide token" : "Show token"}
                     aria-label={showPassword ? "Hide token" : "Show token"}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>

@@ -87,11 +87,10 @@ const DEFAULT_FORM: QuoteFormData = {
   tosLink: "",
   offers: [
     {
-      name: "2 Weeks FREE",
+      name: "",
       price: "$XX.XX",
-      description:
-        "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. 🐾",
-      image: DEFAULT_DOG_PHOTO,
+      description: "",
+      image: "",
     },
   ],
   price1: "$XX.XX",
@@ -707,7 +706,7 @@ function QuoteFormFields({
           <div>
             <label className="text-[10px] text-slate-400">Offer Title</label>
             <Input
-              value={formData.offers[0]?.name || "2 Weeks FREE"}
+              value={formData.offers[0]?.name ?? ""}
               onChange={e => {
                 const offers = [...formData.offers];
                 offers[0] = { ...offers[0], name: e.target.value };
@@ -1010,10 +1009,10 @@ export default function ReactivationQuotePopup({
       tosLink: q.tosLink || "",
       offers: [
         {
-          name: q.offer2Title ?? "2 Weeks FREE",
+          name: q.offer2Title ?? "",
           price: "$XX.XX",
-          description: q.offer2Description || prev.offers[0]?.description || "",
-          image: q.offer2Image || prev.offers[0]?.image || DEFAULT_DOG_PHOTO,
+          description: q.offer2Description ?? prev.offers[0]?.description ?? "",
+          image: q.offer2Image ?? prev.offers[0]?.image ?? "",
         },
       ],
       galleryImages: [

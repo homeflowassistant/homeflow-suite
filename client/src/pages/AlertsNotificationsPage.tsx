@@ -1,9 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Save, Check, Copy, X, Tag } from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
+import { Check, Copy, X, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { CustomVariablePicker } from "@/components/CustomVariablePicker";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 import "./AlertsNotificationsPage.css";
 
 // Dynamic merge tag helpers for the modal
@@ -21,7 +28,9 @@ const MERGE_TAGS = [
 function useLocationId() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("locationId") || params.get("location_id") || "test-location";
+    return (
+      params.get("locationId") || params.get("location_id") || "test-location"
+    );
   }, []);
 }
 
@@ -100,8 +109,12 @@ function ChatBubble({
     return (
       <div className="alerts-chat-bubble-wrapper is-disabled relative">
         <div className="alerts-chat-bubble pr-10">
-          <span className="alerts-bubble-disabled-hint">(Disabled when toggle is OFF)</span>
-          {value || <span className="italic text-slate-400">Empty message</span>}
+          <span className="alerts-bubble-disabled-hint">
+            (Disabled when toggle is OFF)
+          </span>
+          {value || (
+            <span className="italic text-slate-400">Empty message</span>
+          )}
         </div>
         <button
           type="button"
@@ -124,7 +137,7 @@ function ChatBubble({
             ref={textareaRef}
             className="alerts-chat-bubble-textarea pr-10"
             value={value}
-            onChange={(e) => {
+            onChange={e => {
               onChange(e.target.value);
               handleSelectionChange();
             }}
@@ -137,7 +150,7 @@ function ChatBubble({
           <button
             type="button"
             className="alerts-picker-trigger"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               handleSelectionChange();
               onTogglePicker(pickerId);
@@ -163,14 +176,15 @@ function ChatBubble({
   }
 
   return (
-    <div className="alerts-chat-bubble-wrapper relative" onClick={onStartEditing}>
-      <div className="alerts-chat-bubble pr-10">
-        {value}
-      </div>
+    <div
+      className="alerts-chat-bubble-wrapper relative"
+      onClick={onStartEditing}
+    >
+      <div className="alerts-chat-bubble pr-10">{value}</div>
       <button
         type="button"
         className="alerts-picker-trigger"
-        onClick={(e) => {
+        onClick={e => {
           e.stopPropagation();
           onStartEditing();
           setTimeout(() => {
@@ -194,7 +208,10 @@ export default function AlertsNotificationsPage() {
 
   // Active picker state & caret range tracking
   const [activePickerId, setActivePickerId] = useState<string | null>(null);
-  const [selectionRange, setSelectionRange] = useState<{ start: number; end: number }>({
+  const [selectionRange, setSelectionRange] = useState<{
+    start: number;
+    end: number;
+  }>({
     start: 0,
     end: 0,
   });
@@ -205,25 +222,31 @@ export default function AlertsNotificationsPage() {
     "Thanks for contacting {{location.name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!"
   );
 
-  const [autoReplyNewCustomerEnabled, setAutoReplyNewCustomerEnabled] = useState(true);
-  const [autoReplyNewCustomerMessage, setAutoReplyNewCustomerMessage] = useState(
-    "Thanks for signing up with {{location.name}}!\nWe look forward to keeping your yard clean and enjoyable year-round."
-  );
+  const [autoReplyNewCustomerEnabled, setAutoReplyNewCustomerEnabled] =
+    useState(true);
+  const [autoReplyNewCustomerMessage, setAutoReplyNewCustomerMessage] =
+    useState(
+      "Thanks for signing up with {{location.name}}!\nWe look forward to keeping your yard clean and enjoyable year-round."
+    );
 
-  const [teamNotifyNewLeadEnabled, setTeamNotifyNewLeadEnabled] = useState(true);
+  const [teamNotifyNewLeadEnabled, setTeamNotifyNewLeadEnabled] =
+    useState(true);
   const [teamNotifyNewLeadMessage, setTeamNotifyNewLeadMessage] = useState(
     "New Lead Received:\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nCity: {{address}}\nDogs: {{dogs}}\nFrequency: {{frequency}}\nGive them a call!"
   );
 
-  const [teamNotifyNewCustomerEnabled, setTeamNotifyNewCustomerEnabled] = useState(true);
-  const [teamNotifyNewCustomerMessage, setTeamNotifyNewCustomerMessage] = useState(
-    "New Customer Sign Up!\nName:\nPhone:\nEmail:\nCity:\n\nPlease assign the customer to a route"
-  );
+  const [teamNotifyNewCustomerEnabled, setTeamNotifyNewCustomerEnabled] =
+    useState(true);
+  const [teamNotifyNewCustomerMessage, setTeamNotifyNewCustomerMessage] =
+    useState(
+      "New Customer Sign Up!\nName:\nPhone:\nEmail:\nCity:\n\nPlease assign the customer to a route"
+    );
 
   const [teamNotifyPhone, setTeamNotifyPhone] = useState("");
   const [teamNotifyEmail, setTeamNotifyEmail] = useState("");
 
-  const [failedPaymentNotifyEnabled, setFailedPaymentNotifyEnabled] = useState(true);
+  const [failedPaymentNotifyEnabled, setFailedPaymentNotifyEnabled] =
+    useState(true);
   const [failedPaymentNotifyMessage, setFailedPaymentNotifyMessage] = useState(
     "Hi John, we were unable to process your recent payment.\nTo avoid any interruption in service, please update your payment method using the secure link below:"
   );
@@ -233,11 +256,16 @@ export default function AlertsNotificationsPage() {
     "Hi John, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!"
   );
 
-  const [subscriptionPausedNotifyEnabled, setSubscriptionPausedNotifyEnabled] = useState(true);
-  const [subscriptionPausedNotifyMessage, setSubscriptionPausedNotifyMessage] = useState(
-    "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested.\nThank you for trusting {{location.name}}!"
-  );
-  const [subscriptionUnpausedNotifyMessage, setSubscriptionUnpausedNotifyMessage] = useState(
+  const [subscriptionPausedNotifyEnabled, setSubscriptionPausedNotifyEnabled] =
+    useState(true);
+  const [subscriptionPausedNotifyMessage, setSubscriptionPausedNotifyMessage] =
+    useState(
+      "Hi John, your service pause has been removed, and your recurring cleanups will resume as scheduled, as requested.\nThank you for trusting {{location.name}}!"
+    );
+  const [
+    subscriptionUnpausedNotifyMessage,
+    setSubscriptionUnpausedNotifyMessage,
+  ] = useState(
     "Hi John, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{location.name}}!"
   );
 
@@ -248,7 +276,8 @@ export default function AlertsNotificationsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Condition: Both Team Notifications toggles are off
-  const isTeamNotifyDisabled = !teamNotifyNewLeadEnabled && !teamNotifyNewCustomerEnabled;
+  const isTeamNotifyDisabled =
+    !teamNotifyNewLeadEnabled && !teamNotifyNewCustomerEnabled;
 
   // tRPC queries & mutations
   const settingsQuery = trpc.alertsNotifications.getSettings.useQuery(
@@ -256,10 +285,11 @@ export default function AlertsNotificationsPage() {
     { enabled: true }
   );
 
-  const pickerVariablesQuery = trpc.alertsNotifications.getPickerVariables.useQuery(
-    { locationId: locationId || "test-location" },
-    { enabled: true }
-  );
+  const pickerVariablesQuery =
+    trpc.alertsNotifications.getPickerVariables.useQuery(
+      { locationId: locationId || "test-location" },
+      { enabled: true }
+    );
 
   const saveMutation = trpc.alertsNotifications.saveSettings.useMutation();
 
@@ -269,35 +299,46 @@ export default function AlertsNotificationsPage() {
     const d = settingsQuery.data;
 
     setAutoReplyNewLeadEnabled(d.autoReplyNewLeadEnabled);
-    if (d.autoReplyNewLeadMessage) setAutoReplyNewLeadMessage(d.autoReplyNewLeadMessage);
+    if (d.autoReplyNewLeadMessage)
+      setAutoReplyNewLeadMessage(d.autoReplyNewLeadMessage);
 
     setAutoReplyNewCustomerEnabled(d.autoReplyNewCustomerEnabled);
-    if (d.autoReplyNewCustomerMessage) setAutoReplyNewCustomerMessage(d.autoReplyNewCustomerMessage);
+    if (d.autoReplyNewCustomerMessage)
+      setAutoReplyNewCustomerMessage(d.autoReplyNewCustomerMessage);
 
     setTeamNotifyNewLeadEnabled(d.teamNotifyNewLeadEnabled);
-    if (d.teamNotifyNewLeadMessage) setTeamNotifyNewLeadMessage(d.teamNotifyNewLeadMessage);
+    if (d.teamNotifyNewLeadMessage)
+      setTeamNotifyNewLeadMessage(d.teamNotifyNewLeadMessage);
 
     setTeamNotifyNewCustomerEnabled(d.teamNotifyNewCustomerEnabled);
-    if (d.teamNotifyNewCustomerMessage) setTeamNotifyNewCustomerMessage(d.teamNotifyNewCustomerMessage);
+    if (d.teamNotifyNewCustomerMessage)
+      setTeamNotifyNewCustomerMessage(d.teamNotifyNewCustomerMessage);
 
     setTeamNotifyPhone(d.teamNotifyPhone || "");
     setTeamNotifyEmail(d.teamNotifyEmail || "");
 
     setFailedPaymentNotifyEnabled(d.failedPaymentNotifyEnabled);
-    if (d.failedPaymentNotifyMessage) setFailedPaymentNotifyMessage(d.failedPaymentNotifyMessage);
+    if (d.failedPaymentNotifyMessage)
+      setFailedPaymentNotifyMessage(d.failedPaymentNotifyMessage);
 
     setSkippedJobNotifyEnabled(d.skippedJobNotifyEnabled);
-    if (d.skippedJobNotifyMessage) setSkippedJobNotifyMessage(d.skippedJobNotifyMessage);
+    if (d.skippedJobNotifyMessage)
+      setSkippedJobNotifyMessage(d.skippedJobNotifyMessage);
 
     setSubscriptionPausedNotifyEnabled(d.subscriptionPausedNotifyEnabled);
-    if (d.subscriptionPausedNotifyMessage) setSubscriptionPausedNotifyMessage(d.subscriptionPausedNotifyMessage);
-    if (d.subscriptionUnpausedNotifyMessage) setSubscriptionUnpausedNotifyMessage(d.subscriptionUnpausedNotifyMessage);
+    if (d.subscriptionPausedNotifyMessage)
+      setSubscriptionPausedNotifyMessage(d.subscriptionPausedNotifyMessage);
+    if (d.subscriptionUnpausedNotifyMessage)
+      setSubscriptionUnpausedNotifyMessage(d.subscriptionUnpausedNotifyMessage);
   }, [settingsQuery.data]);
 
   // Insert selected token into active field
   const handleSelectToken = useCallback(
     (fieldKey: string, token: string) => {
-      const fieldSetterMap: Record<string, (updater: (prev: string) => string) => void> = {
+      const fieldSetterMap: Record<
+        string,
+        (updater: (prev: string) => string) => void
+      > = {
         autoReplyNewLead: setAutoReplyNewLeadMessage,
         autoReplyNewCustomer: setAutoReplyNewCustomerMessage,
         teamNotifyNewLead: setTeamNotifyNewLeadMessage,
@@ -327,7 +368,7 @@ export default function AlertsNotificationsPage() {
 
   // Toggle picker popover
   const handleTogglePicker = useCallback((id: string) => {
-    setActivePickerId((current) => (current === id ? null : id));
+    setActivePickerId(current => (current === id ? null : id));
   }, []);
 
   // Track caret position
@@ -337,7 +378,11 @@ export default function AlertsNotificationsPage() {
 
   // Save handler
   const handleSave = async () => {
-    if (!locationId || locationId === "preview" || locationId === "test-location") {
+    if (
+      !locationId ||
+      locationId === "preview" ||
+      locationId === "test-location"
+    ) {
       toast.info(
         "Preview / Test Mode: Settings saved locally. Add ?locationId={{location.id}} in GHL to sync with live client sub-accounts."
       );
@@ -369,7 +414,9 @@ export default function AlertsNotificationsPage() {
 
       toast.success("Alerts & Notifications settings saved successfully!");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save settings");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save settings"
+      );
     } finally {
       setIsSaving(false);
     }
@@ -387,10 +434,12 @@ export default function AlertsNotificationsPage() {
     <CustomVariablePicker
       isOpen={activePickerId === fieldKey}
       onClose={() => setActivePickerId(null)}
-      onSelectToken={(token) => handleSelectToken(fieldKey, token)}
+      onSelectToken={token => handleSelectToken(fieldKey, token)}
       data={pickerVariablesQuery.data}
       isLoading={pickerVariablesQuery.isLoading}
-      error={pickerVariablesQuery.error ? pickerVariablesQuery.error.message : null}
+      error={
+        pickerVariablesQuery.error ? pickerVariablesQuery.error.message : null
+      }
       disabled={isPreviewMode}
       disabledReason="Connect a GHL sub-account location ID to load custom values and fields."
       onRetry={() => pickerVariablesQuery.refetch()}
@@ -403,17 +452,21 @@ export default function AlertsNotificationsPage() {
       <div className="alerts-page-header">
         <div>
           <h1 className="alerts-page-title">Alerts & Notifications</h1>
-          <VideoHelpButton pageTitle="Alerts & Notifications" videos={[{ title: "Customize Customer and Team Notification Alerts", youtubeId: "EMm8cAp1ZuI" }]} />
+          <VideoHelpButton
+            pageTitle="Alerts & Notifications"
+            videos={[
+              {
+                title: "Customize Customer and Team Notification Alerts",
+                youtubeId: "EMm8cAp1ZuI",
+              },
+            ]}
+          />
         </div>
-        <button
-          type="button"
-          className="alerts-save-btn"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? "Saving..." : "Save Settings"}
-        </button>
+        <TopSaveButton
+          onClick={() => void handleSave()}
+          isSaving={isSaving}
+          label="Save Settings"
+        />
       </div>
 
       {/* ── Section 1: Auto Replies ────────────────────────────────────── */}
@@ -441,7 +494,7 @@ export default function AlertsNotificationsPage() {
                 <ToggleSwitch
                   id="toggle-auto-reply-lead"
                   isOn={autoReplyNewLeadEnabled}
-                  onToggle={() => setAutoReplyNewLeadEnabled((v) => !v)}
+                  onToggle={() => setAutoReplyNewLeadEnabled(v => !v)}
                 />
               </div>
             </div>
@@ -466,7 +519,7 @@ export default function AlertsNotificationsPage() {
                 <ToggleSwitch
                   id="toggle-auto-reply-customer"
                   isOn={autoReplyNewCustomerEnabled}
-                  onToggle={() => setAutoReplyNewCustomerEnabled((v) => !v)}
+                  onToggle={() => setAutoReplyNewCustomerEnabled(v => !v)}
                 />
               </div>
             </div>
@@ -499,7 +552,7 @@ export default function AlertsNotificationsPage() {
                 <ToggleSwitch
                   id="toggle-team-lead"
                   isOn={teamNotifyNewLeadEnabled}
-                  onToggle={() => setTeamNotifyNewLeadEnabled((v) => !v)}
+                  onToggle={() => setTeamNotifyNewLeadEnabled(v => !v)}
                 />
               </div>
             </div>
@@ -524,15 +577,19 @@ export default function AlertsNotificationsPage() {
                 <ToggleSwitch
                   id="toggle-team-customer"
                   isOn={teamNotifyNewCustomerEnabled}
-                  onToggle={() => setTeamNotifyNewCustomerEnabled((v) => !v)}
+                  onToggle={() => setTeamNotifyNewCustomerEnabled(v => !v)}
                 />
               </div>
             </div>
           </div>
 
           {/* Sub-box: Send Team Notifications to: */}
-          <div className={`alerts-team-box ${isTeamNotifyDisabled ? "is-disabled" : ""}`}>
-            <h4 className="alerts-team-box-title">Send Team Notifications to:</h4>
+          <div
+            className={`alerts-team-box ${isTeamNotifyDisabled ? "is-disabled" : ""}`}
+          >
+            <h4 className="alerts-team-box-title">
+              Send Team Notifications to:
+            </h4>
             <div className="alerts-team-form-grid">
               <div className="alerts-input-row">
                 <label htmlFor="team-phone">Phone</label>
@@ -542,7 +599,7 @@ export default function AlertsNotificationsPage() {
                   className="alerts-input-field"
                   placeholder="Enter Phone"
                   value={teamNotifyPhone}
-                  onChange={(e) => setTeamNotifyPhone(e.target.value)}
+                  onChange={e => setTeamNotifyPhone(e.target.value)}
                   disabled={isTeamNotifyDisabled}
                 />
               </div>
@@ -554,7 +611,7 @@ export default function AlertsNotificationsPage() {
                   className="alerts-input-field"
                   placeholder="Enter Email"
                   value={teamNotifyEmail}
-                  onChange={(e) => setTeamNotifyEmail(e.target.value)}
+                  onChange={e => setTeamNotifyEmail(e.target.value)}
                   disabled={isTeamNotifyDisabled}
                 />
               </div>
@@ -568,7 +625,9 @@ export default function AlertsNotificationsPage() {
         <div className="alerts-grid-2">
           {/* Left Column: Failed Payments Notifications */}
           <div>
-            <h2 className="alerts-section-title">Failed Payments Notifications</h2>
+            <h2 className="alerts-section-title">
+              Failed Payments Notifications
+            </h2>
             <div className="alerts-card-box">
               <div className="alerts-item-block">
                 <div className="alerts-item-header">
@@ -582,7 +641,7 @@ export default function AlertsNotificationsPage() {
                     <ToggleSwitch
                       id="toggle-failed-payment"
                       isOn={failedPaymentNotifyEnabled}
-                      onToggle={() => setFailedPaymentNotifyEnabled((v) => !v)}
+                      onToggle={() => setFailedPaymentNotifyEnabled(v => !v)}
                     />
                   </div>
                   <div className="flex-1 w-full">
@@ -621,7 +680,7 @@ export default function AlertsNotificationsPage() {
                     <ToggleSwitch
                       id="toggle-skipped-job"
                       isOn={skippedJobNotifyEnabled}
-                      onToggle={() => setSkippedJobNotifyEnabled((v) => !v)}
+                      onToggle={() => setSkippedJobNotifyEnabled(v => !v)}
                     />
                   </div>
                   <div className="flex-1 w-full">
@@ -651,7 +710,9 @@ export default function AlertsNotificationsPage() {
         <div className="alerts-grid-2">
           {/* Left Column: Subscription Paused/Unpaused */}
           <div>
-            <h2 className="alerts-section-title">Subscription Paused/Unpaused</h2>
+            <h2 className="alerts-section-title">
+              Subscription Paused/Unpaused
+            </h2>
             <div className="alerts-card-box">
               <div className="alerts-item-block space-y-4">
                 <div className="alerts-item-header flex items-center justify-between">
@@ -662,7 +723,7 @@ export default function AlertsNotificationsPage() {
                   <ToggleSwitch
                     id="toggle-subscription-paused"
                     isOn={subscriptionPausedNotifyEnabled}
-                    onToggle={() => setSubscriptionPausedNotifyEnabled((v) => !v)}
+                    onToggle={() => setSubscriptionPausedNotifyEnabled(v => !v)}
                   />
                 </div>
 
@@ -681,7 +742,9 @@ export default function AlertsNotificationsPage() {
                       activePickerId={activePickerId}
                       onTogglePicker={handleTogglePicker}
                       onCaretChange={handleCaretChange}
-                      pickerComponent={renderPickerForField("subscriptionPaused")}
+                      pickerComponent={renderPickerForField(
+                        "subscriptionPaused"
+                      )}
                       disabled={!subscriptionPausedNotifyEnabled}
                     />
                   </div>
@@ -695,12 +758,16 @@ export default function AlertsNotificationsPage() {
                       value={subscriptionUnpausedNotifyMessage}
                       onChange={setSubscriptionUnpausedNotifyMessage}
                       isEditing={editingKey === "subscriptionUnpaused"}
-                      onStartEditing={() => setEditingKey("subscriptionUnpaused")}
+                      onStartEditing={() =>
+                        setEditingKey("subscriptionUnpaused")
+                      }
                       onStopEditing={() => setEditingKey(null)}
                       activePickerId={activePickerId}
                       onTogglePicker={handleTogglePicker}
                       onCaretChange={handleCaretChange}
-                      pickerComponent={renderPickerForField("subscriptionUnpaused")}
+                      pickerComponent={renderPickerForField(
+                        "subscriptionUnpaused"
+                      )}
                       disabled={!subscriptionPausedNotifyEnabled}
                     />
                   </div>
@@ -714,7 +781,9 @@ export default function AlertsNotificationsPage() {
             <div className="h-full flex flex-col justify-end pt-9">
               <div className="alerts-card-box h-full flex items-center justify-center">
                 <div className="alerts-personalize-card">
-                  <h3 className="alerts-personalize-title">To personalize message prompts</h3>
+                  <h3 className="alerts-personalize-title">
+                    To personalize message prompts
+                  </h3>
                   <button
                     type="button"
                     className="alerts-click-here-btn"
@@ -737,10 +806,12 @@ export default function AlertsNotificationsPage() {
         >
           <div
             className="alerts-modal-content"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="alerts-modal-header">
-              <h3 className="alerts-modal-title">Personalize Message Prompts</h3>
+              <h3 className="alerts-modal-title">
+                Personalize Message Prompts
+              </h3>
               <button
                 type="button"
                 className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
@@ -751,9 +822,10 @@ export default function AlertsNotificationsPage() {
             </div>
             <div className="alerts-modal-body space-y-3">
               <p className="text-xs text-slate-500 mb-2">
-                Click any tag below to copy it to your clipboard, then paste it into any custom message field:
+                Click any tag below to copy it to your clipboard, then paste it
+                into any custom message field:
               </p>
-              {MERGE_TAGS.map((tag) => (
+              {MERGE_TAGS.map(tag => (
                 <div key={tag.code} className="alerts-tag-card">
                   <div>
                     <code className="alerts-tag-code">{tag.code}</code>

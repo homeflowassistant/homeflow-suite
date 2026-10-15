@@ -1380,6 +1380,46 @@ export async function updateCustomValuesOnInstall(
       { name: "failed_payment_message", value: "True" },
       { name: "skipped_job_message", value: "True" },
       { name: "subscription_pausedunpaused_message", value: "True" },
+      {
+        name: "autoreply_new_lead_message",
+        value:
+          "Thanks for contacting {{custom_values.company_name}}!\nWe've received your request and will be in touch shortly. We look forward to helping you enjoy a cleaner, poop-free yard!",
+      },
+      {
+        name: "autoreply_new_customer_message",
+        value:
+          "Thanks for signing up with {{custom_values.company_name}}!\nWe look forward to keeping your yard clean and enjoyable year-round.",
+      },
+      {
+        name: "teamnotification_new_lead_message",
+        value:
+          "New Lead Received!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nGive them a call.",
+      },
+      {
+        name: "teamnotification_new_customer_message",
+        value:
+          "New Customer Sign Up!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nPlease assign them to a route.",
+      },
+      {
+        name: "custom_failed_payment_message",
+        value:
+          "Hi {{contact.first_name}}, we were unable to process your recent payment. To avoid any interruption in service, please update your payment method using the secure link below:\n{{custom_values.add_payment_link}}",
+      },
+      {
+        name: "custom_skipped_job_message",
+        value:
+          "Hi {{contact.first_name}}, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
+      },
+      {
+        name: "custom_subscription_pausedunpaused_message",
+        value:
+          "Hi {{contact.first_name}}, your service has been unpaused, and your recurring cleanups will resume starting next week as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
+      },
+      {
+        name: "account_unpaused_message",
+        value:
+          "Hi {{contact.first_name}}, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
+      },
       { name: "receive_newlead_notifications_true_or_false", value: "True" },
       { name: "on_the_way_notifications_truefalse", value: "True" },
       { name: "job_completed_notifications_truefalse", value: "True" },

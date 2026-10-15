@@ -504,8 +504,7 @@ export const requestSchedulingRouter = router({
               ? extractCustomValueKey(c.fieldKey)
               : undefined;
           const rawKey = unwrapped;
-          const keyCandidate =
-            (typeof c.key === "string" && c.key) || rawKey;
+          const keyCandidate = (typeof c.key === "string" && c.key) || rawKey;
           const nameCandidate =
             (typeof c.name === "string" && c.name) ||
             rawKey ||
@@ -566,8 +565,7 @@ export const requestSchedulingRouter = router({
         // If the subaccount has no stored value, surface the tag itself
         // so the user can see what was inserted (template placeholder).
         return {
-          value:
-            resolved || `{{custom_values.${normalized || "unknown"}}}`,
+          value: resolved || `{{custom_values.${normalized || "unknown"}}}`,
           isPlaceholder: resolved === "",
         };
       } catch (err) {
@@ -814,11 +812,10 @@ export const requestSchedulingRouter = router({
           [CV.offer1Image]: offer1ImageUrl,
 
           // Offer 2 (Leads Line Item 2 & Freebie Offer)
-          [CV.offer2Title]: d.offer2Title ?? "2 Weeks FREE",
+          [CV.offer2Title]: d.offer2Title ?? "",
           [CV.offer2Description]: d.offer2Description ?? "",
           [CV.offer2Image]: offer2ImageUrl,
-          discountfree_offer_for_reengagement_campaigns:
-            d.offer2Title ?? "2 Weeks FREE",
+          discountfree_offer_for_reengagement_campaigns: d.offer2Title ?? "",
 
           // Page Settings
           [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically

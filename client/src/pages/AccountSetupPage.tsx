@@ -2,7 +2,8 @@
  * Account Set Up Page
  *
  * New GHL sidebar item that lets clients fill in their business profile and
- * auto-saves every field directly to the sub-account's GHL custom values.
+ * saves edited fields to the sub-account's custom values when the user clicks
+ * the page Save button.
  *
  * Field → GHL custom value key mapping (order as specified by the client):
  *   Business Name            → {{custom_values.homeflow_business_name}}
@@ -20,11 +21,9 @@
  * Behavior (as requested in the account setup spec):
  *   - Fields are shown in the order listed above, including Business Email and Business Phone.
 
- *   - Auto-save on input (debounced) AND a manual Save button (consistent
- *     with the other settings pages): clicking Save pushes every field whose
- *     value has changed since the last load/save to GHL.
- *   - A confirmation pop-up (toast) appears whenever a value is saved —
- *     after each auto-save and again after a manual Save.
+ *   - Values stay local while the client edits and Save pushes every field
+ *     whose value has changed since the last load/save to the CRM.
+ *   - A confirmation pop-up (toast) appears after a manual Save.
  *   - Images are entered as a URL (paste an image link). If a base64
  *     data URI is pasted instead, it is uploaded to the GHL Media Library
  *     and the hosted URL is stored — the same workflow the Custom Quote
@@ -62,6 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 
 type AccountField =
   | "businessName"
@@ -271,8 +271,6 @@ function useLocationId() {
   }, []);
 }
 
-const DEBOUNCE_MS = 700;
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -441,90 +439,20 @@ export default function AccountSetupPage() {
   // check reflects the latest in-progress value, not just the last fetch.
   const [typedLogo, setTypedLogo] = useState<string>("");
 
-  // ── Auto-save on input with debounce ────────────────────────────────
-  // Each keystroke restarts a timer; when the user pauses for 700ms the
-  // value is pushed to GHL and a confirmation pop-up appears. No-op
-  // updates are skipped, and saves wait until GHL has finished loading so
-  // the freshly fetched value always wins on page open.
-  const debounceTimers = useRef<
-    Record<AccountField, ReturnType<typeof setTimeout> | null>
-  >({
-    businessName: null,
-    businessOwnerName: null,
-    businessEmail: null,
-    businessPhone: null,
-    businessLogo: null,
-    paymentLink: null,
-    facebookPageLink: null,
-    leadCampaignOffer: null,
-    reengagementOffer: null,
-    legalBusinessName: null,
-    businessAddress: null,
-    stateTwoLetterAbbrev: null,
-    internalNotificationsEmail: null,
-    internalNotificationsPhone: null,
-    receiveNewLeadNotifications: null,
-    onTheWayNotifications: null,
-    jobCompletedNotifications: null,
-    offScheduleNotifications: null,
-    notificationChannel: null,
-    crmSelection: null,
-  });
-
+  // ── Local editing ───────────────────────────────────────────────────
+  // Values remain local until the user clicks the page Save button. This
+  // prevents partially completed business-registration data from being
+  // written while the client is still editing the form.
   const handleValueChange = useCallback(
     (field: AccountField, newValue: string) => {
       setValues(prev => ({ ...prev, [field]: newValue }));
-
-      if (debounceTimers.current[field]) {
-        clearTimeout(debounceTimers.current[field]!);
-      }
-
-      // Special handling for the Business Logo: when the user clears the
-      // logo URL, the upload option must show immediately — update the
-      // trackers right away (the debounced save below will push the empty
-      // value to GHL) so the upload box is never gated on the refetch.
       if (field === "businessLogo") {
         setTypedLogo(newValue);
         if (!newValue) setStoredLogo("");
       }
-
-      debounceTimers.current[field] = setTimeout(() => {
-        if (!locationId) return;
-        // Skip no-op saves (value unchanged from what GHL already has).
-        const stored =
-          (settingsQuery.data as Record<string, string> | undefined)?.[
-            mapFieldToGhlKey(field)
-          ] ?? "";
-        if (
-          stored === newValue &&
-          !saveFieldMutation.isPending &&
-          !saveFieldMutation.isError
-        ) {
-          return;
-        }
-        // Wait for the initial GHL load so a fetch failure can't overwrite
-        // the stored value with an empty default, and so the page-open
-        // fetch (which fills the fields first) always wins on open.
-        if (settingsQuery.isLoading || settingsQuery.isError) return;
-
-        setSaveStatus(prev => ({ ...prev, [field]: "saving" }));
-        dataSavedFieldRef.current = field;
-        saveFieldMutation.mutate({ locationId, field, value: newValue });
-      }, DEBOUNCE_MS);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [locationId]
+    []
   );
-
-  // Clean up timers on unmount
-  useEffect(() => {
-    const timers = debounceTimers.current;
-    return () => {
-      for (const t of Object.values(timers)) {
-        if (t) clearTimeout(t);
-      }
-    };
-  }, []);
 
   // Map UI field → the primary GHL key it reads from, used for the no-op skip
   // and for the manual Save button's unsaved-changes detection. Defined here
@@ -560,12 +488,8 @@ export default function AccountSetupPage() {
 
   // ── Manual Save button (same explicit-Save pattern as the other
   //    settings pages) ────────────────────────────────────────────────
-  // The debounced auto-save on each field is kept as-is, so nothing is
-  // lost if the user closes the page. The button additionally pushes every
-  // field whose typed value differs from the last known stored value, so a
-  // single click guarantees everything is in GHL. A confirmation pop-up
-  // appears once the batch completes (each field also toasts individually
-  // if its auto-save already fired).
+  // A single click pushes every field whose typed value differs from the last
+  // known stored value. A confirmation pop-up appears once the batch completes.
   const [isSavingAll, setIsSavingAll] = useState(false);
 
   const savedValues = useMemo(
@@ -606,6 +530,8 @@ export default function AccountSetupPage() {
     try {
       for (const meta of toSave) {
         try {
+          dataSavedFieldRef.current = meta.key;
+          setSaveStatus(prev => ({ ...prev, [meta.key]: "saving" }));
           const res = await saveFieldMutation.mutateAsync({
             locationId,
             field: meta.key,
@@ -681,6 +607,11 @@ export default function AccountSetupPage() {
                   youtubeId: "Tb-Wi8ytbbo",
                 },
               ]}
+            />
+            <TopSaveButton
+              onClick={() => void handleSaveAll()}
+              isSaving={isSavingAll}
+              label="Save"
             />
           </div>
           <p className="text-[12px] text-slate-500 mt-1 px-4">

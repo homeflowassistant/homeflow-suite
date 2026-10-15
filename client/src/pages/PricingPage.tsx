@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { Copy, Save, Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
-import OnboardingTutorial from "@/components/OnboardingTutorial";
+import TopSaveButton from "@/components/TopSaveButton";
 import "./PricingPage.css";
 
 // ─── Shared types with the server ────────────────────────────────────
@@ -333,6 +333,7 @@ export default function PricingPage() {
           <h1 className="pricing-page-title">Pricing Setup</h1>
           <VideoHelpButton
             pageTitle="Pricing"
+            openInNewTab
             videos={[
               {
                 title: "Filling Out Pricing Section Guide",
@@ -342,15 +343,11 @@ export default function PricingPage() {
           />
           <span className="pricing-required-hint">*required fields</span>
         </div>
-        <button
-          type="button"
-          className="pricing-save-btn"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? "Saving..." : "Save Settings"}
-        </button>
+        <TopSaveButton
+          onClick={() => void handleSave()}
+          isSaving={isSaving}
+          label="Save Settings"
+        />
       </div>
 
       {isLoading ? (
@@ -359,11 +356,6 @@ export default function PricingPage() {
         </div>
       ) : (
         <div className="pricing-page-content">
-          <OnboardingTutorial
-            title="Filling Out Pricing Section Guide"
-            youtubeId="UOhfOagLc1o"
-            description="Watch this walkthrough before entering your initial, one-time, and recurring pricing."
-          />
           {/* ── Section 1: Initial Service Pricing ─────────────────── */}
           <section className="pricing-section">
             <div className="pricing-card">

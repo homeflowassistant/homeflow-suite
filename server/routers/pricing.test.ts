@@ -44,13 +44,13 @@ describe("pricing.getSettings", () => {
 
     expect(settings.initialPricing.length).toBe(6);
     expect(settings.oneTimePricing.length).toBe(6);
-    expect(settings.initialPricing[0].value).toContain("$35");
-    expect(settings.oneTimePricing[0].value).toContain("$75");
-    expect(settings.regularZipCodes).toContain("97501");
+    expect(settings.initialPricing[0].value).toContain("$XX");
+    expect(settings.oneTimePricing[0].value).toContain("$XX");
+    expect(settings.regularZipCodes).toBe("");
     expect(settings.regularRecurringPricing[0].dogCount).toBe(1);
-    // Premium tier starts empty per client spec
+    // Premium ZIP codes start empty, while the editable rate template remains available.
     expect(settings.premiumZipCodes).toBe("");
-    expect(settings.premiumRecurringPricing[0].text).toBe("");
+    expect(settings.premiumRecurringPricing[0].text).toContain("$XX.XX");
   });
 
   it("reads existing FAQ prose from GHL keys", async () => {
@@ -92,7 +92,7 @@ describe("pricing.getSettings", () => {
     mockedGetMap.mockRejectedValue(new Error("GHL request failed: 401"));
     const caller = createCaller();
     const settings = await caller.pricing.getSettings({ locationId: "loc123" });
-    expect(settings.initialPricing[0].value).toContain("$35");
+    expect(settings.initialPricing[0].value).toContain("$XX");
   });
 
   it("prefills recurring defaults with the client's line wording", async () => {
@@ -102,19 +102,17 @@ describe("pricing.getSettings", () => {
 
     const r3 = settings.regularRecurringPricing.find(x => x.dogCount === 3)!;
     expect(r3.text).toContain(
-      "2x weekly Recurring Quote Rate for 3 dogs: $21.23 per service"
+      "2x weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Weekly Recurring Quote Rate for 3 dogs: $26.08 per service"
+      "Weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Biweekly Recurring Quote Rate for 3 dogs: $26.08 per service"
+      "Biweekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Monthly Recurring Quote Rate for 3 dogs: N/A"
+      "Monthly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
-    const r1 = settings.regularRecurringPricing.find(x => x.dogCount === 1)!;
-    expect(r1.text).toContain("Monthly Recurring Quote Rate for 1 dog: $70");
   });
 
   it("converts legacy GHL values into the client's free-text line format", async () => {
@@ -208,9 +206,7 @@ describe("pricing.saveSettings", () => {
       )
     ),
     premiumZipCodes: "",
-    premiumRecurringPricing: [1, 2, 3, 4, 5, 6].map(d =>
-      recurringEntry(d, "")
-    ),
+    premiumRecurringPricing: [1, 2, 3, 4, 5, 6].map(d => recurringEntry(d, "")),
     ...overrides,
   });
 

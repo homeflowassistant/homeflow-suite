@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
 import SGLinkPopup from "@/components/SGLinkPopup";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 // Example images served from /public via Vite
 const EXAMPLE_EMAIL = "/lite.png";
 const EXAMPLE_SG_ONBOARDING = "/S&G.png";
@@ -150,10 +151,9 @@ export default function RequestScheduling() {
       { enabled: !!locationId }
     );
 
-  // Auto-save mutation: persists ONLY the Lead Follow-Up option to the GHL
-  // subaccount's `lead_followup_options` custom value immediately whenever
-  // the user selects or changes an option — no manual Save button needed.
-  const autoSaveLeadOptionMutation =
+  // Explicit Save mutation: persists only the Lead Follow-Up option when the
+  // user clicks the page Save button.
+  const saveLeadOptionMutation =
     trpc.requestScheduling.saveLeadFollowUpOption.useMutation({
       onSuccess: () => {
         showToast("Lead Follow-Up option saved.");
@@ -173,11 +173,9 @@ export default function RequestScheduling() {
       },
     });
 
-  // Auto-save mutation: persists ONLY the Initial Outreach Scheduling
-  // timing to the GHL subaccount's `initial_request_scheduling` custom
-  // value immediately whenever the slider value changes — no manual Save
-  // button needed. `setTimingSaveStatus` drives the inline status chip.
-  const autoSaveTimingMutation =
+  // Explicit Save mutation: persists only Initial Outreach Scheduling when
+  // the user clicks the page Save button.
+  const saveTimingMutation =
     trpc.requestScheduling.saveInitialRequestScheduling.useMutation({
       onSuccess: data => {
         setTimingSaveStatus("saved");
@@ -278,11 +276,11 @@ export default function RequestScheduling() {
 
     setTimingSaveStatus("saving");
     try {
-      await autoSaveLeadOptionMutation.mutateAsync({
+      await saveLeadOptionMutation.mutateAsync({
         locationId,
         leadFollowUpOption: selectedOption,
       });
-      await autoSaveTimingMutation.mutateAsync({
+      await saveTimingMutation.mutateAsync({
         locationId,
         initialRequestScheduling: TIMING_LABELS[initialTiming],
       });
@@ -299,8 +297,8 @@ export default function RequestScheduling() {
       );
     }
   }, [
-    autoSaveLeadOptionMutation,
-    autoSaveTimingMutation,
+    saveLeadOptionMutation,
+    saveTimingMutation,
     initialTiming,
     locationId,
     locationSettingsQuery,
@@ -400,6 +398,11 @@ export default function RequestScheduling() {
           <div className="rs-page-icon">
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
+          <TopSaveButton
+            onClick={() => void handleSavePage()}
+            isSaving={timingSaveStatus === "saving"}
+            label="Save"
+          />
         </header>
 
         <section className="rs-card rs-option-section">
@@ -412,7 +415,7 @@ export default function RequestScheduling() {
                     type="button"
                     className={`rs-option-card ${isSelected ? "rs-option-selected" : ""}`}
                     disabled={
-                      autoSaveLeadOptionMutation.isPending &&
+                      saveLeadOptionMutation.isPending &&
                       selectedOption !== option
                     }
                     onClick={() => {
@@ -478,7 +481,7 @@ export default function RequestScheduling() {
                         onChange={() => setSelectedOption(option)}
                         onClick={e => e.stopPropagation()}
                         disabled={
-                          autoSaveLeadOptionMutation.isPending &&
+                          saveLeadOptionMutation.isPending &&
                           selectedOption !== option
                         }
                         style={{
@@ -501,8 +504,8 @@ export default function RequestScheduling() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void handleSavePage()}
             disabled={
-              autoSaveLeadOptionMutation.isPending ||
-              autoSaveTimingMutation.isPending ||
+              saveLeadOptionMutation.isPending ||
+              saveTimingMutation.isPending ||
               locationSettingsQuery.isLoading
             }
           >

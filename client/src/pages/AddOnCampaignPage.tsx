@@ -3,6 +3,7 @@ import { Clock3, Link2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 import "./AddOnCampaignPage.css";
 
 // ─── Example image ───────────────────────────────────────────────────
@@ -159,7 +160,14 @@ export default function AddOnCampaignPage() {
       <div className="aoc-shell">
         {/* ── Page Header ── */}
         <header className="aoc-page-header">
-          <h1 className="aoc-main-title">Add-On Campaign</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="aoc-main-title">Add-On Campaign</h1>
+            <TopSaveButton
+              onClick={() => void handleSave()}
+              isSaving={isSaving}
+              label="Save Settings"
+            />
+          </div>
           <h2 className="aoc-how-title">How It works:</h2>
           <div className="aoc-how-steps">
             <p className="aoc-how-step">1. Add Contacts manually</p>
@@ -168,7 +176,15 @@ export default function AddOnCampaignPage() {
               3. They approve and you schedule their service
             </p>
           </div>
-          <VideoHelpButton pageTitle="Add-On Campaign" videos={[{ title: "Set Up and Edit Add-On Campaign Messages", youtubeId: "9LX1BaEtkV0" }]} />
+          <VideoHelpButton
+            pageTitle="Add-On Campaign"
+            videos={[
+              {
+                title: "Set Up and Edit Add-On Campaign Messages",
+                youtubeId: "9LX1BaEtkV0",
+              },
+            ]}
+          />
         </header>
 
         {/* ── LITE Info Card ── */}

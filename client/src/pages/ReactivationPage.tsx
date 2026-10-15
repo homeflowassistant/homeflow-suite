@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import ReactivationQuotePopup from "@/components/ReactivationQuotePopup";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import TopSaveButton from "@/components/TopSaveButton";
 import "./ReactivationPage.css";
 
 // ─── Example images (place these PNGs in /public) ─────────────────────
@@ -187,19 +188,34 @@ export default function ReactivationPage() {
       <div className="rs-shell reac-shell">
         {/* ── Page Header ── */}
         <header className="rs-page-header reac-page-header">
-          <div>
-            <h1 className="reac-main-title">Reactivation</h1>
-            <h2 className="reac-sub-title">How it works:</h2>
-            <div className="rs-page-copy">
-              <p className="rs-how-step">
-                1. Add Contacts manually or a Facebook form
-              </p>
-              <p className="rs-how-step">2. We reach out with a message</p>
-              <p className="rs-how-step">
-                3. They approve a quote and schedule an scoop
-              </p>
+          <div className="flex w-full items-start justify-between gap-3">
+            <div>
+              <h1 className="reac-main-title">Reactivation</h1>
+              <h2 className="reac-sub-title">How it works:</h2>
+              <div className="rs-page-copy">
+                <p className="rs-how-step">
+                  1. Add Contacts manually or a Facebook form
+                </p>
+                <p className="rs-how-step">2. We reach out with a message</p>
+                <p className="rs-how-step">
+                  3. They approve a quote and schedule an scoop
+                </p>
+              </div>
+              <VideoHelpButton
+                pageTitle="Reactivation"
+                videos={[
+                  {
+                    title: "Reactivating Inactive Customers With Custom Quotes",
+                    youtubeId: "9eKcX8Dbzrs",
+                  },
+                ]}
+              />
             </div>
-            <VideoHelpButton pageTitle="Reactivation" videos={[{ title: "Reactivating Inactive Customers With Custom Quotes", youtubeId: "9eKcX8Dbzrs" }]} />
+            <TopSaveButton
+              onClick={() => void handleSave()}
+              isSaving={isSaving}
+              label="Save Settings"
+            />
           </div>
         </header>
 

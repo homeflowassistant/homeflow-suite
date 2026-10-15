@@ -878,6 +878,16 @@ export const pricingRouter = router({
         const encodedInitial = singleLineEncode(initialAndRecurringText);
         const encodedOneTime = singleLineEncode(oneTimeText);
         const encodedAddOns = singleLineEncode(addOnsText);
+        const legacyRegularRecurring = singleLineEncode(
+          input.regularRecurringPricing
+            .map(row => `${DOG_LABELS[row.dogCount]}\n${row.text}`)
+            .join("\n\n")
+        );
+        const legacyPremiumRecurring = singleLineEncode(
+          input.premiumRecurringPricing
+            .map(row => `${DOG_LABELS[row.dogCount]}\n${row.text}`)
+            .join("\n\n")
+        );
 
         // ── Payload: primary key + display-name aliases ──────────────
         // Mirrors the alertsNotifications save flow: write under the
@@ -889,10 +899,25 @@ export const pricingRouter = router({
           [PRICING_KEYS.initialAndRecurring]: encodedInitial,
           [PRICING_KEYS.onetime]: encodedOneTime,
           [PRICING_KEYS.addOns]: encodedAddOns,
+          // Legacy keys remain dual-written for existing workflows and
+          // previously provisioned subaccounts.
+          [PRICING_KEYS.legacyFaqPriceList]: encodedInitial,
+          [PRICING_KEYS.legacyFaqOneTimeQuotes]: encodedOneTime,
+          [PRICING_KEYS.legacyRegularZipCodes]: singleLineEncode(
+            input.regularZipCodes
+          ),
+          [PRICING_KEYS.legacyRegularRecurring]: legacyRegularRecurring,
+          [PRICING_KEYS.legacyPremiumZipCodes]: singleLineEncode(
+            input.premiumZipCodes
+          ),
+          [PRICING_KEYS.legacyPremiumRecurring]: legacyPremiumRecurring,
+          [PRICING_KEYS.legacyCrossSells]: encodedAddOns,
           // Display-name aliases for dual-write coverage
           "Initial And Recurring Pricing": encodedInitial,
           "OneTime Pricing": encodedOneTime,
           "Add On Pricing": encodedAddOns,
+          "Price List": encodedInitial,
+          "One-Time Quotes": encodedOneTime,
         };
 
         // Step 1: Update existing custom values only (never creates).
@@ -903,6 +928,9 @@ export const pricingRouter = router({
           [PRICING_KEYS.initialAndRecurring, encodedInitial],
           [PRICING_KEYS.onetime, encodedOneTime],
           [PRICING_KEYS.addOns, encodedAddOns],
+          [PRICING_KEYS.legacyFaqPriceList, encodedInitial],
+          [PRICING_KEYS.legacyFaqOneTimeQuotes, encodedOneTime],
+          [PRICING_KEYS.legacyRegularRecurring, legacyRegularRecurring],
         ];
 
         for (const [key, val] of primaryEntries) {

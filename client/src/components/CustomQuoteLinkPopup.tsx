@@ -105,11 +105,10 @@ const DEFAULT_FORM: QuoteFormData = {
       image: DEFAULT_DOG_PHOTO,
     },
     {
-      name: "2 Weeks FREE",
+      name: "",
       price: "$XX.XX",
-      description:
-        "Experience the joy of a hassle-free yard with our weekly dog waste removal service for your furry friend! Just one visit every week is all it takes to keep your yard clean and fresh for your beloved pup. 🐾",
-      image: DEFAULT_DOG_PHOTO,
+      description: "",
+      image: "",
     },
   ],
   price1: "$XX.XX",
@@ -1032,7 +1031,7 @@ function QuoteFormFields({
           <div>
             <label className="text-[10px] text-slate-400">Offer Title</label>
             <Input
-              value={formData.offers[1]?.name || "2 Weeks FREE"}
+              value={formData.offers[1]?.name ?? ""}
               onChange={e => {
                 const offers = [...formData.offers];
                 offers[1] = { ...offers[1], name: e.target.value };
@@ -1370,8 +1369,8 @@ export default function CustomQuoteLinkPopup({
           name: ghl.offer2Title ?? DEFAULT_FORM.offers[1].name,
           price: DEFAULT_FORM.offers[1].price,
           description:
-            ghl.offer2Description || DEFAULT_FORM.offers[1].description,
-          image: ghl.offer2Image || DEFAULT_FORM.offers[1].image,
+            ghl.offer2Description ?? DEFAULT_FORM.offers[1].description,
+          image: ghl.offer2Image ?? DEFAULT_FORM.offers[1].image,
         },
       ],
       galleryImages: DEFAULT_FORM.galleryImages.map(

@@ -243,17 +243,16 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         // recurring keys consumed by the reactivation quote workflows. An
         // explicit empty string is intentional and must remain empty so the
         // optional sign-up offer can be omitted.
-        leads_line_item_2: d.offer2Title ?? "2 Weeks FREE",
+        leads_line_item_2: d.offer2Title ?? "",
         leads_line_item_description_2: d.offer2Description ?? "",
         leads_line_item_image_2: offer2ImageUrl,
-        onetime_line_item_1: d.offer2Title ?? "2 Weeks FREE",
+        onetime_line_item_1: d.offer2Title ?? "",
         onetime_line_item_description_1: d.offer2Description ?? "",
         onetime_line_item_image_1: offer2ImageUrl,
-        recurring_line_item_1: d.offer2Title ?? "2 Weeks FREE",
+        recurring_line_item_1: d.offer2Title ?? "",
         recurring_line_item_description_1: d.offer2Description ?? "",
         recurring_line_item_image_1: offer2ImageUrl,
-        discountfree_offer_for_reengagement_campaigns:
-          d.offer2Title ?? "2 Weeks FREE",
+        discountfree_offer_for_reengagement_campaigns: d.offer2Title ?? "",
         [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically
           ? "true"
           : "false",

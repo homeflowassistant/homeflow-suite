@@ -34,6 +34,7 @@ import ReactivationPage from "@/pages/ReactivationPage";
 import RequestScheduling from "@/pages/RequestScheduling";
 import ZapierIntegrationPage from "@/pages/ZapierIntegrationPage";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
+import TopSaveButton from "@/components/TopSaveButton";
 
 type PageStatus = "complete" | "incomplete" | "blocked" | "skipped";
 
@@ -261,6 +262,69 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
   }
 }
 
+function FacebookMappingGuide() {
+  const mappings = [
+    ["Facebook Page Link", "facebook_page_link", "Facebook Page URL"],
+    ["Legal Business Name", "legal_business_name", "EIN legal name"],
+    ["Business Address", "business_address", "EIN business address"],
+    [
+      "Service State",
+      "state_two_letter_abbrev",
+      "Two-letter state abbreviation",
+    ],
+    [
+      "Notification Channel",
+      "notification_channel__pick_one_sms_email_call",
+      "sms, email, or call",
+    ],
+  ] as const;
+
+  return (
+    <Card className="border-cyan-200 bg-cyan-50/60 shadow-sm">
+      <CardHeader className="p-5 pb-3">
+        <CardTitle className="text-base text-cyan-950">
+          Facebook Page and Value Mapping
+        </CardTitle>
+        <CardDescription className="leading-relaxed text-cyan-900/80">
+          Keep this onboarding page open while you watch the video. Add your
+          Facebook Page URL in Account Set Up, then confirm that the values
+          below are saved under the exact keys used by HomeFlow workflows.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-5 pt-1">
+        <div className="overflow-x-auto rounded-lg border border-cyan-200 bg-white">
+          <table className="w-full min-w-[520px] text-left text-xs">
+            <thead className="bg-cyan-50 text-cyan-950">
+              <tr>
+                <th className="px-3 py-2 font-semibold">
+                  Account Set Up field
+                </th>
+                <th className="px-3 py-2 font-semibold">
+                  Saved custom-value key
+                </th>
+                <th className="px-3 py-2 font-semibold">Expected value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mappings.map(([field, key, expected]) => (
+                <tr key={key} className="border-t border-cyan-100">
+                  <td className="px-3 py-2 font-medium text-slate-800">
+                    {field}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-slate-600">
+                    {`{{custom_values.${key}}}`}
+                  </td>
+                  <td className="px-3 py-2 text-slate-600">{expected}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OnboardingPage() {
   const locationId = useLocationId();
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
@@ -421,9 +485,16 @@ export default function OnboardingPage() {
     <div className="ghl-page bg-slate-50/70 pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Onboarding
-          </h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Onboarding
+            </h1>
+            <TopSaveButton
+              onClick={() => void saveCurrentProgress(currentPage)}
+              isSaving={savingProgress}
+              label="Save"
+            />
+          </div>
           <div className="mt-5 flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-slate-700">
               Step {activeIndex + 1} of {pages.length}
@@ -541,6 +612,9 @@ export default function OnboardingPage() {
             </Card>
 
             <div className="space-y-5">
+              {currentPage.id === "facebook-mapping" && (
+                <FacebookMappingGuide />
+              )}
               <EmbeddedTutorial pageId={currentPage.id} />
               <div className="rounded-2xl border border-cyan-200 bg-white shadow-sm">
                 <div className="border-b border-cyan-100 bg-cyan-50 px-5 py-3">
