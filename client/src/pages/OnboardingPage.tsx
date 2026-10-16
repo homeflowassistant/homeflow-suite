@@ -183,10 +183,8 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
       return <AlertsNotificationsPage embedded />;
     case "integrations":
       return (
-        <>
           <IntegrationsPage embedded />
-          <ZapierIntegrationPage embedded hideSweepGo />
-        </>
+          
       );
     default:
       return null;
@@ -229,11 +227,6 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
             youtubeId="WgOllP4SBIo"
             description="Use this additional walkthrough when the Custom Quote & Link option is selected."
           />
-          <OnboardingTutorial
-            title="Setting Up Client Portal and Offers"
-            youtubeId="5CySgZYJ7Qk"
-            description="Use this walkthrough to configure the client-facing portal and offers."
-          />
         </div>
       );
     case "reactivation":
@@ -259,16 +252,11 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
       );
     case "integrations":
       return (
-        <div className="space-y-4">
           <OnboardingTutorial
             title="Sweep and Go Webhook Setup Guide"
             youtubeId="J7q-qJZ1xxU"
           />
-          <OnboardingTutorial
-            title="Setting Up HomeFlow Zapier Integration"
-            youtubeId="yDa_zUC2T8c"
-          />
-        </div>
+        
       );
     default:
       return null;
