@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import VideoHelpButton from "@/components/VideoHelpButton";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TopSaveButton from "@/components/TopSaveButton";
 import "./PricingPage.css";
 
@@ -208,7 +208,8 @@ function RecurringBox({
 
 // ─── Main Pricing page ───────────────────────────────────────────────
 
-export default function PricingPage() {
+export default function PricingPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -331,16 +332,6 @@ export default function PricingPage() {
       <div className="pricing-page-header homeflow-sticky-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
-          <VideoHelpButton
-            pageTitle="Pricing"
-            openInNewTab
-            videos={[
-              {
-                title: "Filling Out Pricing Section Guide",
-                youtubeId: "UOhfOagLc1o",
-              },
-            ]}
-          />
           <span className="pricing-required-hint">*required fields</span>
         </div>
         <TopSaveButton
@@ -349,6 +340,16 @@ export default function PricingPage() {
           label="Save Settings"
         />
       </div>
+
+      {!embedded && (
+        <div className="pricing-inline-video">
+          <OnboardingTutorial
+            title="Filling Out Pricing Section Guide"
+            youtubeId="UOhfOagLc1o"
+            description="Watch this walkthrough while completing the Initial Service and One-Time Service pricing sections."
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="pricing-loading">

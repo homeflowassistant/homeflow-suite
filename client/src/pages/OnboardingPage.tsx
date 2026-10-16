@@ -172,7 +172,7 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
     case "facebook-mapping":
       return <AccountSetupPage />;
     case "pricing":
-      return <PricingPage />;
+      return <PricingPage embedded />;
     case "request-scheduling":
       return <RequestScheduling />;
     case "reactivation":
