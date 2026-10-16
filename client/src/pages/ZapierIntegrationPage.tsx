@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
 
 const DEFAULT_INVITE_URL =
@@ -136,12 +135,14 @@ function useLocationId() {
 
 type ZapierIntegrationPageProps = {
   hideSweepGo?: boolean;
+  embedded?: boolean;
 };
 
 export default function ZapierIntegrationPage(props: any = {}) {
   const hideSweepGo = Boolean(
     (props as ZapierIntegrationPageProps).hideSweepGo
   );
+  const embedded = Boolean((props as ZapierIntegrationPageProps).embedded);
   const locationId = useLocationId();
   const [copiedKey, setCopiedKey] = useState(false);
   const [zapCreateUrl, setZapCreateUrl] = useState("");
@@ -528,15 +529,6 @@ export default function ZapierIntegrationPage(props: any = {}) {
               />
             )}
           </div>
-          <VideoHelpButton
-            pageTitle="Zapier Integration"
-            videos={[
-              {
-                title: "Setting Up HomeFlow Zapier Integration",
-                youtubeId: "yDa_zUC2T8c",
-              },
-            ]}
-          />
         </div>
         {!hideSweepGo && (
           <>
@@ -668,24 +660,26 @@ export default function ZapierIntegrationPage(props: any = {}) {
                 </div>
 
                 {/* Right Column: Video Embed & Caption */}
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold text-slate-800">
-                    How to connect Sweep & Go
-                  </h3>
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
-                    <iframe
-                      src={SWEEP_AND_GO_VIDEO_URL}
-                      className="w-full h-full border-none"
-                      allow="autoplay; encrypted-media; picture-in-picture"
-                      allowFullScreen
-                      title="How to connect Sweep & Go"
-                    />
+                {!embedded && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-slate-800">
+                      How to connect Sweep & Go
+                    </h3>
+                    <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
+                      <iframe
+                        src={SWEEP_AND_GO_VIDEO_URL}
+                        className="w-full h-full border-none"
+                        allow="autoplay; encrypted-media; picture-in-picture"
+                        allowFullScreen
+                        title="How to connect Sweep & Go"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
+                      This short video shows you how to find your webhook URL
+                      and access token in Sweep & Go and connect it to HomeFlow.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
-                    This short video shows you how to find your webhook URL and
-                    access token in Sweep & Go and connect it to HomeFlow.
-                  </p>
-                </div>
+                )}
               </div>
             </Card>
           </>
@@ -712,26 +706,28 @@ export default function ZapierIntegrationPage(props: any = {}) {
           {/* Row 1: Left Column (What is Zapier Video) | Right Column (Connection Key & Zapier Access) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {/* Left Column: Video */}
-            <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3 flex flex-col justify-between">
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  What is Zapier + when to use it
-                </h3>
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
-                  <iframe
-                    src={ZAPIER_VIDEO_URL}
-                    className="w-full h-full border-none"
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    title="What is Zapier + when to use it"
-                  />
+            {!embedded && (
+              <div className="border border-slate-200/90 shadow-sm bg-white rounded-xl p-5 space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    What is Zapier + when to use it
+                  </h3>
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-200 shadow-sm">
+                    <iframe
+                      src={ZAPIER_VIDEO_URL}
+                      className="w-full h-full border-none"
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      title="What is Zapier + when to use it"
+                    />
+                  </div>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                  Learn how Zapier works, common use cases, and when to use it
+                  to send leads into HomeFlow.
+                </p>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed pt-1">
-                Learn how Zapier works, common use cases, and when to use it to
-                send leads into HomeFlow.
-              </p>
-            </div>
+            )}
 
             {/* Right Column: Connection Key & Zapier Access */}
             <div className="space-y-4 flex flex-col justify-between">

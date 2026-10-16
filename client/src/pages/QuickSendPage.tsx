@@ -473,7 +473,8 @@ function ContactSelectionModal({
 }
 
 // ─── Main Page Component ─────────────────────────────────────────────
-export default function QuickSendPage() {
+export default function QuickSendPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
   const [message, setMessage] = useState("");
   const [showMergeDropdown, setShowMergeDropdown] = useState(false);
@@ -603,15 +604,17 @@ export default function QuickSendPage() {
               isSaving={isSaving || saveMutation.isPending}
               label="Save and Send"
             />
-            <VideoHelpButton
-              pageTitle="Quick Send"
-              videos={[
-                {
-                  title: "Send Quick Send Messages to Clients",
-                  youtubeId: "n4q2Bm7g0wk",
-                },
-              ]}
-            />
+            {!embedded && (
+              <VideoHelpButton
+                pageTitle="Quick Send"
+                videos={[
+                  {
+                    title: "Send Quick Send Messages to Clients",
+                    youtubeId: "n4q2Bm7g0wk",
+                  },
+                ]}
+              />
+            )}
           </div>
           <p className="qs-description">
             Quick Send lets you send a one-time text message to customers.

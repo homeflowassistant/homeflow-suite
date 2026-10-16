@@ -202,7 +202,8 @@ function ChatBubble({
 }
 
 // ── Main Alerts & Notifications Page ──────────────────────────────────
-export default function AlertsNotificationsPage() {
+export default function AlertsNotificationsPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
   const isPreviewMode = false;
 
@@ -452,15 +453,17 @@ export default function AlertsNotificationsPage() {
       <div className="alerts-page-header homeflow-sticky-header">
         <div>
           <h1 className="alerts-page-title">Alerts & Notifications</h1>
-          <VideoHelpButton
-            pageTitle="Alerts & Notifications"
-            videos={[
-              {
-                title: "Customize Customer and Team Notification Alerts",
-                youtubeId: "EMm8cAp1ZuI",
-              },
-            ]}
-          />
+          {!embedded && (
+            <VideoHelpButton
+              pageTitle="Alerts & Notifications"
+              videos={[
+                {
+                  title: "Customize Customer and Team Notification Alerts",
+                  youtubeId: "EMm8cAp1ZuI",
+                },
+              ]}
+            />
+          )}
         </div>
         <TopSaveButton
           onClick={() => void handleSave()}

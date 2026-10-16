@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
 import "./IntegrationsPage.css";
 
@@ -17,7 +16,8 @@ function useLocationId() {
   }, []);
 }
 
-export default function IntegrationsPage() {
+export default function IntegrationsPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
 
   const [webhookUrl, setWebhookUrl] = useState("");
@@ -95,46 +95,39 @@ export default function IntegrationsPage() {
               label="Save"
             />
           </div>
-          <VideoHelpButton
-            pageTitle="Sweep & Go Integration"
-            videos={[
-              {
-                title: "Sweep and Go Webhook Setup Guide",
-                youtubeId: "J7q-qJZ1xxU",
-              },
-            ]}
-          />
         </div>
 
         {/* ── Top Video Tutorial Section ─────────────────────────────────── */}
-        <section className="integrations-section">
-          <div className="integrations-card-box">
-            <div className="integrations-card-header">
-              <div className="integrations-card-icon">
-                <Video className="w-5 h-5" />
+        {!embedded && (
+          <section className="integrations-section">
+            <div className="integrations-card-box">
+              <div className="integrations-card-header">
+                <div className="integrations-card-icon">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="integrations-card-title">
+                    Setup Video Tutorial
+                  </h2>
+                  <p className="integrations-card-subtitle">
+                    Watch the step-by-step video below to learn how to configure
+                    your webhook and access key.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="integrations-card-title">
-                  Setup Video Tutorial
-                </h2>
-                <p className="integrations-card-subtitle">
-                  Watch the step-by-step video below to learn how to configure
-                  your webhook and access key.
-                </p>
-              </div>
-            </div>
 
-            <div className="integrations-video-wrapper">
-              <iframe
-                src={SWEEP_AND_GO_VIDEO_URL}
-                className="integrations-video-iframe"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                title="Integrations Setup Tutorial"
-              />
+              <div className="integrations-video-wrapper">
+                <iframe
+                  src={SWEEP_AND_GO_VIDEO_URL}
+                  className="integrations-video-iframe"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  title="Integrations Setup Tutorial"
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── Webhook & API Key Settings Section ──────────────────────────── */}
         <section className="integrations-section">

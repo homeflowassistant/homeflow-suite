@@ -168,24 +168,24 @@ function RequirementRow({ requirement }: { requirement: Requirement }) {
 function EmbeddedSetupPage({ pageId }: { pageId: string }) {
   switch (pageId) {
     case "account-setup":
-      return <AccountSetupPage />;
+      return <AccountSetupPage embedded />;
     case "facebook-mapping":
-      return <AccountSetupPage />;
+      return <AccountSetupPage embedded />;
     case "pricing":
       return <PricingPage embedded />;
     case "request-scheduling":
-      return <RequestScheduling />;
+      return <RequestScheduling embedded />;
     case "reactivation":
-      return <ReactivationPage />;
+      return <ReactivationPage embedded />;
     case "add-on-campaign":
-      return <AddOnCampaignPage />;
+      return <AddOnCampaignPage embedded />;
     case "alerts-notifications":
-      return <AlertsNotificationsPage />;
+      return <AlertsNotificationsPage embedded />;
     case "integrations":
       return (
         <>
-          <IntegrationsPage />
-          <ZapierIntegrationPage hideSweepGo />
+          <IntegrationsPage embedded />
+          <ZapierIntegrationPage embedded hideSweepGo />
         </>
       );
     default:
@@ -256,6 +256,19 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
           title="Customize Customer and Team Notification Alerts"
           youtubeId="EMm8cAp1ZuI"
         />
+      );
+    case "integrations":
+      return (
+        <div className="space-y-4">
+          <OnboardingTutorial
+            title="Sweep and Go Webhook Setup Guide"
+            youtubeId="J7q-qJZ1xxU"
+          />
+          <OnboardingTutorial
+            title="Setting Up HomeFlow Zapier Integration"
+            youtubeId="yDa_zUC2T8c"
+          />
+        </div>
       );
     default:
       return null;

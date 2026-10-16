@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import OnboardingTutorial from "@/components/OnboardingTutorial";
+import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
 import "./PricingPage.css";
 
@@ -332,6 +332,17 @@ export default function PricingPage(props: any = {}) {
       <div className="pricing-page-header homeflow-sticky-header">
         <div className="pricing-header-left">
           <h1 className="pricing-page-title">Pricing Setup</h1>
+          {!embedded && (
+            <VideoHelpButton
+              pageTitle="Pricing"
+              videos={[
+                {
+                  title: "Filling Out Pricing Section Guide",
+                  youtubeId: "UOhfOagLc1o",
+                },
+              ]}
+            />
+          )}
           <span className="pricing-required-hint">*required fields</span>
         </div>
         <TopSaveButton
@@ -340,16 +351,6 @@ export default function PricingPage(props: any = {}) {
           label="Save Settings"
         />
       </div>
-
-      {!embedded && (
-        <div className="pricing-inline-video">
-          <OnboardingTutorial
-            title="Filling Out Pricing Section Guide"
-            youtubeId="UOhfOagLc1o"
-            description="Watch this walkthrough while completing the Initial Service and One-Time Service pricing sections."
-          />
-        </div>
-      )}
 
       {isLoading ? (
         <div className="pricing-loading">

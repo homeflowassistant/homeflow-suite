@@ -279,7 +279,8 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export default function AccountSetupPage() {
+export default function AccountSetupPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
 
   // UI state for each field (independent so one field can be editing while another saves)
@@ -587,15 +588,17 @@ export default function AccountSetupPage() {
             <h1 className="text-lg sm:text-xl font-extrabold text-blue-800 uppercase tracking-wider">
               Account Set Up
             </h1>
-            <VideoHelpButton
-              pageTitle="Account Setup"
-              videos={[
-                {
-                  title: "HomeFlow Assistant: Account Set Up Explanation",
-                  youtubeId: "Tb-Wi8ytbbo",
-                },
-              ]}
-            />
+            {!embedded && (
+              <VideoHelpButton
+                pageTitle="Account Setup"
+                videos={[
+                  {
+                    title: "HomeFlow Assistant: Account Set Up Explanation",
+                    youtubeId: "Tb-Wi8ytbbo",
+                  },
+                ]}
+              />
+            )}
             <TopSaveButton
               onClick={() => void handleSaveAll()}
               isSaving={isSavingAll}

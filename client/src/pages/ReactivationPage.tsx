@@ -78,7 +78,8 @@ function onetimeTimingToIndex(value: string): number {
 }
 
 // ─── Main Reactivation Page ───────────────────────────────────────────
-export default function ReactivationPage() {
+export default function ReactivationPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
 
   const [selectedOption, setSelectedOption] =
@@ -201,15 +202,18 @@ export default function ReactivationPage() {
                   3. They approve a quote and schedule an scoop
                 </p>
               </div>
-              <VideoHelpButton
-                pageTitle="Reactivation"
-                videos={[
-                  {
-                    title: "Reactivating Inactive Customers With Custom Quotes",
-                    youtubeId: "9eKcX8Dbzrs",
-                  },
-                ]}
-              />
+              {!embedded && (
+                <VideoHelpButton
+                  pageTitle="Reactivation"
+                  videos={[
+                    {
+                      title:
+                        "Reactivating Inactive Customers With Custom Quotes",
+                      youtubeId: "9eKcX8Dbzrs",
+                    },
+                  ]}
+                />
+              )}
             </div>
             <TopSaveButton
               onClick={() => void handleSave()}

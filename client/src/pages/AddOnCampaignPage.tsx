@@ -74,7 +74,8 @@ function addonDurationToIndex(value: string): number {
 }
 
 // ─── Main Page Component ─────────────────────────────────────────────
-export default function AddOnCampaignPage() {
+export default function AddOnCampaignPage(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
   const [addonDuration, setAddonDuration] = useState(3); // default: 10 Weeks
   const [isSaving, setIsSaving] = useState(false);
@@ -176,15 +177,17 @@ export default function AddOnCampaignPage() {
               3. They approve and you schedule their service
             </p>
           </div>
-          <VideoHelpButton
-            pageTitle="Add-On Campaign"
-            videos={[
-              {
-                title: "Set Up and Edit Add-On Campaign Messages",
-                youtubeId: "9LX1BaEtkV0",
-              },
-            ]}
-          />
+          {!embedded && (
+            <VideoHelpButton
+              pageTitle="Add-On Campaign"
+              videos={[
+                {
+                  title: "Set Up and Edit Add-On Campaign Messages",
+                  youtubeId: "9LX1BaEtkV0",
+                },
+              ]}
+            />
+          )}
         </header>
 
         {/* ── LITE Info Card ── */}

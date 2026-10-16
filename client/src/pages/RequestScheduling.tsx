@@ -116,7 +116,8 @@ const SECOND_ROW = TIMELINE_STEPS.slice(6);
 
 // ─── Main RequestScheduling Page ─────────────────────────────────────
 
-export default function RequestScheduling() {
+export default function RequestScheduling(props: any = {}) {
+  const embedded = Boolean(props.embedded);
   const {
     locationId,
     leadFollowUpOption,
@@ -366,27 +367,29 @@ export default function RequestScheduling() {
                 3. They approve a quote and you schedule a scope.
               </p>
             </div>
-            <VideoHelpButton
-              pageTitle="Follow Up"
-              videos={[
-                {
-                  title: "Set Up Your Follow Up Sequence Options",
-                  youtubeId: "z4ApGBizwV8",
-                },
-                {
-                  title: "Set Up Custom Quote",
-                  youtubeId: "WgOllP4SBIo",
-                  description:
-                    "Use this walkthrough when the Custom Quote & Link option is selected.",
-                },
-                {
-                  title: "Setting Up Client Portal and Offers",
-                  youtubeId: "5CySgZYJ7Qk",
-                  description:
-                    "Use this walkthrough to configure the client-facing portal and offers.",
-                },
-              ]}
-            />
+            {!embedded && (
+              <VideoHelpButton
+                pageTitle="Follow Up"
+                videos={[
+                  {
+                    title: "Set Up Your Follow Up Sequence Options",
+                    youtubeId: "z4ApGBizwV8",
+                  },
+                  {
+                    title: "Set Up Custom Quote",
+                    youtubeId: "WgOllP4SBIo",
+                    description:
+                      "Use this walkthrough when the Custom Quote & Link option is selected.",
+                  },
+                  {
+                    title: "Setting Up Client Portal and Offers",
+                    youtubeId: "5CySgZYJ7Qk",
+                    description:
+                      "Use this walkthrough to configure the client-facing portal and offers.",
+                  },
+                ]}
+              />
+            )}
           </div>
           <div className="rs-page-icon">
             <Sparkles className="h-6 w-6 text-primary" />
