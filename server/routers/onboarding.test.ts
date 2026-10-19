@@ -135,4 +135,14 @@ describe("onboarding wizard validation", () => {
     expect(page(results, "reactivation").complete).toBe(false);
     expect(page(results, "reactivation").skipped).toBe(true);
   });
+
+  it("treats a required setup page as skipped when the user chooses Skip Step", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [],
+      skippedStepIds: new Set(["account-setup"]),
+    });
+    expect(page(results, "account-setup").status).toBe("skipped");
+    expect(page(results, "account-setup").skipped).toBe(true);
+  });
 });

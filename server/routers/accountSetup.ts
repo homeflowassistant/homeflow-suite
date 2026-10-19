@@ -4,6 +4,7 @@ import { publicProcedure, router } from "../_core/trpc.js";
 import { getLocationAccessToken } from "../helpers/tokenHelper.js";
 import {
   updateExistingCustomValuesOnly,
+  ensureGhlCustomValue,
   fetchAllCustomValues,
   resolveCustomValue as resolveGhlCustomValue,
   uploadToGhlMedia,
@@ -167,17 +168,55 @@ const saveAccountSetupFieldProcedure = publicProcedure
       const ext = mimeMatch ? MIME_TO_EXT[mimeMatch[1]] || ".png" : ".png";
       const fileName = `business_logo_${Date.now()}${ext}`;
       storedValue = await uploadToGhlMedia(locationId, rawValue, fileName);
+      if (!storedValue) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "Business logo upload failed. The custom value was not changed.",
+        });
+      }
     } else {
       storedValue = rawValue;
     }
 
-    // STRICT UPDATE ONLY: PUT existing custom values in place; never create
-    // new ones. Every key mapped to this field receives the same value.
+    // Update existing custom values first. If a provisioned key is missing,
+    // create that mapped custom value so the Account Set Up form remains
+    // usable for locations that were installed before this field was added.
     const updates: Record<string, string> = {};
     for (const key of FIELD_KEY_MAP[field]) {
       updates[key] = storedValue;
     }
-    await updateExistingCustomValuesOnly(locationId, updates);
+
+    const updateResult = await updateExistingCustomValuesOnly(
+      locationId,
+      updates
+    );
+    const failedKeys = [...updateResult.failedKeys];
+    const ensured: Record<string, { id: string; action: string }> = {};
+
+    for (const key of updateResult.missingKeys) {
+      const result = await ensureGhlCustomValue(locationId, key, storedValue);
+      const failed = [
+        "create_failed",
+        "skipped_not_found",
+        "update_failed",
+      ].includes(result.id);
+      if (failed) {
+        failedKeys.push(key);
+      } else {
+        ensured[key] = {
+          id: result.id,
+          action: result.id === "created" ? "created" : "updated",
+        };
+      }
+    }
+
+    if (failedKeys.length > 0) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Unable to save Account Set Up custom value(s): ${Array.from(new Set(failedKeys)).join(", ")}`,
+      });
+    }
 
     return {
       success: true,
@@ -189,7 +228,7 @@ const saveAccountSetupFieldProcedure = publicProcedure
       results: Object.fromEntries(
         Object.keys(updates).map(k => [
           k,
-          { action: "created_or_updated" as const, id: "updated" },
+          ensured[k] ?? { action: "updated" as const, id: "updated" },
         ])
       ),
     };

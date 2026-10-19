@@ -403,7 +403,6 @@ function OnboardingPageContent() {
   };
 
   const handleSkip = async () => {
-    if (!currentPage.skippable) return;
     await stepStateMutation.mutateAsync({
       locationId,
       stepId: currentPage.id,
@@ -498,14 +497,8 @@ function OnboardingPageContent() {
                       ? "No validation fields"
                       : `${currentPage.completedCount} of ${currentPage.totalCount} checks complete`}
                   </span>
-                  <span
-                    className={
-                      currentPage.skippable
-                        ? "font-semibold text-slate-600"
-                        : "font-semibold text-slate-700"
-                    }
-                  >
-                    {currentPage.skippable ? "Optional step" : "Required step"}
+                  <span className="font-semibold text-slate-600">
+                    Skip available
                   </span>
                 </div>
                 {currentPage.totalCount > 0 && (
@@ -574,11 +567,7 @@ function OnboardingPageContent() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={
-                    !currentPage.skippable ||
-                    savingProgress ||
-                    stepStateMutation.isPending
-                  }
+                  disabled={savingProgress || stepStateMutation.isPending}
                   onClick={handleSkip}
                   className="gap-2 border-slate-300"
                 >

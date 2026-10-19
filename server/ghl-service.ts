@@ -971,7 +971,7 @@ export async function upsertGhlCustomValue(
   console.error(
     `[GHL] PUT failed for custom value '${name}': ${resp.status} ${errBody}`
   );
-  return { id: existingId, name, value };
+  return { id: "update_failed", name, value };
 }
 
 /**
@@ -1016,14 +1016,17 @@ export async function ensureGhlCustomValue(
     };
   }
 
-  // A concurrent installer may have created the value between the initial GET
-  // and this POST. Re-read/update once on conflict; otherwise preserve the
-  // existing update-only contract and return a non-throwing result for callers.
-  if (response.status === 409) {
+  const errorBody = await response.text();
+  // A concurrent installer or a display-name mismatch may mean the value
+  // already exists even when the API returns 400 instead of 409. Re-read and
+  // update once before reporting a real creation failure.
+  if (
+    response.status === 409 ||
+    /already exists|already been taken|duplicate/i.test(errorBody)
+  ) {
     return upsertGhlCustomValue(locationId, name, value);
   }
 
-  const errorBody = await response.text();
   console.error(
     `[GHL] POST failed for custom value '${name}': ${response.status} ${errorBody}`
   );
@@ -1071,7 +1074,10 @@ export async function seedDefaultGhlCustomValue(
 
     const updated = await upsertGhlCustomValue(locationId, name, value);
     return {
-      action: updated.id === "skipped_not_found" ? "failed" : "filled_empty",
+      action:
+        updated.id === "skipped_not_found" || updated.id === "update_failed"
+          ? "failed"
+          : "filled_empty",
       ...updated,
     };
   } catch (error) {

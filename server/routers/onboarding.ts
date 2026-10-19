@@ -509,9 +509,7 @@ export function buildOnboardingResults(options: {
   sourceError?: string;
 }): OnboardingPageResult[] {
   return PAGE_DEFINITIONS.map(page => {
-    const skipped = Boolean(
-      page.skippable && options.skippedStepIds?.has(page.id)
-    );
+    const skipped = Boolean(options.skippedStepIds?.has(page.id));
     const requirements = getPageRequirements(page, options.customValues);
     const results = requirements.map(requirement => {
       if (!options.connected) {
@@ -919,8 +917,6 @@ export const onboardingRouter = router({
     .mutation(async ({ input }) => {
       const page = PAGE_DEFINITIONS.find(item => item.id === input.stepId);
       if (!page) throw new Error(`Unknown onboarding step '${input.stepId}'.`);
-      if (!page.skippable)
-        throw new Error(`Onboarding step '${input.stepId}' cannot be skipped.`);
       const db = await getDb();
       if (!db)
         throw new Error(
