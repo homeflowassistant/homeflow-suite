@@ -125,9 +125,6 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
     "company_logo",
   ]),
   customValue("payment-link", "Payment Link", ["add_payment_link"]),
-  customValue("facebook-page-link", "Facebook Page Link", [
-    "facebook_page_link",
-  ]),
   customValue("lead-campaign-offer", "Lead Campaign Offer", [
     "discountfree_offer_for_lead_campaigns",
   ]),
@@ -305,13 +302,13 @@ const PRICING_VALUES: Requirement[] = [
   customValue("pricing-add-ons", "Add-On Pricing", ["add_on_pricing"]),
 ];
 
-const FACEBOOK_MAPPING_VALUES: Requirement[] = [
+const FACEBOOK_SETUP_VALUES: Requirement[] = [
   customValue(
     "facebook-page-link",
     "Facebook Page Link",
     ["facebook_page_link"],
-    false,
-    "Add the Facebook Page URL in Account Set Up so HomeFlow can reference it in campaign messages."
+    true,
+    "Add the Facebook Page URL so HomeFlow can reference it in campaign messages."
   ),
 ];
 
@@ -401,15 +398,15 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
     ],
   },
   {
-    id: "facebook-mapping",
+    id: "facebook-setup",
     stepOrder: 8,
-    title: "Facebook and Value Mapping",
+    title: "Facebook Setup",
     description:
-      "Add the Facebook Page URL and review the custom-value mapping used by campaign messages.",
-    route: "/account-setup#facebookPageLink",
+      "Connect the Facebook Page, map its form fields, and save the Facebook Page URL used by HomeFlow messages.",
+    route: "/facebook-setup",
     required: false,
     skippable: true,
-    requirements: FACEBOOK_MAPPING_VALUES,
+    requirements: FACEBOOK_SETUP_VALUES,
   },
 ];
 

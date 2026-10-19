@@ -61,6 +61,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 
 type AccountField =
   | "businessName"
@@ -556,6 +557,8 @@ export default function AccountSetupPage(props: any = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId, values, savedValues]);
 
+  useOnboardingSaveHandler(embedded, handleSaveAll);
+
   if (!locationId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -599,11 +602,13 @@ export default function AccountSetupPage(props: any = {}) {
                 ]}
               />
             )}
-            <TopSaveButton
-              onClick={() => void handleSaveAll()}
-              isSaving={isSavingAll}
-              label="Save"
-            />
+            {!embedded && (
+              <TopSaveButton
+                onClick={() => void handleSaveAll()}
+                isSaving={isSavingAll}
+                label="Save"
+              />
+            )}
           </div>
           <p className="text-[12px] text-slate-500 mt-1 px-4">
             Fill in your business details below.

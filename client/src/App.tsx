@@ -12,6 +12,7 @@ import ContactsPage from "./pages/ContactsPage";
 import AlertsNotificationsPage from "./pages/AlertsNotificationsPage";
 import PricingPage from "./pages/PricingPage";
 import AccountSetupPage from "./pages/AccountSetupPage";
+import FacebookSetupPage from "./pages/FacebookSetupPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import ZapierIntegrationPage from "./pages/ZapierIntegrationPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -31,6 +32,7 @@ function Router() {
       />
       <Route path={"/pricing"} component={PricingPage} />
       <Route path={"/account-setup"} component={AccountSetupPage} />
+      <Route path={"/facebook-setup"} component={FacebookSetupPage} />
       <Route path={"/integrations"} component={ZapierIntegrationPage} />
       <Route path={"/integrate"} component={ZapierIntegrationPage} />
       <Route path={"/onboarding"} component={OnboardingPage} />

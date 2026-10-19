@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import ReactivationQuotePopup from "@/components/ReactivationQuotePopup";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./ReactivationPage.css";
 
 // ─── Example images (place these PNGs in /public) ─────────────────────
@@ -116,7 +117,7 @@ export default function ReactivationPage(props: any = {}) {
 
   // ── Save handlers ────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (selectedOption === "Custom Quote & Link") {
+    if (selectedOption === "Custom Quote & Link" && !embedded) {
       setShowQuotePopup(true);
       return;
     }
@@ -137,6 +138,8 @@ export default function ReactivationPage(props: any = {}) {
       setIsSaving(false);
     }
   };
+
+  useOnboardingSaveHandler(embedded, handleSave);
 
   const handleQuoteSaveSuccess = () => {
     setSelectedOption("Custom Quote & Link");
@@ -215,11 +218,13 @@ export default function ReactivationPage(props: any = {}) {
                 />
               )}
             </div>
-            <TopSaveButton
-              onClick={() => void handleSave()}
-              isSaving={isSaving}
-              label="Save Settings"
-            />
+            {!embedded && (
+              <TopSaveButton
+                onClick={() => void handleSave()}
+                isSaving={isSaving}
+                label="Save Settings"
+              />
+            )}
           </div>
         </header>
 

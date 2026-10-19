@@ -28,13 +28,16 @@ import { trpc } from "@/lib/trpc";
 import AccountSetupPage from "@/pages/AccountSetupPage";
 import AddOnCampaignPage from "@/pages/AddOnCampaignPage";
 import AlertsNotificationsPage from "@/pages/AlertsNotificationsPage";
-import IntegrationsPage from "@/pages/IntegrationsPage";
+import FacebookSetupPage from "@/pages/FacebookSetupPage";
 import PricingPage from "@/pages/PricingPage";
 import ReactivationPage from "@/pages/ReactivationPage";
 import RequestScheduling from "@/pages/RequestScheduling";
 import ZapierIntegrationPage from "@/pages/ZapierIntegrationPage";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
-import TopSaveButton from "@/components/TopSaveButton";
+import {
+  OnboardingSaveProvider,
+  useOnboardingSaveContext,
+} from "@/components/OnboardingSaveContext";
 
 type PageStatus = "complete" | "incomplete" | "blocked" | "skipped";
 
@@ -169,8 +172,8 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
   switch (pageId) {
     case "account-setup":
       return <AccountSetupPage embedded />;
-    case "facebook-mapping":
-      return <AccountSetupPage embedded />;
+    case "facebook-setup":
+      return <FacebookSetupPage embedded />;
     case "pricing":
       return <PricingPage embedded />;
     case "request-scheduling":
@@ -182,10 +185,7 @@ function EmbeddedSetupPage({ pageId }: { pageId: string }) {
     case "alerts-notifications":
       return <AlertsNotificationsPage embedded />;
     case "integrations":
-      return (
-          <IntegrationsPage embedded />
-          
-      );
+      return <ZapierIntegrationPage embedded />;
     default:
       return null;
   }
@@ -200,14 +200,8 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
           youtubeId="Tb-Wi8ytbbo"
         />
       );
-    case "facebook-mapping":
-      return (
-        <OnboardingTutorial
-          title="Add Your Facebook Page and Review Value Mapping"
-          youtubeId="Tb-Wi8ytbbo"
-          description="Use the Facebook Page Link field in Account Set Up, then review the values used by campaign messages."
-        />
-      );
+    case "facebook-setup":
+      return null;
     case "pricing":
       return (
         <OnboardingTutorial
@@ -252,81 +246,23 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
       );
     case "integrations":
       return (
+        <div className="space-y-4">
           <OnboardingTutorial
             title="Sweep and Go Webhook Setup Guide"
             youtubeId="J7q-qJZ1xxU"
           />
-        
+          <OnboardingTutorial
+            title="Setting Up HomeFlow Zapier Integration"
+            youtubeId="yDa_zUC2T8c"
+          />
+        </div>
       );
     default:
       return null;
   }
 }
 
-function FacebookMappingGuide() {
-  const mappings = [
-    ["Facebook Page Link", "facebook_page_link", "Facebook Page URL"],
-    ["Legal Business Name", "legal_business_name", "EIN legal name"],
-    ["Business Address", "business_address", "EIN business address"],
-    [
-      "Service State",
-      "state_two_letter_abbrev",
-      "Two-letter state abbreviation",
-    ],
-    [
-      "Notification Channel",
-      "notification_channel__pick_one_sms_email_call",
-      "sms, email, or call",
-    ],
-  ] as const;
-
-  return (
-    <Card className="border-cyan-200 bg-cyan-50/60 shadow-sm">
-      <CardHeader className="p-5 pb-3">
-        <CardTitle className="text-base text-cyan-950">
-          Facebook Page and Value Mapping
-        </CardTitle>
-        <CardDescription className="leading-relaxed text-cyan-900/80">
-          Keep this onboarding page open while you watch the video. Add your
-          Facebook Page URL in Account Set Up, then confirm that the values
-          below are saved under the exact keys used by HomeFlow workflows.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-5 pt-1">
-        <div className="overflow-x-auto rounded-lg border border-cyan-200 bg-white">
-          <table className="w-full min-w-[520px] text-left text-xs">
-            <thead className="bg-cyan-50 text-cyan-950">
-              <tr>
-                <th className="px-3 py-2 font-semibold">
-                  Account Set Up field
-                </th>
-                <th className="px-3 py-2 font-semibold">
-                  Saved custom-value key
-                </th>
-                <th className="px-3 py-2 font-semibold">Expected value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mappings.map(([field, key, expected]) => (
-                <tr key={key} className="border-t border-cyan-100">
-                  <td className="px-3 py-2 font-medium text-slate-800">
-                    {field}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-600">
-                    {`{{custom_values.${key}}}`}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600">{expected}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function OnboardingPage() {
+function OnboardingPageContent() {
   const locationId = useLocationId();
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -343,6 +279,7 @@ export default function OnboardingPage() {
   );
   const recordProgress = trpc.onboarding.recordProgress.useMutation();
   const stepStateMutation = trpc.onboarding.setStepState.useMutation();
+  const onboardingSave = useOnboardingSaveContext();
   const pages = (statusQuery.data?.pages ?? []) as PageResult[];
 
   useEffect(() => {
@@ -445,6 +382,7 @@ export default function OnboardingPage() {
   const goToStep = async (index: number) => {
     if (!currentPage || index < 0 || index >= pages.length) {
       if (currentPage && index >= pages.length) {
+        await onboardingSave?.saveActivePage();
         const latest = await statusQuery.refetch();
         const latestPage =
           latest.data?.pages.find(page => page.id === currentPage.id) ||
@@ -453,6 +391,7 @@ export default function OnboardingPage() {
       }
       return;
     }
+    await onboardingSave?.saveActivePage();
     const latest = await statusQuery.refetch();
     const latestPages = (latest.data?.pages || pages) as PageResult[];
     const latestCurrentPage =
@@ -463,39 +402,28 @@ export default function OnboardingPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (!currentPage.skippable) return;
-    stepStateMutation.mutate(
-      {
-        locationId,
-        stepId: currentPage.id,
-        state: currentPage.skipped ? "active" : "skipped",
-      },
-      {
-        onSuccess: async () => {
-          await statusQuery.refetch();
-          if (!currentPage.skipped && activeIndex < pages.length - 1) {
-            setActiveStepId(pages[activeIndex + 1].id);
-          }
-        },
-      }
-    );
+    await stepStateMutation.mutateAsync({
+      locationId,
+      stepId: currentPage.id,
+      state: "skipped",
+    });
+    await statusQuery.refetch();
+    if (activeIndex < pages.length - 1) {
+      setDetailsOpen(false);
+      setActiveStepId(pages[activeIndex + 1].id);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
     <div className="ghl-page bg-slate-50/70 pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <header className="homeflow-sticky-header rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Onboarding
-            </h1>
-            <TopSaveButton
-              onClick={() => void saveCurrentProgress(currentPage)}
-              isSaving={savingProgress}
-              label="Save"
-            />
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Onboarding
+          </h1>
           <div className="mt-5 flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-slate-700">
               Step {activeIndex + 1} of {pages.length}
@@ -613,9 +541,6 @@ export default function OnboardingPage() {
             </Card>
 
             <div className="space-y-5">
-              {currentPage.id === "facebook-mapping" && (
-                <FacebookMappingGuide />
-              )}
               <EmbeddedTutorial pageId={currentPage.id} />
               <div className="rounded-2xl border border-cyan-200 bg-white shadow-sm">
                 <div className="border-b border-cyan-100 bg-cyan-50 px-5 py-3">
@@ -623,8 +548,9 @@ export default function OnboardingPage() {
                     Complete Step {currentPage.stepOrder}: {currentPage.title}
                   </p>
                   <p className="mt-0.5 text-xs text-cyan-700">
-                    This is the existing HomeFlow page. Fill it out and save, or
-                    use Next step to record the remaining work and continue.
+                    Complete the page, then use Previous Step or Next Step to
+                    save the page and navigate. Skip Step advances without
+                    saving.
                   </p>
                 </div>
                 <div className="p-2 sm:p-4">
@@ -642,7 +568,7 @@ export default function OnboardingPage() {
                 className="gap-2 border-slate-300"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back
+                Previous Step
               </Button>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
@@ -656,7 +582,7 @@ export default function OnboardingPage() {
                   onClick={handleSkip}
                   className="gap-2 border-slate-300"
                 >
-                  {currentPage.skipped ? "Resume step" : "Skip step"}
+                  Skip Step
                   <SkipForward className="h-4 w-4" />
                 </Button>
                 <Button
@@ -669,7 +595,7 @@ export default function OnboardingPage() {
                     ? "Saving progress…"
                     : activeIndex === pages.length - 1
                       ? "Finish setup"
-                      : "Next step"}
+                      : "Next Step"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -685,14 +611,22 @@ export default function OnboardingPage() {
                 How progress is recorded
               </p>
               <p className="mt-1">
-                Saving a page records its live configuration. Clicking Next step
-                without saving records the page as incomplete and stores its
-                missing checks, so the client can return to it later.
+                Previous Step and Next Step save the active page before moving.
+                Skip Step marks an optional page as skipped and moves forward
+                without saving the values currently entered on that page.
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <OnboardingSaveProvider>
+      <OnboardingPageContent />
+    </OnboardingSaveProvider>
   );
 }

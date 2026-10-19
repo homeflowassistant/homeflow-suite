@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 
 const DEFAULT_INVITE_URL =
   "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
@@ -513,6 +514,8 @@ export default function ZapierIntegrationPage(props: any = {}) {
     );
   }
 
+  useOnboardingSaveHandler(embedded, handleSaveSweepGo);
+
   return (
     <div className="ghl-page pb-10">
       <div className="ghl-inner space-y-8">
@@ -521,7 +524,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
             <h1 className="text-xl font-bold text-slate-900">
               Zapier Integration
             </h1>
-            {!hideSweepGo && (
+            {!hideSweepGo && !embedded && (
               <TopSaveButton
                 onClick={() => void handleSaveSweepGo()}
                 isSaving={isSavingSweepGo}

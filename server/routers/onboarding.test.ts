@@ -69,7 +69,7 @@ describe("onboarding wizard validation", () => {
     ).toBe(true);
   });
 
-  it("contains the requested sequential steps including Facebook mapping", () => {
+  it("contains the requested sequential steps including Facebook Setup", () => {
     const results = buildOnboardingResults({
       ...baseOptions,
       customValues: [],
@@ -82,7 +82,7 @@ describe("onboarding wizard validation", () => {
       "add-on-campaign",
       "alerts-notifications",
       "integrations",
-      "facebook-mapping",
+      "facebook-setup",
     ]);
     expect(results).toHaveLength(8);
     expect(results.some(item => item.id === "contacts")).toBe(false);

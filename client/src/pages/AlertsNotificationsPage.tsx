@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { CustomVariablePicker } from "@/components/CustomVariablePicker";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./AlertsNotificationsPage.css";
 
 // Dynamic merge tag helpers for the modal
@@ -423,6 +424,8 @@ export default function AlertsNotificationsPage(props: any = {}) {
     }
   };
 
+  useOnboardingSaveHandler(embedded, handleSave);
+
   const handleCopyTag = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedTag(code);
@@ -465,11 +468,13 @@ export default function AlertsNotificationsPage(props: any = {}) {
             />
           )}
         </div>
-        <TopSaveButton
-          onClick={() => void handleSave()}
-          isSaving={isSaving}
-          label="Save Settings"
-        />
+        {!embedded && (
+          <TopSaveButton
+            onClick={() => void handleSave()}
+            isSaving={isSaving}
+            label="Save Settings"
+          />
+        )}
       </div>
 
       {/* ── Section 1: Auto Replies ────────────────────────────────────── */}

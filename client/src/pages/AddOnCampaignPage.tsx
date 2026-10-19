@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./AddOnCampaignPage.css";
 
 // ─── Example image ───────────────────────────────────────────────────
@@ -123,6 +124,8 @@ export default function AddOnCampaignPage(props: any = {}) {
     }
   };
 
+  useOnboardingSaveHandler(embedded, handleSave);
+
   // ── Go to SMS/Email templates ──
   const handleGoToTemplates = () => {
     window.open(
@@ -163,11 +166,13 @@ export default function AddOnCampaignPage(props: any = {}) {
         <header className="aoc-page-header homeflow-sticky-header">
           <div className="flex items-center justify-between gap-3">
             <h1 className="aoc-main-title">Add-On Campaign</h1>
-            <TopSaveButton
-              onClick={() => void handleSave()}
-              isSaving={isSaving}
-              label="Save Settings"
-            />
+            {!embedded && (
+              <TopSaveButton
+                onClick={() => void handleSave()}
+                isSaving={isSaving}
+                label="Save Settings"
+              />
+            )}
           </div>
           <h2 className="aoc-how-title">How It works:</h2>
           <div className="aoc-how-steps">

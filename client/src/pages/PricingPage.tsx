@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./PricingPage.css";
 
 // ─── Shared types with the server ────────────────────────────────────
@@ -293,6 +294,8 @@ export default function PricingPage(props: any = {}) {
     }
   };
 
+  useOnboardingSaveHandler(embedded, handleSave);
+
   // ── Derived helpers ───────────────────────────────────────────────
   const dogBoxes: number[] = [1, 2, 3, 4, 5, 6];
 
@@ -345,11 +348,13 @@ export default function PricingPage(props: any = {}) {
           )}
           <span className="pricing-required-hint">*required fields</span>
         </div>
-        <TopSaveButton
-          onClick={() => void handleSave()}
-          isSaving={isSaving}
-          label="Save Settings"
-        />
+        {!embedded && (
+          <TopSaveButton
+            onClick={() => void handleSave()}
+            isSaving={isSaving}
+            label="Save Settings"
+          />
+        )}
       </div>
 
       {isLoading ? (

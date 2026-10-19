@@ -6,6 +6,7 @@ import CustomQuoteLinkPopup from "@/components/CustomQuoteLinkPopup";
 import SGLinkPopup from "@/components/SGLinkPopup";
 import VideoHelpButton from "@/components/VideoHelpButton";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 // Example images served from /public via Vite
 const EXAMPLE_EMAIL = "/lite.png";
 const EXAMPLE_SG_ONBOARDING = "/S&G.png";
@@ -300,6 +301,8 @@ export default function RequestScheduling(props: any = {}) {
     showToast,
   ]);
 
+  useOnboardingSaveHandler(embedded, handleSavePage);
+
   // Redirect handlers for Email / SMS template buttons
   const handleGoToEmailTemplates = () => {
     window.open(
@@ -394,11 +397,13 @@ export default function RequestScheduling(props: any = {}) {
           <div className="rs-page-icon">
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
-          <TopSaveButton
-            onClick={() => void handleSavePage()}
-            isSaving={timingSaveStatus === "saving"}
-            label="Save"
-          />
+          {!embedded && (
+            <TopSaveButton
+              onClick={() => void handleSavePage()}
+              isSaving={timingSaveStatus === "saving"}
+              label="Save"
+            />
+          )}
         </header>
 
         <section className="rs-card rs-option-section">
