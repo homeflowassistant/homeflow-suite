@@ -691,6 +691,7 @@ export default function RequestScheduling(props: any = {}) {
         onTimingChange={setInitialTiming}
         onFollowUpChange={setFollowUpCount}
         onSaveSuccess={handleQuoteSaveSuccess}
+        embedded={embedded}
       />
 
       {/* S&G Link Popup */}
@@ -698,6 +699,7 @@ export default function RequestScheduling(props: any = {}) {
         open={sgLinkPopupOpen}
         onOpenChange={setSgLinkPopupOpen}
         locationId={locationId}
+        embedded={embedded}
       />
     </div>
   );

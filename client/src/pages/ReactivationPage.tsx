@@ -453,6 +453,7 @@ export default function ReactivationPage(props: any = {}) {
         reactivationOption={selectedOption}
         onetimeTiming={onetimeTiming}
         onSaveSuccess={handleQuoteSaveSuccess}
+        embedded={embedded}
       />
     </div>
   );

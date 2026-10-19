@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Play, Copy, ExternalLink, Save, Loader2 } from "lucide-react";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 
 const YOUTUBE_VIDEO_URL = "https://www.youtube.com/embed/5CySgZYJ7Qk";
 
@@ -54,12 +55,14 @@ interface SGLinkPopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   locationId: string;
+  embedded?: boolean;
 }
 
 export default function SGLinkPopup({
   open,
   onOpenChange,
   locationId,
+  embedded = false,
 }: SGLinkPopupProps) {
   const [baseLink, setBaseLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -143,6 +146,8 @@ export default function SGLinkPopup({
       setIsSaving(false);
     }
   };
+
+  useOnboardingSaveHandler(embedded && open, handleSave);
 
   return (
     <Dialog
@@ -270,22 +275,23 @@ export default function SGLinkPopup({
                   )}
                 </div>
 
-                {/* Save Button */}
-                <div className="pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={isSaving || !baseLink.trim()}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    {isSaving ? "Saving..." : "Save Base Link"}
-                  </button>
-                </div>
+                {!embedded && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isSaving || !baseLink.trim()}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {isSaving ? "Saving..." : "Save Base Link"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

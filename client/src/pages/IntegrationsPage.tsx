@@ -3,6 +3,7 @@ import { Link2, Video, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import TopSaveButton from "@/components/TopSaveButton";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./IntegrationsPage.css";
 
 const SWEEP_AND_GO_VIDEO_URL = "https://www.youtube.com/embed/J7q-qJZ1xxU";
@@ -75,6 +76,8 @@ export default function IntegrationsPage(props: any = {}) {
     }
   };
 
+  useOnboardingSaveHandler(embedded, handleSave);
+
   const handleCopyWebhook = async () => {
     if (!webhookUrl.trim()) return;
     await navigator.clipboard.writeText(webhookUrl.trim());
@@ -89,11 +92,13 @@ export default function IntegrationsPage(props: any = {}) {
         <div className="integrations-page-header homeflow-sticky-header">
           <div className="flex items-center gap-3">
             <h1 className="integrations-page-title">Integrations</h1>
-            <TopSaveButton
-              onClick={() => void handleSave()}
-              isSaving={isSaving}
-              label="Save"
-            />
+            {!embedded && (
+              <TopSaveButton
+                onClick={() => void handleSave()}
+                isSaving={isSaving}
+                label="Save"
+              />
+            )}
           </div>
         </div>
 

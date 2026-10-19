@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ interface ReactivationQuotePopupProps {
   onetimeTiming: number;
   onTimingChange?: (value: number) => void;
   onSaveSuccess: () => void;
+  embedded?: boolean;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────
@@ -439,12 +441,14 @@ function QuoteFormFields({
   onSave,
   isSaving,
   locationId,
+  embedded,
 }: {
   formData: QuoteFormData;
   setFormData: React.Dispatch<React.SetStateAction<QuoteFormData>>;
   onSave: () => void;
   isSaving: boolean;
   locationId: string;
+  embedded?: boolean;
 }) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -941,32 +945,33 @@ function QuoteFormFields({
         />
       </div>
 
-      {/* ── Save Settings Button ── */}
-      <div className="border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={isSaving || isUploading}
-          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Saving...
-            </>
-          ) : isUploading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Uploading image...
-            </>
-          ) : (
-            <>
-              <Save size={14} />
-              Save Settings
-            </>
-          )}
-        </button>
-      </div>
+      {!embedded && (
+        <div className="border-t border-slate-200 pt-4">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving || isUploading}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Saving...
+              </>
+            ) : isUploading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Uploading image...
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                Save Settings
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -980,6 +985,7 @@ export default function ReactivationQuotePopup({
   reactivationOption,
   onetimeTiming,
   onSaveSuccess,
+  embedded = false,
 }: ReactivationQuotePopupProps) {
   const [formData, setFormData] = useState<QuoteFormData>(DEFAULT_FORM);
   const [isSaving, setIsSaving] = useState(false);
@@ -1106,6 +1112,8 @@ export default function ReactivationQuotePopup({
     onOpenChange,
   ]);
 
+  useOnboardingSaveHandler(embedded && open, handleSave);
+
   const handleClose = (open: boolean) => {
     if (!open) {
       setFormData(DEFAULT_FORM);
@@ -1153,6 +1161,7 @@ export default function ReactivationQuotePopup({
                 onSave={handleSave}
                 isSaving={isSaving}
                 locationId={locationId}
+                embedded={embedded}
               />
             </div>
           </div>

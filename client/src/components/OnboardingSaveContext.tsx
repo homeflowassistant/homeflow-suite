@@ -22,10 +22,11 @@ export function OnboardingSaveProvider({ children }: { children: ReactNode }) {
   const activeHandlerRef = useRef<SaveHandler | null>(null);
 
   const registerSaveHandler = useCallback((handler: SaveHandler) => {
+    const previousHandler = activeHandlerRef.current;
     activeHandlerRef.current = handler;
     return () => {
       if (activeHandlerRef.current === handler) {
-        activeHandlerRef.current = null;
+        activeHandlerRef.current = previousHandler;
       }
     };
   }, []);
