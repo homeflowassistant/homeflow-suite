@@ -524,13 +524,6 @@ export default function ZapierIntegrationPage(props: any = {}) {
             <h1 className="text-xl font-bold text-slate-900">
               Zapier Integration
             </h1>
-            {!hideSweepGo && !embedded && (
-              <TopSaveButton
-                onClick={() => void handleSaveSweepGo()}
-                isSaving={isSavingSweepGo}
-                label="Save"
-              />
-            )}
           </div>
         </div>
         {!hideSweepGo && (
@@ -660,6 +653,16 @@ export default function ZapierIntegrationPage(props: any = {}) {
                       </button>
                     </div>
                   </div>
+
+                  {!embedded && (
+                    <div className="flex justify-end pt-1">
+                      <TopSaveButton
+                        onClick={() => void handleSaveSweepGo()}
+                        isSaving={isSavingSweepGo}
+                        label="Save"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Column: Video Embed & Caption */}
