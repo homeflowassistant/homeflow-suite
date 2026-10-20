@@ -34,6 +34,7 @@ import ReactivationPage from "@/pages/ReactivationPage";
 import RequestScheduling from "@/pages/RequestScheduling";
 import ZapierIntegrationPage from "@/pages/ZapierIntegrationPage";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
+import TopSaveButton from "@/components/TopSaveButton";
 import {
   OnboardingSaveProvider,
   useOnboardingSaveContext,
@@ -408,6 +409,22 @@ function OnboardingPageContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const saveActiveOnboardingPage = async () => {
+    if (!currentPage || savingProgress) return;
+
+    setSavingProgress(true);
+    try {
+      await onboardingSave?.saveActivePage();
+      const latest = await statusQuery.refetch();
+      const latestPage =
+        latest.data?.pages.find(page => page.id === currentPage.id) ||
+        currentPage;
+      await saveCurrentProgress(latestPage as PageResult);
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
   const handleSkip = async () => {
     await stepStateMutation.mutateAsync({
       locationId,
@@ -557,6 +574,16 @@ function OnboardingPageContent() {
                 </div>
               </div>
             </div>
+
+            {currentPage.id === "integrations" && (
+              <div className="flex justify-end">
+                <TopSaveButton
+                  onClick={() => void saveActiveOnboardingPage()}
+                  isSaving={savingProgress}
+                  label="Save"
+                />
+              </div>
+            )}
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Button
