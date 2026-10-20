@@ -123,6 +123,14 @@ describe("onboarding wizard validation", () => {
         item => item.id === "pricing-initial-recurring"
       )?.reason
     ).toContain("placeholder");
+    expect(
+      page(results, "pricing").requirements.find(
+        item => item.id === "pricing-add-ons"
+      )
+    ).toMatchObject({
+      label: "Recurring Pricing",
+      key: "add_on_pricing",
+    });
   });
 
   it("treats an optional campaign as skipped rather than complete", () => {

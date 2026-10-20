@@ -299,7 +299,7 @@ const PRICING_VALUES: Requirement[] = [
     "initial_and_recurring_pricing",
   ]),
   customValue("pricing-one-time", "One-Time Pricing", ["onetime_pricing"]),
-  customValue("pricing-add-ons", "Add-On Pricing", ["add_on_pricing"]),
+  customValue("pricing-add-ons", "Recurring Pricing", ["add_on_pricing"]),
 ];
 
 const FACEBOOK_SETUP_VALUES: Requirement[] = [

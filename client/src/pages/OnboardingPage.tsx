@@ -34,6 +34,7 @@ import ReactivationPage from "@/pages/ReactivationPage";
 import RequestScheduling from "@/pages/RequestScheduling";
 import ZapierIntegrationPage from "@/pages/ZapierIntegrationPage";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
+import TopSaveButton from "@/components/TopSaveButton";
 import {
   OnboardingSaveProvider,
   useOnboardingSaveContext,
@@ -325,7 +326,8 @@ function OnboardingPageContent() {
       <div className="ghl-page flex items-center justify-center p-10">
         <div className="flex items-center gap-3 text-sm text-slate-600">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
-          Checking your HomeFlow setup in GHL…
+          Checking your HomeFlow setup in Royal Review. This may take a
+          minute...
         </div>
       </div>
     );
@@ -379,6 +381,34 @@ function OnboardingPageContent() {
         lastReason:
           page.requirements.find(item => item.status !== "complete")?.reason ||
           "All step checks passed.",
+      });
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const handleSaveProgress = async () => {
+    if (!currentPage || savingProgress) return;
+
+    setSavingProgress(true);
+    try {
+      await onboardingSave?.saveActivePage();
+      const latest = await statusQuery.refetch();
+      const latestPage =
+        latest.data?.pages.find(page => page.id === currentPage.id) ||
+        currentPage;
+      await recordProgress.mutateAsync({
+        locationId,
+        stepId: latestPage.id,
+        state: latestPage.skipped ? "skipped" : latestPage.status,
+        completedCount: latestPage.completedCount,
+        totalCount: latestPage.totalCount,
+        missingRequirementsJson: JSON.stringify(
+          latestPage.requirements.filter(item => item.status !== "complete")
+        ),
+        lastReason:
+          latestPage.requirements.find(item => item.status !== "complete")
+            ?.reason || "All step checks passed.",
       });
     } finally {
       setSavingProgress(false);
@@ -558,17 +588,24 @@ function OnboardingPageContent() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={activeIndex === 0 || savingProgress}
-                onClick={() => void goToStep(activeIndex - 1)}
-                className="gap-2 border-slate-300"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Previous Step
-              </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
+                <TopSaveButton
+                  onClick={() => void handleSaveProgress()}
+                  isSaving={savingProgress}
+                  label="Save Progress"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={activeIndex === 0 || savingProgress}
+                  onClick={() => void goToStep(activeIndex - 1)}
+                  className="gap-2 border-slate-300"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Previous Step
+                </Button>
+              </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
@@ -606,8 +643,9 @@ function OnboardingPageContent() {
                 How progress is recorded
               </p>
               <p className="mt-1">
-                Previous Step and Next Step save the active page before moving.
-                Skip Step marks an optional page as skipped and moves forward
+                Save Progress stores the active page without moving to another
+                step. Previous Step and Next Step save the active page before
+                moving. Skip Step marks the page as skipped and moves forward
                 without saving the values currently entered on that page.
               </p>
             </div>
