@@ -4,7 +4,6 @@ import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
   updateExistingCustomValuesOnly,
-  upsertGhlCustomValue,
 } from "../ghl-service.js";
 
 // ─── GHL custom value keys ────────────────────────────────────────────
@@ -23,9 +22,8 @@ import {
 //   add_on_pricing                 -> Add-Ons (single free-text block;
 //                                     currently not shown in the UI)
 //
-// Writes go to the canonical key plus a display-name alias. Values are
-// written with updateExistingCustomValuesOnly (never creates duplicate
-// fields) plus upsertGhlCustomValue for the primary keys.
+// Writes go only to the three canonical keys. Legacy keys remain read-only
+// fallbacks so older subaccounts can still be loaded and migrated by saving.
 const PRICING_KEYS = {
   // Primary consolidated keys
   initialAndRecurring: "initial_and_recurring_pricing",
@@ -63,6 +61,10 @@ interface RecurringEntry {
 
 const DOG_COUNTS = [1, 2, 3, 4, 5, 6];
 
+function dogLabelForCount(dogs: number): string {
+  return dogs === 6 ? "6+ Dogs" : `${dogs} Dog${dogs > 1 ? "s" : ""}`;
+}
+
 // ─── Instruction copy shown as a subheading under each section ────────
 // Client instruction (verbatim from the client's request). It is rendered
 // by the UI as a section subheading — it is intentionally NOT part of any
@@ -76,7 +78,7 @@ export const FIELD_INSTRUCTION =
 
 function makeInitialDefault(dogs: number): FaqEntry {
   return {
-    dogLabel: dogs === 6 ? "6+ Dogs" : `${dogs} Dog${dogs > 1 ? "s" : ""}`,
+    dogLabel: dogLabelForCount(dogs),
     value:
       "Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
   };
@@ -84,7 +86,7 @@ function makeInitialDefault(dogs: number): FaqEntry {
 
 function makeOneTimeDefault(dogs: number): FaqEntry {
   return {
-    dogLabel: `${dogs} Dog${dogs > 1 ? "s" : ""}`,
+    dogLabel: dogLabelForCount(dogs),
     value:
       "One-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each.",
   };
@@ -162,15 +164,6 @@ export function singleLineDecode(text: string): string {
 
 // ─── Composed block templates (n8n FAQ_PriceList / FAQ_OneTimeQuotes) ──
 
-const DOG_LABELS: Record<number, string> = {
-  1: "1 Dog",
-  2: "2 Dogs",
-  3: "3 Dogs",
-  4: "4 Dogs",
-  5: "5 Dogs",
-  6: "6+ Dogs",
-};
-
 /**
  * Compose the initial-and-recurring block matching the n8n
  * FAQ_PriceList template structure:
@@ -196,13 +189,14 @@ function composeInitialAndRecurring(input: {
 }): string {
   const parts: string[] = [];
 
-  for (const entry of input.initialPricing) {
-    if (!entry.value.trim()) continue;
+  input.initialPricing.forEach((entry, index) => {
+    if (!entry.value.trim()) return;
+    const dogCount = DOG_COUNTS[index] ?? index + 1;
     parts.push(
-      `# Initial Service Pricing for ${entry.dogLabel}`,
+      `# Initial Service Pricing for ${dogLabelForCount(dogCount)}`,
       entry.value.trim()
     );
-  }
+  });
 
   parts.push("# Rule: Regular Recurring Pricing Applies to these zip codes:");
   parts.push(`[${input.regularZipCodes.trim()}]`);
@@ -245,7 +239,9 @@ function parseOneTimeEntries(raw: string, fallbacks: FaqEntry[]): FaqEntry[] {
   const perDog = new Map<number, string[]>();
   let current = -1;
   for (const l of lines) {
-    const header = l.match(/^#\s*One-Time Service Pricing For\s+(\d+)\s*DOG/i);
+    const header = l.match(
+      /^#\s*One-Time Service Pricing For\s+(\d+)\s*\+?\s*DOG/i
+    );
     if (header) {
       current = Number(header[1]);
       if (!perDog.has(current)) perDog.set(current, []);
@@ -291,19 +287,14 @@ function buildOneTimeFallback(raw: string, fallbacks: FaqEntry[]): FaqEntry[] {
  */
 function composeOneTime(entries: FaqEntry[]): string {
   const parts: string[] = [];
-  for (const entry of entries) {
-    if (!entry.value.trim()) continue;
-    const dogs =
-      entry.dogLabel.toLowerCase().includes("+") ||
-      entry.dogLabel.toLowerCase().includes("dogs")
-        ? "DOGS"
-        : "DOG";
+  entries.forEach((entry, index) => {
+    if (!entry.value.trim()) return;
+    const dogCount = DOG_COUNTS[index] ?? index + 1;
     parts.push(
-      `# One-Time Service Pricing For ${entry.dogLabel.toUpperCase()}:`
+      `# One-Time Service Pricing For ${dogLabelForCount(dogCount).toUpperCase()}:`
     );
-    void dogs;
     parts.push(entry.value.trim());
-  }
+  });
   return parts.join("\n");
 }
 
@@ -541,10 +532,9 @@ export const pricingRouter = router({
           const sections = decodedInitial.split(/\n+/);
 
           const readInitialSection = (dogs: number): string | undefined => {
-            const label = `${dogs} Dog${dogs > 1 ? "s" : ""}`;
             const idx = sections.findIndex(l =>
               new RegExp(
-                `^#\\s*Initial Service Pricing for ${label.replace("+", "\\+")}\\s*$`,
+                `^#\\s*Initial Service Pricing for ${dogLabelForCount(dogs).replace("+", "\\+")}\\s*$`,
                 "i"
               ).test(l)
             );
@@ -766,10 +756,9 @@ export const pricingRouter = router({
    *   initial_and_recurring_pricing  (composed FAQ_PriceList-style block)
    *   onetime_pricing                (composed FAQ_OneTimeQuotes-style blocks)
    *   add_on_pricing                 (single free-text block)
-   * Writes go to the canonical key and a display-name alias. Step 1
-   * (updateExistingCustomValuesOnly) only touches custom values that
-   * already exist — it never creates fields; step 2 (upsertGhlCustomValue)
-   * re-attempts the canonical keys.
+   * Writes go only to the three canonical keys. updateExistingCustomValuesOnly
+   * uses PUT to replace each existing custom value and never appends to the
+   * previous string or creates additional pricing fields.
    */
   saveSettings: publicProcedure
     .input(
@@ -878,70 +867,38 @@ export const pricingRouter = router({
         const encodedInitial = singleLineEncode(initialAndRecurringText);
         const encodedOneTime = singleLineEncode(oneTimeText);
         const encodedAddOns = singleLineEncode(addOnsText);
-        const legacyRegularRecurring = singleLineEncode(
-          input.regularRecurringPricing
-            .map(row => `${DOG_LABELS[row.dogCount]}\n${row.text}`)
-            .join("\n\n")
-        );
-        const legacyPremiumRecurring = singleLineEncode(
-          input.premiumRecurringPricing
-            .map(row => `${DOG_LABELS[row.dogCount]}\n${row.text}`)
-            .join("\n\n")
-        );
-
-        // ── Payload: primary key + display-name aliases ──────────────
-        // Mirrors the alertsNotifications save flow: write under the
-        // snake_case key and under a human display-name alias so keys
-        // that exist under either variant in the client's sub-account
-        // are updated. updateExistingCustomValuesOnly only touches
-        // custom values that already exist — it never creates fields.
+        // ── Payload: the three configured custom values only ──────────
+        // Each value is rebuilt completely from the current UI state.
+        // The update service sends a PUT for the existing custom-value ID,
+        // so a save replaces the prior string instead of appending to it.
         const customValuePayload: Record<string, string> = {
           [PRICING_KEYS.initialAndRecurring]: encodedInitial,
           [PRICING_KEYS.onetime]: encodedOneTime,
           [PRICING_KEYS.addOns]: encodedAddOns,
-          // Legacy keys remain dual-written for existing workflows and
-          // previously provisioned subaccounts.
-          [PRICING_KEYS.legacyFaqPriceList]: encodedInitial,
-          [PRICING_KEYS.legacyFaqOneTimeQuotes]: encodedOneTime,
-          [PRICING_KEYS.legacyRegularZipCodes]: singleLineEncode(
-            input.regularZipCodes
-          ),
-          [PRICING_KEYS.legacyRegularRecurring]: legacyRegularRecurring,
-          [PRICING_KEYS.legacyPremiumZipCodes]: singleLineEncode(
-            input.premiumZipCodes
-          ),
-          [PRICING_KEYS.legacyPremiumRecurring]: legacyPremiumRecurring,
-          [PRICING_KEYS.legacyCrossSells]: encodedAddOns,
-          // Display-name aliases for dual-write coverage
-          "Initial And Recurring Pricing": encodedInitial,
-          "OneTime Pricing": encodedOneTime,
-          "Add On Pricing": encodedAddOns,
-          "Price List": encodedInitial,
-          "One-Time Quotes": encodedOneTime,
         };
 
-        // Step 1: Update existing custom values only (never creates).
-        await updateExistingCustomValuesOnly(locationId, customValuePayload);
-
-        // Step 2: Re-attempt primary keys for full sub-account coverage.
-        const primaryEntries: [string, string][] = [
-          [PRICING_KEYS.initialAndRecurring, encodedInitial],
-          [PRICING_KEYS.onetime, encodedOneTime],
-          [PRICING_KEYS.addOns, encodedAddOns],
-          [PRICING_KEYS.legacyFaqPriceList, encodedInitial],
-          [PRICING_KEYS.legacyFaqOneTimeQuotes, encodedOneTime],
-          [PRICING_KEYS.legacyRegularRecurring, legacyRegularRecurring],
-        ];
-
-        for (const [key, val] of primaryEntries) {
-          try {
-            await upsertGhlCustomValue(locationId, key, val);
-          } catch (e) {
-            console.warn(`[Pricing] Upsert custom value '${key}':`, e);
-          }
+        const updateResult = await updateExistingCustomValuesOnly(
+          locationId,
+          customValuePayload
+        );
+        if (
+          updateResult.missingKeys.length > 0 ||
+          updateResult.failedKeys.length > 0
+        ) {
+          const missing = updateResult.missingKeys.join(", ");
+          const failed = updateResult.failedKeys.join(", ");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: [
+              missing ? `Missing custom values: ${missing}` : "",
+              failed ? `Failed custom-value updates: ${failed}` : "",
+            ]
+              .filter(Boolean)
+              .join(". "),
+          });
         }
 
-        return { success: true };
+        return { success: true, updatedKeys: Object.keys(customValuePayload) };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         const msg = error instanceof Error ? error.message : "Unknown error";

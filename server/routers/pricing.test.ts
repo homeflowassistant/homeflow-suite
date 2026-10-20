@@ -4,20 +4,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../ghl-service", () => ({
   getLocationCustomValueMap: vi.fn(),
   updateExistingCustomValuesOnly: vi.fn(),
-  upsertGhlCustomValue: vi.fn(),
 }));
 
 import {
   getLocationCustomValueMap,
   updateExistingCustomValuesOnly,
-  upsertGhlCustomValue,
 } from "../ghl-service.js";
 import { appRouter } from "../routers.js";
 import type { AppRouter } from "../routers.js";
 
 const mockedGetMap = vi.mocked(getLocationCustomValueMap);
 const mockedUpdate = vi.mocked(updateExistingCustomValuesOnly);
-const mockedUpsert = vi.mocked(upsertGhlCustomValue);
 
 function createCaller() {
   return appRouter.createCaller({
@@ -33,8 +30,7 @@ beforeEach(() => {
 
 // Empty map simulates a location with no pricing custom values yet.
 mockedGetMap.mockResolvedValue(new Map());
-mockedUpdate.mockResolvedValue(undefined);
-mockedUpsert.mockResolvedValue({ id: "test-id", name: "x", value: "y" });
+mockedUpdate.mockResolvedValue({ missingKeys: [], failedKeys: [] });
 
 describe("pricing.getSettings", () => {
   it("returns seeded defaults when no GHL values exist", async () => {
@@ -210,23 +206,24 @@ describe("pricing.saveSettings", () => {
     ...overrides,
   });
 
-  it("saves via updateExistingCustomValuesOnly with all pricing keys", async () => {
+  it("replaces only the three configured custom values", async () => {
     const caller = createCaller();
     const result = await caller.pricing.saveSettings(validInput());
 
     expect(result.success).toBe(true);
     expect(mockedUpdate).toHaveBeenCalledTimes(1);
     const payload = mockedUpdate.mock.calls[0][1];
-    expect(Object.keys(payload)).toContain("faq_one_time_quotes");
-    expect(Object.keys(payload)).toContain("faq_price_list");
-    expect(Object.keys(payload)).toContain("regular_pricing_zip_codes");
-    expect(Object.keys(payload)).toContain("regular_recurring_pricing");
-    expect(Object.keys(payload)).toContain("premium_pricing_zip_codes");
-    expect(Object.keys(payload)).toContain("premium_recurring_pricing");
-    // Dual-write display-name aliases must also be present
-    expect(Object.keys(payload)).toContain("One-Time Quotes");
-    expect(Object.keys(payload)).toContain("Price List");
-    expect(mockedUpsert).toHaveBeenCalledTimes(6);
+    expect(Object.keys(payload).sort()).toEqual([
+      "add_on_pricing",
+      "initial_and_recurring_pricing",
+      "onetime_pricing",
+    ]);
+    expect(payload.initial_and_recurring_pricing).toContain(
+      "# Initial Service Pricing for 3 Dogs"
+    );
+    expect(payload.onetime_pricing).toContain(
+      "# One-Time Service Pricing For 3 DOGS:"
+    );
   });
 
   it("never creates fields — updateExistingCustomValuesOnly only updates existing values", async () => {
@@ -234,8 +231,18 @@ describe("pricing.saveSettings", () => {
     await caller.pricing.saveSettings(validInput());
     // The service contract is update-only; verify our code path uses it (no POST).
     expect(updateExistingCustomValuesOnly).toHaveBeenCalled();
-    // upsertGhlCustomValue also refuses to POST when no existing ID is found.
-    expect(upsertGhlCustomValue).toHaveBeenCalled();
+    expect(mockedUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports missing existing custom values instead of claiming success", async () => {
+    mockedUpdate.mockResolvedValueOnce({
+      missingKeys: ["add_on_pricing"],
+      failedKeys: [],
+    });
+    const caller = createCaller();
+    await expect(caller.pricing.saveSettings(validInput())).rejects.toThrow(
+      /Missing custom values: add_on_pricing/
+    );
   });
 
   it("rejects lines without a rate, N/A, or not-offered status", async () => {
@@ -312,22 +319,20 @@ describe("pricing.saveSettings", () => {
     );
     await caller.pricing.saveSettings(input);
     const payload = mockedUpdate.mock.calls[0][1];
-    expect(payload["regular_recurring_pricing"]).toContain(
+    expect(payload["initial_and_recurring_pricing"]).toContain(
       "Weekly Recurring Quote Rate for 1 dog: $21.00 per service"
     );
-    expect(payload["regular_recurring_pricing"]).toContain(
+    expect(payload["initial_and_recurring_pricing"]).toContain(
       "Monthly Recurring Quote Rate for 1 dog: $70"
     );
     // Extra frequency lines are preserved exactly as typed
-    expect(payload["regular_recurring_pricing"]).toContain(
+    expect(payload["initial_and_recurring_pricing"]).toContain(
       "3x weekly Recurring Quote Rate"
     );
-    expect(payload["faq_price_list"]).toContain("$35");
-    expect(payload["faq_one_time_quotes"]).toContain("$75");
-    // Premium tier is serialized even when empty (workflow expects the value slot)
-    expect(
-      Object.prototype.hasOwnProperty.call(payload, "premium_recurring_pricing")
-    ).toBe(true);
+    expect(payload["initial_and_recurring_pricing"]).toContain("$35");
+    expect(payload["onetime_pricing"]).toContain("$75");
+    expect(Object.keys(payload)).not.toContain("faq_price_list");
+    expect(Object.keys(payload)).not.toContain("regular_recurring_pricing");
   });
 
   it("maps empty locationId to a BAD_REQUEST", async () => {
@@ -341,9 +346,6 @@ describe("pricing.saveSettings", () => {
     // NOTE: validation runs before the GHL call, so 401 only surfaces when the input
     // is otherwise valid and the mocked GHL service rejects on update/upsert.
     mockedUpdate.mockRejectedValue(
-      new Error("GHL request failed: 401 Unauthorized")
-    );
-    mockedUpsert.mockRejectedValue(
       new Error("GHL request failed: 401 Unauthorized")
     );
     const caller = createCaller();
