@@ -654,15 +654,13 @@ export default function ZapierIntegrationPage(props: any = {}) {
                     </div>
                   </div>
 
-                  {!embedded && (
-                    <div className="flex justify-end pt-1">
-                      <TopSaveButton
-                        onClick={() => void handleSaveSweepGo()}
-                        isSaving={isSavingSweepGo}
-                        label="Save"
-                      />
-                    </div>
-                  )}
+                  <div className="flex justify-end pt-1">
+                    <TopSaveButton
+                      onClick={() => void handleSaveSweepGo()}
+                      isSaving={isSavingSweepGo}
+                      label="Save"
+                    />
+                  </div>
                 </div>
 
                 {/* Right Column: Video Embed & Caption */}
