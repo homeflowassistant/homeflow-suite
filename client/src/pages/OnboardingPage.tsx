@@ -201,7 +201,13 @@ function EmbeddedTutorial({ pageId }: { pageId: string }) {
         />
       );
     case "facebook-setup":
-      return null;
+      return (
+        <OnboardingTutorial
+          title="How to Connect Facebook and Receive Leads"
+          youtubeId="PFvQI5hjx44"
+          description="Follow this walkthrough to connect the Facebook Page and map Instant Form fields so HomeFlow can receive leads."
+        />
+      );
     case "pricing":
       return (
         <OnboardingTutorial

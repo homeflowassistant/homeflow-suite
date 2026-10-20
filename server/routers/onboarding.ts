@@ -305,10 +305,10 @@ const PRICING_VALUES: Requirement[] = [
 const FACEBOOK_SETUP_VALUES: Requirement[] = [
   customValue(
     "facebook-page-link",
-    "Facebook Page Link",
+    "Facebook Page Link from Account Setup",
     ["facebook_page_link"],
     true,
-    "Add the Facebook Page URL so HomeFlow can reference it in campaign messages."
+    "The Facebook Page URL is collected on Account Setup; this step confirms the connection and Instant Form mapping."
   ),
 ];
 
@@ -402,7 +402,7 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
     stepOrder: 8,
     title: "Facebook Setup",
     description:
-      "Connect the Facebook Page, map its form fields, and save the Facebook Page URL used by HomeFlow messages.",
+      "Confirm that the Facebook Page is connected and its Instant Form fields are mapped to HomeFlow.",
     route: "/facebook-setup",
     required: false,
     skippable: true,

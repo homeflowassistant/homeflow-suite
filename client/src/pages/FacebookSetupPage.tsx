@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Facebook, Link2 } from "lucide-react";
+import { CheckCircle2, Facebook } from "lucide-react";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
 import TopSaveButton from "@/components/TopSaveButton";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
+
+type FacebookSetupStatus = "yes" | "not-yet";
+
+function getFacebookStatusStorageKey(locationId: string): string {
+  return `homeflow:facebook-setup-status:${locationId}`;
+}
 
 function useLocationId() {
   return useMemo(() => {
@@ -20,19 +25,18 @@ function useLocationId() {
 export default function FacebookSetupPage(props: any = {}) {
   const embedded = Boolean(props.embedded);
   const locationId = useLocationId();
-  const [facebookPageLink, setFacebookPageLink] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const settingsQuery = trpc.accountSetup.getSettings.useQuery(
-    { locationId },
-    { enabled: Boolean(locationId) }
-  );
-  const saveFieldMutation = trpc.accountSetup.saveField.useMutation();
+  const [setupStatus, setSetupStatus] =
+    useState<FacebookSetupStatus>("not-yet");
 
   useEffect(() => {
-    if (settingsQuery.data) {
-      setFacebookPageLink(settingsQuery.data.facebookPageLink || "");
+    if (!locationId) return;
+    const storedStatus = window.localStorage.getItem(
+      getFacebookStatusStorageKey(locationId)
+    );
+    if (storedStatus === "yes" || storedStatus === "not-yet") {
+      setSetupStatus(storedStatus);
     }
-  }, [settingsQuery.data]);
+  }, [locationId]);
 
   const handleSave = useCallback(async () => {
     if (!locationId) {
@@ -42,26 +46,12 @@ export default function FacebookSetupPage(props: any = {}) {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      await saveFieldMutation.mutateAsync({
-        locationId,
-        field: "facebookPageLink",
-        value: facebookPageLink.trim(),
-      });
-      toast.success("Facebook setup saved.");
-      await settingsQuery.refetch();
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Facebook setup could not be saved."
-      );
-      throw error;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [facebookPageLink, locationId, saveFieldMutation, settingsQuery]);
+    window.localStorage.setItem(
+      getFacebookStatusStorageKey(locationId),
+      setupStatus
+    );
+    toast.success("Facebook setup status saved.");
+  }, [locationId, setupStatus]);
 
   useOnboardingSaveHandler(embedded, handleSave);
 
@@ -92,7 +82,7 @@ export default function FacebookSetupPage(props: any = {}) {
         {!embedded && (
           <TopSaveButton
             onClick={() => void handleSave()}
-            isSaving={isSaving || saveFieldMutation.isPending}
+            isSaving={false}
             label="Save"
           />
         )}
@@ -104,45 +94,59 @@ export default function FacebookSetupPage(props: any = {}) {
         </h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-blue-950/80">
           <li>
-            Open the CRM Settings area and connect the client’s Facebook Page.
+            Open the CRM Settings area and connect the client&apos;s Facebook
+            Page.
           </li>
           <li>Map the Facebook form fields to the HomeFlow contact fields.</li>
-          <li>Copy the public Facebook Page URL into the field below.</li>
           <li>
-            Use Next Step after checking the connection. Next Step saves this
-            page.
+            Use the question below to confirm whether both steps are complete.
           </li>
         </ol>
       </section>
 
-      <section className="space-y-2">
-        <label
-          htmlFor="facebook-page-link"
-          className="flex items-center gap-2 text-sm font-semibold text-slate-900"
-        >
-          <Link2 className="h-4 w-4 text-blue-700" aria-hidden="true" />
-          Facebook Page URL
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold leading-relaxed text-slate-900">
+          Have you connected your Facebook Page and mapped your Instant Form
+          fields to HomeFlow?
+        </h2>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40">
+          <input
+            type="radio"
+            name="facebook-setup-status"
+            value="yes"
+            checked={setupStatus === "yes"}
+            onChange={() => setSetupStatus("yes")}
+            className="mt-1 h-4 w-4 accent-blue-600"
+          />
+          <span className="text-sm font-medium text-slate-800">
+            Yes, I&apos;ve completed both steps.
+          </span>
         </label>
-        <input
-          id="facebook-page-link"
-          type="url"
-          value={facebookPageLink}
-          onChange={event => setFacebookPageLink(event.target.value)}
-          placeholder="https://www.facebook.com/your-page"
-          disabled={settingsQuery.isLoading || isSaving}
-          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none ring-blue-500 focus:ring-2"
-        />
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40">
+          <input
+            type="radio"
+            name="facebook-setup-status"
+            value="not-yet"
+            checked={setupStatus === "not-yet"}
+            onChange={() => setSetupStatus("not-yet")}
+            className="mt-1 h-4 w-4 accent-blue-600"
+          />
+          <span className="text-sm font-medium text-slate-800">
+            Not yet. I&apos;ll do it later or I&apos;m not using Facebook
+            Instant Forms.
+          </span>
+        </label>
         <p className="text-xs leading-relaxed text-slate-500">
-          This value is stored as the Facebook Page Link custom value and is
-          used by HomeFlow campaign messages.
+          The Facebook Page URL is collected on Account Setup. This step only
+          confirms the connection and Instant Form mapping status.
         </p>
       </section>
 
       <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p>
-          When the Facebook connection and field mapping are complete, click
-          Next Step. The onboarding flow saves the page before moving forward.
+          Choose the option that matches your current setup. Next Step saves the
+          onboarding progress before moving forward.
         </p>
       </div>
     </div>
