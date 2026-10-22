@@ -65,6 +65,10 @@ function dogLabelForCount(dogs: number): string {
   return dogs === 6 ? "6+ Dogs" : `${dogs} Dog${dogs > 1 ? "s" : ""}`;
 }
 
+function dogTextForCount(dogs: number): string {
+  return dogs === 6 ? "6+ dogs" : `${dogs} dog${dogs > 1 ? "s" : ""}`;
+}
+
 // ─── Instruction copy shown as a subheading under each section ────────
 // Client instruction (verbatim from the client's request). It is rendered
 // by the UI as a section subheading — it is intentionally NOT part of any
@@ -79,16 +83,23 @@ export const FIELD_INSTRUCTION =
 function makeInitialDefault(dogs: number): FaqEntry {
   return {
     dogLabel: dogLabelForCount(dogs),
-    value:
-      "Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
+    value: [
+      `### One week OR less: $XX (${dogTextForCount(dogs)})`,
+      `### More than one week & less than 1 Month: $XX-XX (${dogTextForCount(dogs)})`,
+      `### 1 Month: $XX (${dogTextForCount(dogs)})`,
+      `### 2 Months: $XX (${dogTextForCount(dogs)})`,
+      `### 3 Months: $XX (${dogTextForCount(dogs)})`,
+      `### 4 Months: $XX (${dogTextForCount(dogs)})`,
+      `### 5 Months: $XX (${dogTextForCount(dogs)})`,
+      `### 6 Months: $XX (${dogTextForCount(dogs)})`,
+    ].join("\n"),
   };
 }
 
 function makeOneTimeDefault(dogs: number): FaqEntry {
   return {
     dogLabel: dogLabelForCount(dogs),
-    value:
-      "One-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each.",
+    value: `## One-Time Quote Rate for ${dogTextForCount(dogs)}: ${dogs === 6 ? "$XX+" : "$XX-XX"} per service`,
   };
 }
 
@@ -98,7 +109,7 @@ function makeOneTimeDefault(dogs: number): FaqEntry {
  * $XX.XX per service") with neutral XX/XX.XX placeholders.
  */
 function makeRecurringDefault(dogs: number): RecurringEntry {
-  const dogWord = `${dogs} dog${dogs > 1 ? "s" : ""}`;
+  const dogWord = dogTextForCount(dogs);
   const freqLines: [string, string][] = [
     ["2x weekly", "2x weekly Recurring Quote Rate"],
     ["Weekly", "Weekly Recurring Quote Rate"],
@@ -106,9 +117,13 @@ function makeRecurringDefault(dogs: number): RecurringEntry {
     ["Monthly", "Monthly Recurring Quote Rate"],
   ];
   const lines = freqLines.map(
-    ([_key, label]) => `${label} for ${dogWord}: $XX.XX per service`
+    ([_key, label]) => `### ${label} for ${dogWord}: $XX.XX per service`
   );
   return { dogCount: dogs, text: lines.join("\n") };
+}
+
+function makeEmptyRecurringDefault(dogs: number): RecurringEntry {
+  return { dogCount: dogs, text: "" };
 }
 
 function buildDefaults() {
@@ -118,7 +133,7 @@ function buildDefaults() {
     regularZipCodes: "",
     regularRecurringPricing: DOG_COUNTS.map(makeRecurringDefault),
     premiumZipCodes: "",
-    premiumRecurringPricing: DOG_COUNTS.map(makeRecurringDefault),
+    premiumRecurringPricing: DOG_COUNTS.map(makeEmptyRecurringDefault),
     crossSells: "Add-on name: $XX per visit",
   };
 }
@@ -200,11 +215,12 @@ function composeInitialAndRecurring(input: {
 
   parts.push("# Rule: Regular Recurring Pricing Applies to these zip codes:");
   parts.push(`[${input.regularZipCodes.trim()}]`);
+  parts.push("# Fixed Quotes for Recurring Services:");
 
   for (const row of input.regularRecurringPricing) {
     if (!row.text.trim()) continue;
     parts.push(
-      `## Regular Recurring Service Pricing for ${row.dogCount} DOG${row.dogCount > 1 ? "S" : ""}:`,
+      `## Recurring Service Prices for ${dogLabelForCount(row.dogCount)}`,
       row.text.trim()
     );
   }
@@ -215,11 +231,10 @@ function composeInitialAndRecurring(input: {
   parts.push(`[${input.premiumZipCodes.trim()}]`);
 
   for (const row of input.premiumRecurringPricing) {
-    if (!row.text.trim()) continue;
     parts.push(
-      `## Premium Recurring Service Pricing for ${row.dogCount} DOG${row.dogCount > 1 ? "S" : ""}:`,
-      row.text.trim()
+      `## Recurring Service Premium Prices for ${dogLabelForCount(row.dogCount)}`
     );
+    if (row.text.trim()) parts.push(row.text.trim());
   }
 
   return parts.join("\n");
@@ -381,7 +396,8 @@ const PREMIUM_RECURRING_HEADERS = DOG_COUNTS.map(
  * lines are dropped so each textarea shows only its own rates.
  */
 function parseRecurringText(raw: string, dogCount: number): string {
-  const dogWord = `${dogCount} dog${dogCount > 1 ? "s" : ""}`;
+  const dogWord =
+    dogCount === 6 ? "(?:6\\+\\s*dogs?|6\\s*dogs?)" : `${dogCount}\\s*dogs?`;
   const lines = raw
     .split("\n")
     .map(l => l.trim())
@@ -394,7 +410,7 @@ function parseRecurringText(raw: string, dogCount: number): string {
       /recurring quote rate/i.test(line) &&
       new RegExp(dogWord, "i").test(line)
     ) {
-      out.push(line);
+      out.push(`### ${line.replace(/^###\s*/, "")}`);
       continue;
     }
     // Legacy format: header lines like "1 Dog" / "2 Dogs" start a block
@@ -414,7 +430,7 @@ function parseRecurringText(raw: string, dogCount: number): string {
         : freqRaw.toLowerCase();
       const rate = legacyMatch[2].trim();
       out.push(
-        `${freq.charAt(0).toUpperCase() + freq.slice(1)} Recurring Quote Rate for ${dogWord}: ${rate}`
+        `### ${freq.charAt(0).toUpperCase() + freq.slice(1)} Recurring Quote Rate for ${dogTextForCount(dogCount)}: ${rate}`
       );
     }
   }
@@ -440,7 +456,7 @@ function parseRecurringText(raw: string, dogCount: number): string {
             : freqRaw.toLowerCase();
           const rate = legacyMatch[2].trim();
           out.push(
-            `${freq.charAt(0).toUpperCase() + freq.slice(1)} Recurring Quote Rate for ${dogWord}: ${rate}`
+            `### ${freq.charAt(0).toUpperCase() + freq.slice(1)} Recurring Quote Rate for ${dogTextForCount(dogCount)}: ${rate}`
           );
         }
       }
@@ -546,6 +562,9 @@ export const pricingRouter = router({
                 l.trim().startsWith("[") && l.trim().endsWith("]");
               if (isZipBracket) break;
               if (/^# Rule:/i.test(l)) break;
+              if (/^#\s+(?:Initial Service Pricing|Fixed Quotes)/i.test(l)) {
+                break;
+              }
               textLines.push(l);
             }
             return textLines.join("\n") || undefined;
@@ -567,10 +586,16 @@ export const pricingRouter = router({
             prefix: "Regular" | "Premium"
           ): RecurringEntry[] =>
             DOG_COUNTS.map(dogCount => {
-              const label = `${dogCount} Dog${dogCount > 1 ? "s" : ""}`;
+              const label = dogLabelForCount(dogCount).replace("+", "\\+");
+              const legacyLabel = `${dogCount} Dog${dogCount > 1 ? "s" : ""}`;
+              const currentLabel =
+                prefix === "Regular"
+                  ? `Recurring Service Prices for ${label}`
+                  : `Recurring Service Premium Prices for ${label}`;
+              const legacyPrefix = `${prefix} Recurring Service Pricing for ${legacyLabel}`;
               const idx = sections.findIndex(l =>
                 new RegExp(
-                  `^##\\s*${prefix} Recurring Service Pricing for ${label}\\s*[:]?\\s*$`,
+                  `^##\\s*(?:${currentLabel}|${legacyPrefix})\\s*[:]?\\s*$`,
                   "i"
                 ).test(l)
               );
@@ -590,6 +615,7 @@ export const pricingRouter = router({
                   l.trim().startsWith("[") && l.trim().endsWith("]");
                 if (isZipBracket) break;
                 if (/^# Rule:/i.test(l)) break;
+                if (/^##\s+/i.test(l) || /^#\s+/i.test(l)) break;
                 if (l.trim()) textLines.push(l);
               }
               return {

@@ -40,7 +40,7 @@ const INITIAL_DURATION_LINES = [
   "One week OR less",
   "More than one week & less than 1 Month",
   "1 Month",
-  "2 Month",
+  "2 Months",
   "3 Months",
   "4 Months",
   "5 Months",
@@ -50,31 +50,29 @@ const INITIAL_DURATION_LINES = [
 const PRICING_SECTION_INSTRUCTION =
   "If this service is provided, replace the X's with your service pricing. Leave blank or enter: “Not Currently Offered” if the service isn’t currently offered. Please contact support if you need assistance.";
 
-const INITIAL_PRICING_TEMPLATES = {
-  "Charge by Bag":
-    "Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
-  "Charge by time since last scoop": [
-    "One week OR less (1 dog): $XX-$XX",
-    "Two weeks (1 dog): $XX-$XX",
-    "Three weeks (1 dog): $XX-$XX",
-    "One month (1 dog): $XX-$XX",
-    "Two months (1 dog): $XX-$XX",
-    "3-4 months (1 dog): $XX-$XX",
-    "5-6 months (1 dog): $XX-$XX",
-    "7-9 months (1 dog): $XX-$XX",
-    "10+ months (1 dog): $XX-$XX",
-  ].join("\n"),
-  "Charge flat rate":
-    "Initial service is XX when you sign up for recurring service",
-} as const;
+function dogTextForCount(dog: number): string {
+  return dog === 6 ? "6+ dogs" : `${dog} dog${dog > 1 ? "s" : ""}`;
+}
 
-const ONE_TIME_PRICING_TEMPLATES = {
-  "Charge by Bag":
-    "One-time service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service.",
-  "Charge by time since last scoop":
-    INITIAL_PRICING_TEMPLATES["Charge by time since last scoop"],
-  "Charge flat rate": "One-time service is a flat XX",
-} as const;
+function getInitialPricingTemplates(dog: number): Record<string, string> {
+  const dogText = dogTextForCount(dog);
+  return {
+    "Charge by Bag": `### Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service. (${dogText})`,
+    "Charge by time since last scoop": INITIAL_DURATION_LINES.map(
+      duration => `### ${duration}: $XX-XX (${dogText})`
+    ).join("\n"),
+    "Charge flat rate": `### Initial service is $XX when you sign up for recurring service (${dogText})`,
+  };
+}
+
+function getOneTimePricingTemplates(dog: number): Record<string, string> {
+  const dogText = dogTextForCount(dog);
+  return {
+    "Charge by Bag": `## One-Time Quote Rate for ${dogText}: $XX-XX per service`,
+    "Charge by time since last scoop": `## One-Time Quote Rate for ${dogText}: $XX-XX per service`,
+    "Charge flat rate": `## One-Time Quote Rate for ${dogText}: $XX per service`,
+  };
+}
 
 function PricingTemplateButtons({
   templates,
@@ -379,7 +377,7 @@ export default function PricingPage(props: any = {}) {
                       {dog} Dog{dog > 1 ? "s" : ""}
                     </PawLabel>
                     <PricingTemplateButtons
-                      templates={INITIAL_PRICING_TEMPLATES}
+                      templates={getInitialPricingTemplates(dog)}
                       onApply={value => updateInitialEntry(dog - 1, value)}
                     />
                     <textarea
@@ -417,7 +415,7 @@ export default function PricingPage(props: any = {}) {
                       {dog} Dog{dog > 1 ? "s" : ""}
                     </PawLabel>
                     <PricingTemplateButtons
-                      templates={ONE_TIME_PRICING_TEMPLATES}
+                      templates={getOneTimePricingTemplates(dog)}
                       onApply={value => updateOneTimeEntry(dog - 1, value)}
                     />
                     <textarea

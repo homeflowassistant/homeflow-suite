@@ -40,13 +40,17 @@ describe("pricing.getSettings", () => {
 
     expect(settings.initialPricing.length).toBe(6);
     expect(settings.oneTimePricing.length).toBe(6);
-    expect(settings.initialPricing[0].value).toContain("$XX");
-    expect(settings.oneTimePricing[0].value).toContain("$XX");
+    expect(settings.initialPricing[0].value).toContain(
+      "### One week OR less: $XX (1 dog)"
+    );
+    expect(settings.oneTimePricing[0].value).toContain(
+      "## One-Time Quote Rate for 1 dog: $XX-XX per service"
+    );
     expect(settings.regularZipCodes).toBe("");
     expect(settings.regularRecurringPricing[0].dogCount).toBe(1);
     // Premium ZIP codes start empty, while the editable rate template remains available.
     expect(settings.premiumZipCodes).toBe("");
-    expect(settings.premiumRecurringPricing[0].text).toContain("$XX.XX");
+    expect(settings.premiumRecurringPricing[0].text).toBe("");
   });
 
   it("reads existing FAQ prose from GHL keys", async () => {
@@ -98,17 +102,85 @@ describe("pricing.getSettings", () => {
 
     const r3 = settings.regularRecurringPricing.find(x => x.dogCount === 3)!;
     expect(r3.text).toContain(
-      "2x weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
+      "### 2x weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
+      "### Weekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Biweekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
+      "### Biweekly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
     expect(r3.text).toContain(
-      "Monthly Recurring Quote Rate for 3 dogs: $XX.XX per service"
+      "### Monthly Recurring Quote Rate for 3 dogs: $XX.XX per service"
     );
+  });
+
+  it("loads canonical Markdown into the matching dog fields", async () => {
+    mockedGetMap.mockResolvedValue(
+      new Map([
+        [
+          "initial_and_recurring_pricing",
+          {
+            id: "cv-initial",
+            value: [
+              "# Initial Service Pricing for 1 Dog",
+              "### One week OR less: $60 (1 dog)",
+              "# Initial Service Pricing for 6+ Dogs",
+              "### One week OR less: $70+ (6+ dogs)",
+              "# Rule: Regular Recurring Pricing Applies to these zip codes:",
+              "[97501, 97502]",
+              "# Fixed Quotes for Recurring Services:",
+              "## Recurring Service Prices for 1 Dog",
+              "### Weekly Recurring Quote Rate for 1 dog: $25.00 per service",
+              "## Recurring Service Prices for 6+ Dogs",
+              "### Weekly Recurring Quote Rate for 6+ dogs: $XX.XX per service",
+              "# Rule: Premium Recurring Pricing Applies to these zip codes:",
+              "[]",
+              "## Recurring Service Premium Prices for 1 Dog",
+              "## Recurring Service Premium Prices for 6+ Dogs",
+            ].join("\\n"),
+          },
+        ],
+        [
+          "onetime_pricing",
+          {
+            id: "cv-onetime",
+            value: [
+              "# One-Time Service Pricing For 1 DOG:",
+              "## One-Time Quote Rate for 1 dog: $110-140 per service",
+              "# One-Time Service Pricing For 6+ DOGS:",
+              "## One-Time Quote Rate for 6+ dogs: $185+ per service",
+            ].join("\\n"),
+          },
+        ],
+        ["add_on_pricing", { id: "cv-addons", value: "Add-on name: $25" }],
+      ])
+    );
+
+    const caller = createCaller();
+    const settings = await caller.pricing.getSettings({ locationId: "loc123" });
+
+    expect(settings.initialPricing[0].value).toBe(
+      "### One week OR less: $60 (1 dog)"
+    );
+    expect(settings.initialPricing[5].value).toBe(
+      "### One week OR less: $70+ (6+ dogs)"
+    );
+    expect(settings.regularZipCodes).toBe("97501, 97502");
+    expect(settings.regularRecurringPricing[0].text).toBe(
+      "### Weekly Recurring Quote Rate for 1 dog: $25.00 per service"
+    );
+    expect(settings.regularRecurringPricing[5].text).toBe(
+      "### Weekly Recurring Quote Rate for 6+ dogs: $XX.XX per service"
+    );
+    expect(settings.premiumRecurringPricing[0].text).toBe("");
+    expect(settings.oneTimePricing[0].value).toBe(
+      "## One-Time Quote Rate for 1 dog: $110-140 per service"
+    );
+    expect(settings.oneTimePricing[5].value).toBe(
+      "## One-Time Quote Rate for 6+ dogs: $185+ per service"
+    );
+    expect(settings.crossSells).toBe("Add-on name: $25");
   });
 
   it("converts legacy GHL values into the client's free-text line format", async () => {
@@ -137,15 +209,19 @@ describe("pricing.getSettings", () => {
 
     const r1 = settings.regularRecurringPricing.find(x => x.dogCount === 1)!;
     expect(r1.text).toContain(
-      "2x weekly Recurring Quote Rate for 1 dog: $18.69 per service"
+      "### 2x weekly Recurring Quote Rate for 1 dog: $18.69 per service"
     );
-    expect(r1.text).toContain("Monthly Recurring Quote Rate for 1 dog: $70");
+    expect(r1.text).toContain(
+      "### Monthly Recurring Quote Rate for 1 dog: $70"
+    );
     // 1 Dog's block must not leak the 2 Dogs rates
     expect(r1.text).not.toContain("2 dogs");
     const r2 = settings.regularRecurringPricing.find(x => x.dogCount === 2)!;
-    expect(r2.text).toContain("Monthly Recurring Quote Rate for 2 dogs: $75");
     expect(r2.text).toContain(
-      "2x weekly Recurring Quote Rate for 2 dogs: $18.69 per service"
+      "### Monthly Recurring Quote Rate for 2 dogs: $75"
+    );
+    expect(r2.text).toContain(
+      "### 2x weekly Recurring Quote Rate for 2 dogs: $18.69 per service"
     );
   });
 
@@ -163,7 +239,7 @@ describe("pricing.getSettings", () => {
 
     const r1 = settings.regularRecurringPricing.find(x => x.dogCount === 1)!;
     expect(r1.text).toContain(
-      "3x weekly Recurring Quote Rate for 1 dog: $25 per service"
+      "### 3x weekly Recurring Quote Rate for 1 dog: $25 per service"
     );
     expect(r1.text.split("\n").length).toBe(4);
   });
@@ -194,10 +270,10 @@ describe("pricing.saveSettings", () => {
       recurringEntry(
         d,
         [
-          `2x weekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $18.69 per service`,
-          `Weekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $21.00 per service`,
-          `Biweekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $21.00 per service`,
-          `Monthly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $70`,
+          `### 2x weekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $18.69 per service`,
+          `### Weekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $21.00 per service`,
+          `### Biweekly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $21.00 per service`,
+          `### Monthly Recurring Quote Rate for ${d} dog${d > 1 ? "s" : ""}: $70`,
         ].join("\n")
       )
     ),
@@ -220,6 +296,15 @@ describe("pricing.saveSettings", () => {
     ]);
     expect(payload.initial_and_recurring_pricing).toContain(
       "# Initial Service Pricing for 3 Dogs"
+    );
+    expect(payload.initial_and_recurring_pricing).toContain(
+      "# Fixed Quotes for Recurring Services:"
+    );
+    expect(payload.initial_and_recurring_pricing).toContain(
+      "## Recurring Service Prices for 3 Dogs"
+    );
+    expect(payload.initial_and_recurring_pricing).toContain(
+      "## Recurring Service Premium Prices for 6+ Dogs"
     );
     expect(payload.onetime_pricing).toContain(
       "# One-Time Service Pricing For 3 DOGS:"
@@ -263,10 +348,10 @@ describe("pricing.saveSettings", () => {
     input.regularRecurringPricing[0] = recurringEntry(
       1,
       [
-        "2x weekly Recurring Quote Rate for 1 dog: $18.69 per service",
-        "Weekly Recurring Quote Rate for 1 dog: $21.00 per service",
-        "3x weekly Recurring Quote Rate for 1 dog: $25.00 per service",
-        "Monthly Recurring Quote Rate for 1 dog: $70",
+        "### 2x weekly Recurring Quote Rate for 1 dog: $18.69 per service",
+        "### Weekly Recurring Quote Rate for 1 dog: $21.00 per service",
+        "### 3x weekly Recurring Quote Rate for 1 dog: $25.00 per service",
+        "### Monthly Recurring Quote Rate for 1 dog: $70",
       ].join("\n")
     );
     const result = await caller.pricing.saveSettings(input);
@@ -279,8 +364,8 @@ describe("pricing.saveSettings", () => {
     input.regularRecurringPricing[0] = recurringEntry(
       1,
       [
-        "Biweekly Recurring Quote Rate for 1 dog: N/A",
-        "Monthly Recurring Quote Rate for 1 dog: not offered currently",
+        "### Biweekly Recurring Quote Rate for 1 dog: N/A",
+        "### Monthly Recurring Quote Rate for 1 dog: not offered currently",
       ].join("\n")
     );
     const result = await caller.pricing.saveSettings(input);
@@ -310,20 +395,20 @@ describe("pricing.saveSettings", () => {
     input.regularRecurringPricing[0] = recurringEntry(
       1,
       [
-        "2x weekly Recurring Quote Rate for 1 dog: $18.69 per service",
-        "Weekly Recurring Quote Rate for 1 dog: $21.00 per service",
-        "Biweekly Recurring Quote Rate for 1 dog: $21.00 per service",
-        "3x weekly Recurring Quote Rate for 1 dog: $25.00 per service",
-        "Monthly Recurring Quote Rate for 1 dog: $70",
+        "### 2x weekly Recurring Quote Rate for 1 dog: $18.69 per service",
+        "### Weekly Recurring Quote Rate for 1 dog: $21.00 per service",
+        "### Biweekly Recurring Quote Rate for 1 dog: $21.00 per service",
+        "### 3x weekly Recurring Quote Rate for 1 dog: $25.00 per service",
+        "### Monthly Recurring Quote Rate for 1 dog: $70",
       ].join("\n")
     );
     await caller.pricing.saveSettings(input);
     const payload = mockedUpdate.mock.calls[0][1];
     expect(payload["initial_and_recurring_pricing"]).toContain(
-      "Weekly Recurring Quote Rate for 1 dog: $21.00 per service"
+      "### Weekly Recurring Quote Rate for 1 dog: $21.00 per service"
     );
     expect(payload["initial_and_recurring_pricing"]).toContain(
-      "Monthly Recurring Quote Rate for 1 dog: $70"
+      "### Monthly Recurring Quote Rate for 1 dog: $70"
     );
     // Extra frequency lines are preserved exactly as typed
     expect(payload["initial_and_recurring_pricing"]).toContain(
