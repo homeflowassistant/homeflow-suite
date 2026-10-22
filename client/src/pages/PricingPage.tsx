@@ -57,18 +57,23 @@ function dogTextForCount(dog: number): string {
 function getInitialPricingTemplates(dog: number): Record<string, string> {
   const dogText = dogTextForCount(dog);
   return {
-    "Charge by Bag": `### Initial service starts at $XX and covers the first two bags. Additional bags are charged at $XX each. Only applies to initial cleanup and does not apply to weekly service. (${dogText})`,
+    "Charge by Bag": INITIAL_DURATION_LINES.map(
+      duration =>
+        `### ${duration}: $XX for the first two bags, $XX each additional bag (${dogText})`
+    ).join("\n"),
     "Charge by time since last scoop": INITIAL_DURATION_LINES.map(
       duration => `### ${duration}: $XX-XX (${dogText})`
     ).join("\n"),
-    "Charge flat rate": `### Initial service is $XX when you sign up for recurring service (${dogText})`,
+    "Charge flat rate": INITIAL_DURATION_LINES.map(
+      duration => `### ${duration}: $XX (${dogText})`
+    ).join("\n"),
   };
 }
 
 function getOneTimePricingTemplates(dog: number): Record<string, string> {
   const dogText = dogTextForCount(dog);
   return {
-    "Charge by Bag": `## One-Time Quote Rate for ${dogText}: $XX-XX per service`,
+    "Charge by Bag": `## One-Time Quote Rate for ${dogText}: $XX for the first two bags, $XX each additional bag per service`,
     "Charge by time since last scoop": `## One-Time Quote Rate for ${dogText}: $XX-XX per service`,
     "Charge flat rate": `## One-Time Quote Rate for ${dogText}: $XX per service`,
   };
