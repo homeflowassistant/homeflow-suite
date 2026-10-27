@@ -78,11 +78,9 @@ type AccountField =
   | "stateTwoLetterAbbrev"
   | "internalNotificationsEmail"
   | "internalNotificationsPhone"
-  | "receiveNewLeadNotifications"
   | "onTheWayNotifications"
   | "jobCompletedNotifications"
   | "offScheduleNotifications"
-  | "notificationChannel"
   | "crmSelection";
 
 interface FieldMeta {
@@ -95,6 +93,59 @@ interface FieldMeta {
   options?: { label: string; value: string }[];
   help?: string;
 }
+
+const US_STATE_OPTIONS = [
+  ["Alabama", "AL"],
+  ["Alaska", "AK"],
+  ["Arizona", "AZ"],
+  ["Arkansas", "AR"],
+  ["California", "CA"],
+  ["Colorado", "CO"],
+  ["Connecticut", "CT"],
+  ["Delaware", "DE"],
+  ["Florida", "FL"],
+  ["Georgia", "GA"],
+  ["Hawaii", "HI"],
+  ["Idaho", "ID"],
+  ["Illinois", "IL"],
+  ["Indiana", "IN"],
+  ["Iowa", "IA"],
+  ["Kansas", "KS"],
+  ["Kentucky", "KY"],
+  ["Louisiana", "LA"],
+  ["Maine", "ME"],
+  ["Maryland", "MD"],
+  ["Massachusetts", "MA"],
+  ["Michigan", "MI"],
+  ["Minnesota", "MN"],
+  ["Mississippi", "MS"],
+  ["Missouri", "MO"],
+  ["Montana", "MT"],
+  ["Nebraska", "NE"],
+  ["Nevada", "NV"],
+  ["New Hampshire", "NH"],
+  ["New Jersey", "NJ"],
+  ["New Mexico", "NM"],
+  ["New York", "NY"],
+  ["North Carolina", "NC"],
+  ["North Dakota", "ND"],
+  ["Ohio", "OH"],
+  ["Oklahoma", "OK"],
+  ["Oregon", "OR"],
+  ["Pennsylvania", "PA"],
+  ["Rhode Island", "RI"],
+  ["South Carolina", "SC"],
+  ["South Dakota", "SD"],
+  ["Tennessee", "TN"],
+  ["Texas", "TX"],
+  ["Utah", "UT"],
+  ["Vermont", "VT"],
+  ["Virginia", "VA"],
+  ["Washington", "WA"],
+  ["West Virginia", "WV"],
+  ["Wisconsin", "WI"],
+  ["Wyoming", "WY"],
+].map(([label, value]) => ({ label, value }));
 
 // Display order matches the order given by the client.
 const FIELDS: FieldMeta[] = [
@@ -182,10 +233,11 @@ const FIELDS: FieldMeta[] = [
   },
   {
     key: "stateTwoLetterAbbrev",
-    label: "Service State",
-    placeholder: "UT",
+    label: "Which state do you service in?",
+    placeholder: "Select a state",
     icon: <MapPin size={15} />,
-    help: "Enter the two-letter state abbreviation where you provide service.",
+    help: "Select the state where you provide service. The saved value uses the two-letter abbreviation.",
+    options: US_STATE_OPTIONS,
   },
   {
     key: "crmSelection",
@@ -209,28 +261,6 @@ const FIELDS: FieldMeta[] = [
     label: "Internal Notification Phone",
     placeholder: "(555) 123-4567",
     icon: <Phone size={15} />,
-  },
-  {
-    key: "notificationChannel",
-    label: "Notification Channel",
-    placeholder: "Select a channel",
-    icon: <Bell size={15} />,
-    help: "Choose the channel used for customer notifications. SMS is the recommended default.",
-    options: [
-      { label: "SMS", value: "sms" },
-      { label: "Email", value: "email" },
-      { label: "Call", value: "call" },
-    ],
-  },
-  {
-    key: "receiveNewLeadNotifications",
-    label: "Receive New Lead Notifications",
-    placeholder: "Select an option",
-    icon: <Bell size={15} />,
-    options: [
-      { label: "True", value: "True" },
-      { label: "False", value: "False" },
-    ],
   },
   {
     key: "onTheWayNotifications",
@@ -300,11 +330,9 @@ export default function AccountSetupPage(props: any = {}) {
     stateTwoLetterAbbrev: "",
     internalNotificationsEmail: "",
     internalNotificationsPhone: "",
-    receiveNewLeadNotifications: "True",
     onTheWayNotifications: "True",
     jobCompletedNotifications: "True",
     offScheduleNotifications: "True",
-    notificationChannel: "sms",
     crmSelection: "",
   });
   // Drives the conditional upload UI for the Business Logo field:
@@ -332,11 +360,9 @@ export default function AccountSetupPage(props: any = {}) {
     stateTwoLetterAbbrev: "idle",
     internalNotificationsEmail: "idle",
     internalNotificationsPhone: "idle",
-    receiveNewLeadNotifications: "idle",
     onTheWayNotifications: "idle",
     jobCompletedNotifications: "idle",
     offScheduleNotifications: "idle",
-    notificationChannel: "idle",
     crmSelection: "idle",
   });
 
@@ -419,11 +445,9 @@ export default function AccountSetupPage(props: any = {}) {
       stateTwoLetterAbbrev: s.stateTwoLetterAbbrev,
       internalNotificationsEmail: s.internalNotificationsEmail,
       internalNotificationsPhone: s.internalNotificationsPhone,
-      receiveNewLeadNotifications: s.receiveNewLeadNotifications || "True",
       onTheWayNotifications: s.onTheWayNotifications || "True",
       jobCompletedNotifications: s.jobCompletedNotifications || "True",
       offScheduleNotifications: s.offScheduleNotifications || "True",
-      notificationChannel: s.notificationChannel || "sms",
       crmSelection: s.crmSelection,
     });
     setStoredLogo(s.businessLogo);
@@ -478,11 +502,9 @@ export default function AccountSetupPage(props: any = {}) {
         stateTwoLetterAbbrev: "stateTwoLetterAbbrev",
         internalNotificationsEmail: "internalNotificationsEmail",
         internalNotificationsPhone: "internalNotificationsPhone",
-        receiveNewLeadNotifications: "receiveNewLeadNotifications",
         onTheWayNotifications: "onTheWayNotifications",
         jobCompletedNotifications: "jobCompletedNotifications",
         offScheduleNotifications: "offScheduleNotifications",
-        notificationChannel: "notificationChannel",
         crmSelection: "crmSelection",
       }) as const
     )[field];
@@ -628,7 +650,7 @@ export default function AccountSetupPage(props: any = {}) {
           const status = saveStatus[meta.key];
           return (
             <div key={meta.key}>
-              {meta.key === "notificationChannel" && (
+              {meta.key === "onTheWayNotifications" && (
                 <div className="mb-2 rounded-xl border border-cyan-200 bg-cyan-50/70 p-4 shadow-sm">
                   <h2 className="text-sm font-bold text-cyan-900">
                     Customer Notifications (Sweep and Go Users Only)
