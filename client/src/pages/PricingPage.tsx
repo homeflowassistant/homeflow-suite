@@ -48,7 +48,7 @@ const INITIAL_DURATION_LINES = [
 ] as const;
 
 const PRICING_SECTION_INSTRUCTION =
-  "If this service is provided, replace the X's with your service pricing. Leave blank or enter: “Not Currently Offered” if the service isn’t currently offered. Please contact support if you need assistance.";
+  "If this service is provided, replace the X's with your service pricing. Enter “Not Currently Offered” if the service isn’t currently offered. Please contact support if you need assistance.";
 
 function dogTextForCount(dog: number): string {
   return dog === 6 ? "6+ dogs" : `${dog} dog${dog > 1 ? "s" : ""}`;
@@ -487,8 +487,7 @@ export default function PricingPage(props: any = {}) {
                 Recurring Service Pricing: Regular Zip Codes
               </h2>
               <p className="pricing-section-instruction">
-                If this service is provided, replace the X's with your service
-                pricing. Please contact support if you need assistance.
+                {PRICING_SECTION_INSTRUCTION}
               </p>
               <div className="pricing-grid-3">
                 {regularRecurringPricing.map((reg, rowIndex) => {
@@ -524,8 +523,7 @@ export default function PricingPage(props: any = {}) {
                 Recurring Service Pricing: Premium Zip Codes
               </h2>
               <p className="pricing-section-instruction">
-                If this service is provided, replace the X's with your service
-                pricing. Please contact support if you need assistance.
+                {PRICING_SECTION_INSTRUCTION}
               </p>
               <div className="pricing-grid-3">
                 {premiumRecurringPricing.map((prem, rowIndex) => {
