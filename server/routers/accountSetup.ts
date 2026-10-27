@@ -83,14 +83,10 @@ const FIELD_KEY_MAP: Record<keyof AccountSetupData, string[]> = {
   legalBusinessName: ["legal_business_name"],
   businessAddress: ["business_address"],
   stateTwoLetterAbbrev: ["state_two_letter_abbrev"],
-  internalNotificationsEmail: [
-    "internal_notifications_email",
-    "send_team_notification_email",
-  ],
-  internalNotificationsPhone: [
-    "internal_notifications_phone_number",
-    "send_team_notification_phone",
-  ],
+  // These are the same canonical keys used by Alerts and Notifications.
+  // Older internal_* values remain read-compatible below.
+  internalNotificationsEmail: ["send_team_notification_email"],
+  internalNotificationsPhone: ["send_team_notification_phone"],
   receiveNewLeadNotifications: ["receive_newlead_notifications_true_or_false"],
   onTheWayNotifications: ["on_the_way_notifications_truefalse"],
   jobCompletedNotifications: ["job_completed_notifications_truefalse"],
@@ -268,12 +264,15 @@ const getAccountSetupSettingsProcedure = publicProcedure
         legalBusinessName: get("legal_business_name"),
         businessAddress: get("business_address"),
         stateTwoLetterAbbrev: get("state_two_letter_abbrev"),
+        // Read the Alerts and Notifications keys first. Fall back to the
+        // older internal_* keys so existing accounts do not lose visibility
+        // of values saved before this alignment.
         internalNotificationsEmail:
-          get("internal_notifications_email") ||
-          get("send_team_notification_email"),
+          get("send_team_notification_email") ||
+          get("internal_notifications_email"),
         internalNotificationsPhone:
-          get("internal_notifications_phone_number") ||
-          get("send_team_notification_phone"),
+          get("send_team_notification_phone") ||
+          get("internal_notifications_phone_number"),
         receiveNewLeadNotifications:
           get("receive_newlead_notifications_true_or_false") || "True",
         onTheWayNotifications:
