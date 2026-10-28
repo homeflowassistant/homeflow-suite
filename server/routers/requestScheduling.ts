@@ -16,6 +16,12 @@ import {
 const FOLLOW_UP_CUSTOM_VALUE_NAME =
   "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)";
 
+const FOLLOW_UP_OPTION_TO_GHL_VALUE = {
+  Lite: "Lite",
+  "S&G Link": "SG-Link",
+  "Custom Quote & Link": "Custom-Link",
+} as const;
+
 const TIMING_MAP = {
   0: "within_24h",
   1: "24h",
@@ -610,13 +616,15 @@ export const requestSchedulingRouter = router({
       }
 
       await updateExistingCustomValuesOnly(locationId, {
-        [CV.leadFollowupOptions]: input.leadFollowUpOption,
+        [CV.leadFollowupOptions]:
+          FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
       });
 
       return {
         success: true,
         saved: {
-          lead_followup_options: input.leadFollowUpOption,
+          lead_followup_options:
+            FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
         },
         results: {
           lead_followup_options: {
@@ -712,14 +720,15 @@ export const requestSchedulingRouter = router({
       // because doing so causes the 400 "already exists" error if the name/key matching fails.
       // We will strictly PUT to the existing keys.
       await updateExistingCustomValuesOnly(locationId, {
-        [CV.leadFollowupOptions]: input.leadFollowUpOption,
+        [CV.leadFollowupOptions]:
+          FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
         initial_request_scheduling: input.initialRequestScheduling,
         [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
       });
 
       // We no longer return the created IDs, because we only updated existing ones.
       const leadOptionResults = {
-        value: input.leadFollowUpOption,
+        value: FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
         id: "updated",
       };
       const initialResults = {

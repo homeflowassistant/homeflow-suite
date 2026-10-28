@@ -3,14 +3,13 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
-  upsertGhlCustomValue,
   updateExistingCustomValuesOnly,
   uploadToGhlMedia,
 } from "../ghl-service.js";
 
 // ─── Reactivation campaign option values ─────────────────────────────
-// "Lite"              → saved as "Lite"         to lead_followup_options
-// "Custom Quote & Link" → saved as "Custom-Link" to lead_followup_options
+// "Lite"              → saved as "Lite"         to reactivation_options
+// "Custom Quote & Link" → saved as "Custom-Link" to reactivation_options
 // (S&G Link is a Follow-Up page concern only; not used here)
 const REACTIVATION_OPTIONS = ["Lite", "Custom Quote & Link"] as const;
 type ReactivationOption = (typeof REACTIVATION_OPTIONS)[number];
@@ -37,9 +36,7 @@ type OnetimeTiming = (typeof ONETIME_TIMING_LABELS)[number];
 // The Follow-Up page (RequestScheduling) has its own separate keys and is
 // NOT touched anywhere in this file.
 const CV = {
-  // Shared option key — written by BOTH pages but with different values
-  // Follow-Up page writes: "Lite" | "SG-Link" | "Custom-Link"
-  // Reactivation page writes: "Lite" | "Custom-Link"
+  // Legacy shared option key retained only for loading older accounts.
   leadFollowupOptions: "lead_followup_options",
   // Canonical Reactivation-only option key required by the client workflow.
   reactivationOptions: "reactivation_options",
@@ -169,7 +166,6 @@ const saveCustomValuesSettingsProcedure = publicProcedure
     }
 
     await updateExistingCustomValuesOnly(locationId, {
-      [CV.leadFollowupOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
       [CV.reactivationOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
       [CV.onetimeServiceScheduling]: input.onetimeTiming,
     });
@@ -326,8 +322,21 @@ export const reactivationRouter = router({
         return found;
       };
 
-      // Derive the reactivation option from the shared lead_followup_options key.
-      // Only "Lite" and "Custom-Link" are valid for this page.
+      const readPreferredValue = (
+        canonicalKeys: string[],
+        legacyKeys: string[] = []
+      ): string => {
+        for (const key of canonicalKeys) {
+          if (hasKey(key)) return get(key);
+        }
+        for (const key of legacyKeys) {
+          if (hasKey(key)) return get(key);
+        }
+        return "";
+      };
+
+      // Prefer the Reactivation-specific key. Fall back to the legacy shared
+      // key only for accounts saved before reactivation_options was added.
       const savedOption =
         get(CV.reactivationOptions) || get(CV.leadFollowupOptions);
       let reactivationOption: ReactivationOption = "Lite";
@@ -349,13 +358,23 @@ export const reactivationRouter = router({
           companyImage: get(CV.companyImage),
           discountOffer: get(CV.discountOffer),
           offer2Title: (() => {
-            const savedOffer = hasKey("onetime_line_item_1")
-              ? get("onetime_line_item_1")
-              : get("leads_line_item_2") || get(CV.discountOffer);
+            const savedOffer = readPreferredValue(
+              ["onetime_line_item_1", "recurring_line_item_1"],
+              ["leads_line_item_2", CV.discountOffer]
+            );
             return savedOffer === "" ? "" : savedOffer || "2 Weeks FREE";
           })(),
-          offer2Description: get("leads_line_item_description_2"),
-          offer2Image: get("leads_line_item_image_2"),
+          offer2Description: readPreferredValue(
+            [
+              "onetime_line_item_description_1",
+              "recurring_line_item_description_1",
+            ],
+            ["leads_line_item_description_2"]
+          ),
+          offer2Image: readPreferredValue(
+            ["onetime_line_item_image_1", "recurring_line_item_image_1"],
+            ["leads_line_item_image_2"]
+          ),
           sendQuoteAutomatically: get(CV.sendQuoteAutomatically) !== "false",
           tosLink: get(CV.tosLink),
           showCardSection: get(CV.showCardSection) !== "false",
@@ -384,7 +403,7 @@ export const reactivationRouter = router({
    * Save reactivation settings to GHL custom values.
    *
    * Always saves:
-   *   - lead_followup_options  → "Lite" | "Custom-Link"
+   *   - reactivation_options  → "Lite" | "Custom-Link"
    *   - onetime_service_reactivation_scheduling
    *
    * When "Custom Quote & Link" is selected, also saves all custom quote fields.
@@ -392,7 +411,7 @@ export const reactivationRouter = router({
    * Logo is written to BOTH homeflow_business_logo AND company_logo.
    * Name is written to BOTH homeflow_business_name AND company_name.
    *
-   * The Follow-Up page (RequestScheduling) is NOT touched.
+   * The Follow-Up option custom value is never modified.
    */
   saveSettings: saveCustomValuesSettingsProcedure,
   saveCustomValuesSettings: saveCustomValuesSettingsProcedure,
