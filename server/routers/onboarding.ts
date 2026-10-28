@@ -140,11 +140,9 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
   ]),
   customValue("internal-notifications-email", "Internal Notification Email", [
     "internal_notifications_email",
-    "send_team_notification_email",
   ]),
   customValue("internal-notifications-phone", "Internal Notification Phone", [
     "internal_notifications_phone_number",
-    "send_team_notification_phone",
   ]),
   customValue(
     "receive-new-lead-notifications",

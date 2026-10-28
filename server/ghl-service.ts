@@ -1414,7 +1414,7 @@ export async function updateCustomValuesOnInstall(
       {
         name: "custom_skipped_job_message",
         value:
-          "Hi {{contact.first_name}}, due to your gate being locked, we were unable to complete your scheduled service.\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
+          "Hi {{contact.first_name}}, we were unable to complete your scheduled service due to:\n{{contact.skip_reason}}.\n\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!",
       },
       {
         name: "custom_subscription_pausedunpaused_message",

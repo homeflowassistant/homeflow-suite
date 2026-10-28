@@ -48,6 +48,9 @@ describe("Alerts & Notifications Router Defaults", () => {
     expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain(
       "recurring cleanups have been unpaused"
     );
+    expect(DEFAULT_ALERT_TEMPLATES.skippedJobNotifyMessage).toBe(
+      "Hi {{contact.first_name}}, we were unable to complete your scheduled service due to:\n{{contact.skip_reason}}.\n\nWe apologize for the inconvenience and will be back on your next service day. Thank you for your patience!"
+    );
   });
 
   it("exports exact custom value keys for subscription toggle and message text fields", async () => {

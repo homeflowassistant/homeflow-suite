@@ -3,6 +3,7 @@ import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import VideoHelpButton from "@/components/VideoHelpButton";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TopSaveButton from "@/components/TopSaveButton";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import "./PricingPage.css";
@@ -359,6 +360,14 @@ export default function PricingPage(props: any = {}) {
           />
         )}
       </div>
+      {!embedded && (
+        <div className="pricing-inline-video">
+          <OnboardingTutorial
+            title="Filling Out Pricing Section Guide"
+            youtubeId="UOhfOagLc1o"
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="pricing-loading">
