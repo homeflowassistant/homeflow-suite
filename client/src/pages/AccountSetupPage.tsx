@@ -243,7 +243,7 @@ const FIELDS: FieldMeta[] = [
     placeholder: "Select a CRM",
     icon: <ListChecks size={15} />,
     options: [
-      { label: "S&G (Stripe)", value: "thank-you-strip" },
+      { label: "S&G (Stripe)", value: "thank-you-stripe" },
       { label: "S&G (Card Pointe)", value: "thank-you-pointe" },
       { label: "All other CRMs", value: "thank-you" },
     ],
