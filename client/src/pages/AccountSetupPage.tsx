@@ -76,8 +76,6 @@ type AccountField =
   | "legalBusinessName"
   | "businessAddress"
   | "stateTwoLetterAbbrev"
-  | "internalNotificationsEmail"
-  | "internalNotificationsPhone"
   | "onTheWayNotifications"
   | "jobCompletedNotifications"
   | "offScheduleNotifications"
@@ -251,18 +249,6 @@ const FIELDS: FieldMeta[] = [
     ],
   },
   {
-    key: "internalNotificationsEmail",
-    label: "Internal Notification Email",
-    placeholder: "team@yourbusiness.com",
-    icon: <Mail size={15} />,
-  },
-  {
-    key: "internalNotificationsPhone",
-    label: "Internal Notification Phone",
-    placeholder: "(555) 123-4567",
-    icon: <Phone size={15} />,
-  },
-  {
     key: "onTheWayNotifications",
     label: "On the Way Notifications",
     placeholder: "Select an option",
@@ -328,8 +314,6 @@ export default function AccountSetupPage(props: any = {}) {
     legalBusinessName: "",
     businessAddress: "",
     stateTwoLetterAbbrev: "",
-    internalNotificationsEmail: "",
-    internalNotificationsPhone: "",
     onTheWayNotifications: "True",
     jobCompletedNotifications: "True",
     offScheduleNotifications: "True",
@@ -358,8 +342,6 @@ export default function AccountSetupPage(props: any = {}) {
     legalBusinessName: "idle",
     businessAddress: "idle",
     stateTwoLetterAbbrev: "idle",
-    internalNotificationsEmail: "idle",
-    internalNotificationsPhone: "idle",
     onTheWayNotifications: "idle",
     jobCompletedNotifications: "idle",
     offScheduleNotifications: "idle",
@@ -443,8 +425,6 @@ export default function AccountSetupPage(props: any = {}) {
       legalBusinessName: s.legalBusinessName,
       businessAddress: s.businessAddress,
       stateTwoLetterAbbrev: s.stateTwoLetterAbbrev,
-      internalNotificationsEmail: s.internalNotificationsEmail,
-      internalNotificationsPhone: s.internalNotificationsPhone,
       onTheWayNotifications: s.onTheWayNotifications || "True",
       jobCompletedNotifications: s.jobCompletedNotifications || "True",
       offScheduleNotifications: s.offScheduleNotifications || "True",
@@ -500,8 +480,6 @@ export default function AccountSetupPage(props: any = {}) {
         legalBusinessName: "legalBusinessName",
         businessAddress: "businessAddress",
         stateTwoLetterAbbrev: "stateTwoLetterAbbrev",
-        internalNotificationsEmail: "internalNotificationsEmail",
-        internalNotificationsPhone: "internalNotificationsPhone",
         onTheWayNotifications: "onTheWayNotifications",
         jobCompletedNotifications: "jobCompletedNotifications",
         offScheduleNotifications: "offScheduleNotifications",
