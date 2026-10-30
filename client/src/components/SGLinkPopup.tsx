@@ -137,11 +137,17 @@ export default function SGLinkPopup({
         locationId,
         baseOnboardingLink: normalizedLink,
       });
-      toast.success("Base onboarding link saved successfully!");
+      toast.success(
+        "Base onboarding link saved. Follow Up option set to S&G Link."
+      );
       // Close the popup only after a successful save
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to save. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save. Please try again."
+      );
     } finally {
       setIsSaving(false);
     }

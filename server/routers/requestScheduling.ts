@@ -16,11 +16,24 @@ import {
 const FOLLOW_UP_CUSTOM_VALUE_NAME =
   "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)";
 
-const FOLLOW_UP_OPTION_TO_GHL_VALUE = {
+export const FOLLOW_UP_OPTION_TO_GHL_VALUE = {
   Lite: "Lite",
   "S&G Link": "SG-Link",
   "Custom Quote & Link": "Custom-Link",
 } as const;
+
+function assertCustomValueUpdated(
+  locationId: string,
+  key: string,
+  result: { missingKeys: string[]; failedKeys: string[] }
+) {
+  if (result.missingKeys.includes(key) || result.failedKeys.includes(key)) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Unable to save the Follow Up setting '${key}' for location ${locationId}. Verify that this custom value exists and try again.`,
+    });
+  }
+}
 
 const TIMING_MAP = {
   0: "within_24h",
@@ -615,10 +628,15 @@ export const requestSchedulingRouter = router({
         });
       }
 
-      await updateExistingCustomValuesOnly(locationId, {
+      const optionUpdate = await updateExistingCustomValuesOnly(locationId, {
         [CV.leadFollowupOptions]:
           FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
       });
+      assertCustomValueUpdated(
+        locationId,
+        CV.leadFollowupOptions,
+        optionUpdate
+      );
 
       return {
         success: true,
@@ -719,12 +737,20 @@ export const requestSchedulingRouter = router({
       // STRICT UPDATE ONLY: We do not want to ever POST/create these base fields,
       // because doing so causes the 400 "already exists" error if the name/key matching fails.
       // We will strictly PUT to the existing keys.
-      await updateExistingCustomValuesOnly(locationId, {
-        [CV.leadFollowupOptions]:
-          FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
-        initial_request_scheduling: input.initialRequestScheduling,
-        [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
-      });
+      const baseUpdateResult = await updateExistingCustomValuesOnly(
+        locationId,
+        {
+          [CV.leadFollowupOptions]:
+            FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
+          initial_request_scheduling: input.initialRequestScheduling,
+          [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
+        }
+      );
+      assertCustomValueUpdated(
+        locationId,
+        CV.leadFollowupOptions,
+        baseUpdateResult
+      );
 
       // We no longer return the created IDs, because we only updated existing ones.
       const leadOptionResults = {
@@ -917,8 +943,8 @@ export const requestSchedulingRouter = router({
     }),
 
   /**
-   * Save S&G Link base onboarding link to GHL custom value.
-   * Saves to: base_onboarding_link (accessible via {{custom_values.base_onboarding_link}})
+   * Save the S&G Link base onboarding link and synchronize the Follow-Up option.
+   * Saves base_onboarding_link and lead_followup_options = "SG-Link".
    */
   saveSgLinkSettings: publicProcedure
     .input(
@@ -938,19 +964,47 @@ export const requestSchedulingRouter = router({
         });
       }
 
-      const result = await upsertGhlCustomValue(
+      const linkResult = await upsertGhlCustomValue(
         locationId,
         "base_onboarding_link",
         input.baseOnboardingLink.trim()
       );
+      if (["skipped_not_found", "update_failed"].includes(linkResult.id)) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "Unable to save the Sweep & Go base onboarding link. Verify that its custom value exists and try again.",
+        });
+      }
+
+      const optionResult = await upsertGhlCustomValue(
+        locationId,
+        CV.leadFollowupOptions,
+        FOLLOW_UP_OPTION_TO_GHL_VALUE["S&G Link"]
+      );
+      if (["skipped_not_found", "update_failed"].includes(optionResult.id)) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "The base onboarding link was saved, but lead_followup_options could not be set to SG-Link. Verify that the custom value exists and try again.",
+        });
+      }
 
       return {
         success: true,
         saved: {
-          base_onboarding_link: result.value,
+          base_onboarding_link: linkResult.value,
+          [CV.leadFollowupOptions]: optionResult.value,
         },
         results: {
-          base_onboarding_link: { action: "created_or_updated", id: result.id },
+          base_onboarding_link: {
+            action: "created_or_updated",
+            id: linkResult.id,
+          },
+          [CV.leadFollowupOptions]: {
+            action: "created_or_updated",
+            id: optionResult.id,
+          },
         },
       };
     }),
