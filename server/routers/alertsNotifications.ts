@@ -41,7 +41,7 @@ export const DEFAULT_ALERT_TEMPLATES = {
 
   subscriptionPausedNotifyEnabled: true,
   subscriptionPausedNotifyMessage:
-    "Hi {{contact.first_name}}, your service has been unpaused, and your recurring cleanups will resume starting next week as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
+    "Hi {{contact.first_name}}, your scooping service has been paused.\n\nThank you for trusting {{custom_values.company_name}}!",
 
   subscriptionUnpausedNotifyMessage:
     "Hi {{contact.first_name}}, your recurring cleanups have been unpaused and will resume as scheduled.\nThank you for trusting {{custom_values.company_name}}!",

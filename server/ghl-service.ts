@@ -1419,7 +1419,7 @@ export async function updateCustomValuesOnInstall(
       {
         name: "custom_subscription_pausedunpaused_message",
         value:
-          "Hi {{contact.first_name}}, your service has been unpaused, and your recurring cleanups will resume starting next week as scheduled.\nThank you for trusting {{custom_values.company_name}}!",
+          "Hi {{contact.first_name}}, your scooping service has been paused.\n\nThank you for trusting {{custom_values.company_name}}!",
       },
       {
         name: "account_unpaused_message",

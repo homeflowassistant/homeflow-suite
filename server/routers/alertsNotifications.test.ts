@@ -42,8 +42,8 @@ describe("Alerts & Notifications Router Defaults", () => {
       "./alertsNotifications.js"
     );
     expect(DEFAULT_ALERT_TEMPLATES.autoReplyNewLeadEnabled).toBe(true);
-    expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toContain(
-      "service has been unpaused"
+    expect(DEFAULT_ALERT_TEMPLATES.subscriptionPausedNotifyMessage).toBe(
+      "Hi {{contact.first_name}}, your scooping service has been paused.\n\nThank you for trusting {{custom_values.company_name}}!"
     );
     expect(DEFAULT_ALERT_TEMPLATES.subscriptionUnpausedNotifyMessage).toContain(
       "recurring cleanups have been unpaused"
