@@ -12,6 +12,7 @@ import { eq, or } from "drizzle-orm";
 import { getDb } from "./db.js";
 import { ENV } from "./_core/env.js";
 import { ghlInstallations, type GHLInstallation } from "../drizzle/schema.js";
+import { INSTALL_CUSTOM_VALUE_DEFAULTS } from "./install-custom-value-defaults.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
@@ -1363,6 +1364,7 @@ export async function updateCustomValuesOnInstall(
     // client. The helper creates missing values, fills empty values, and
     // preserves non-empty values so reinstalling the app is safe.
     const customValuesToSeed = [
+      ...INSTALL_CUSTOM_VALUE_DEFAULTS,
       {
         name: "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
         value: "Lite",
@@ -1371,10 +1373,6 @@ export async function updateCustomValuesOnInstall(
       { name: "follow_up_limit", value: "3" },
       { name: "initial_clean_up_required_true_or_false", value: "True" },
       { name: "notification_channel__pick_one_sms_email_call", value: "sms" },
-      {
-        name: "email_sending_subdomain_after_the_",
-        value: "@send.homeflowassistant.com",
-      },
       { name: "send_quote_automatically", value: "True" },
       { name: "onetime_line_item_price_1", value: "$0.00" },
       { name: "recurring_line_item_price_1", value: "$0.00" },
