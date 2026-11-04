@@ -117,10 +117,6 @@ export default function ReactivationPage(props: any = {}) {
 
   // ── Save handlers ────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (selectedOption === "Custom Quote & Link" && !embedded) {
-      setShowQuotePopup(true);
-      return;
-    }
     setIsSaving(true);
     try {
       await saveMutation.mutateAsync({
