@@ -12,6 +12,7 @@ import {
   resolveCustomValue as resolveGhlCustomValue,
   extractCustomValueKey,
 } from "../ghl-service.js";
+import { buildFollowUpOffer2CustomValueUpdates } from "./quoteOfferMappings.js";
 
 const FOLLOW_UP_CUSTOM_VALUE_NAME =
   "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)";
@@ -846,11 +847,12 @@ export const requestSchedulingRouter = router({
           [CV.offer1Description]: d.offer1Description ?? "",
           [CV.offer1Image]: offer1ImageUrl,
 
-          // Offer 2 (Leads Line Item 2 & Freebie Offer)
-          [CV.offer2Title]: d.offer2Title ?? "",
-          [CV.offer2Description]: d.offer2Description ?? "",
-          [CV.offer2Image]: offer2ImageUrl,
-          discountfree_offer_for_reengagement_campaigns: d.offer2Title ?? "",
+          // Follow Up Offer 2 (Leads Line Item 2 values only)
+          ...buildFollowUpOffer2CustomValueUpdates({
+            title: d.offer2Title,
+            description: d.offer2Description,
+            image: offer2ImageUrl,
+          }),
 
           // Page Settings
           [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically

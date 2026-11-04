@@ -6,6 +6,10 @@ import {
   updateExistingCustomValuesOnly,
   uploadToGhlMedia,
 } from "../ghl-service.js";
+import {
+  buildReactivationOfferCustomValueUpdates,
+  readReactivationOfferCustomValues,
+} from "./quoteOfferMappings.js";
 
 // ─── Reactivation campaign option values ─────────────────────────────
 // "Lite"              → saved as "Lite"         to reactivation_options
@@ -32,9 +36,9 @@ const ONETIME_TIMING_LABELS = [
 type OnetimeTiming = (typeof ONETIME_TIMING_LABELS)[number];
 
 // ─── Custom value key names (GHL) ─────────────────────────────────────
-// IMPORTANT: These are the Reactivation page's own keys only.
-// The Follow-Up page (RequestScheduling) has its own separate keys and is
-// NOT touched anywhere in this file.
+// Reactivation's quote offer uses its one-time and recurring keys below.
+// Follow-Up's Leads Line Item 2 quote values are not read or written here.
+// The legacy Follow-Up option fallback is separate from quote-offer storage.
 const CV = {
   // Legacy shared option key retained only for loading older accounts.
   leadFollowupOptions: "lead_followup_options",
@@ -235,20 +239,11 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         quote_title: d.quoteTitle ?? "",
         [CV.companyDescription]: d.bioText ?? "",
         [CV.companyImage]: companyImageUrl,
-        // Keep the existing lead keys and also populate the one-time and
-        // recurring keys consumed by the reactivation quote workflows. An
-        // explicit empty string is intentional and must remain empty so the
-        // optional sign-up offer can be omitted.
-        leads_line_item_2: d.offer2Title ?? "",
-        leads_line_item_description_2: d.offer2Description ?? "",
-        leads_line_item_image_2: offer2ImageUrl,
-        onetime_line_item_1: d.offer2Title ?? "",
-        onetime_line_item_description_1: d.offer2Description ?? "",
-        onetime_line_item_image_1: offer2ImageUrl,
-        recurring_line_item_1: d.offer2Title ?? "",
-        recurring_line_item_description_1: d.offer2Description ?? "",
-        recurring_line_item_image_1: offer2ImageUrl,
-        discountfree_offer_for_reengagement_campaigns: d.offer2Title ?? "",
+        ...buildReactivationOfferCustomValueUpdates({
+          title: d.offer2Title,
+          description: d.offer2Description,
+          image: offer2ImageUrl,
+        }),
         [CV.sendQuoteAutomatically]: d.sendQuoteAutomatically
           ? "true"
           : "false",
@@ -322,18 +317,7 @@ export const reactivationRouter = router({
         return found;
       };
 
-      const readPreferredValue = (
-        canonicalKeys: string[],
-        legacyKeys: string[] = []
-      ): string => {
-        for (const key of canonicalKeys) {
-          if (hasKey(key)) return get(key);
-        }
-        for (const key of legacyKeys) {
-          if (hasKey(key)) return get(key);
-        }
-        return "";
-      };
+      const reactivationOffer = readReactivationOfferCustomValues(get, hasKey);
 
       // Prefer the Reactivation-specific key. Fall back to the legacy shared
       // key only for accounts saved before reactivation_options was added.
@@ -357,24 +341,9 @@ export const reactivationRouter = router({
           bioText: get(CV.companyDescription),
           companyImage: get(CV.companyImage),
           discountOffer: get(CV.discountOffer),
-          offer2Title: (() => {
-            const savedOffer = readPreferredValue(
-              ["onetime_line_item_1", "recurring_line_item_1"],
-              ["leads_line_item_2", CV.discountOffer]
-            );
-            return savedOffer === "" ? "" : savedOffer || "2 Weeks FREE";
-          })(),
-          offer2Description: readPreferredValue(
-            [
-              "onetime_line_item_description_1",
-              "recurring_line_item_description_1",
-            ],
-            ["leads_line_item_description_2"]
-          ),
-          offer2Image: readPreferredValue(
-            ["onetime_line_item_image_1", "recurring_line_item_image_1"],
-            ["leads_line_item_image_2"]
-          ),
+          offer2Title: reactivationOffer.title,
+          offer2Description: reactivationOffer.description,
+          offer2Image: reactivationOffer.image,
           sendQuoteAutomatically: get(CV.sendQuoteAutomatically) !== "false",
           tosLink: get(CV.tosLink),
           showCardSection: get(CV.showCardSection) !== "false",

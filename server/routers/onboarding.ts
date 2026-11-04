@@ -219,8 +219,9 @@ const REACTIVATION_QUOTE_VALUES: Requirement[] = [
   customValue("reactivation-quote-title", "Quote Title", ["quote_title"]),
   customValue("reactivation-company-image", "Company Image", ["company_image"]),
   customValue("reactivation-offer", "Reactivation Offer", [
+    "onetime_line_item_1",
+    "recurring_line_item_1",
     "discountfree_offer_for_reengagement_campaigns",
-    "leads_line_item_2",
   ]),
 ];
 
