@@ -9,6 +9,7 @@ import {
   getLocationPickerVariables,
   syncStaffNotificationContact,
 } from "../ghl-service.js";
+import { toE164Phone } from "../services/ghl-sms-custom-action-service.js";
 
 // ─── Default Templates matching UI layout exact specifications ─────────
 export const DEFAULT_ALERT_TEMPLATES = {
@@ -471,7 +472,15 @@ export const alertsNotificationsRouter = router({
   saveSettings: locationProcedure
     .input(alertsNotificationsSchema)
     .mutation(async ({ input }) => {
-      const { locationId, ...data } = input;
+      const { locationId, ...rawData } = input;
+      // Store the team phone in E.164 (+1XXXXXXXXXX for US/Canada numbers)
+      // so GHL workflow SMS steps accept it (#34).
+      const data = {
+        ...rawData,
+        teamNotifyPhone: rawData.teamNotifyPhone.trim()
+          ? toE164Phone(rawData.teamNotifyPhone)
+          : "",
+      };
 
       // Formatted text message payloads with explicit '\n' line breaks preserved
       const autoReplyNewLeadMessage = formatCustomTextWithNewlines(
