@@ -305,12 +305,13 @@ const getAccountSetupSettingsProcedure = locationProcedure
         internalNotificationsPhone: get("internal_notifications_phone_number"),
         receiveNewLeadNotifications:
           get("receive_newlead_notifications_true_or_false") || "True",
-        onTheWayNotifications:
-          get("on_the_way_notifications_truefalse") || "True",
-        jobCompletedNotifications:
-          get("job_completed_notifications_truefalse") || "True",
-        offScheduleNotifications:
-          get("off_schedule_notifications_truefalse") || "True",
+        // Raw stored values: the page shows "True" as the default for an
+        // empty value, and because the stored value differs from what is
+        // shown, Save writes it. Returning "True" here hid the difference,
+        // so the default was never saved and onboarding stayed incomplete.
+        onTheWayNotifications: get("on_the_way_notifications_truefalse"),
+        jobCompletedNotifications: get("job_completed_notifications_truefalse"),
+        offScheduleNotifications: get("off_schedule_notifications_truefalse"),
         notificationChannel:
           get("notification_channel__pick_one_sms_email_call") || "sms",
         crmSelection: get("confirmation_page_link"),

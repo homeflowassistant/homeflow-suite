@@ -9,6 +9,7 @@ import {
   getLocationPickerVariables,
   type PickerVariable,
 } from "../ghl-service.js";
+import { saveCustomValuesOrThrow } from "../helpers/customValueSave.js";
 import { locationProcedure, router } from "../_core/trpc.js";
 
 type RequirementKind = "custom_value" | "custom_field" | "system";
@@ -22,6 +23,10 @@ type Requirement = {
   aliases: string[];
   required: boolean;
   reason?: string;
+  /** Extra rule for a filled value (default: any non-empty value). */
+  completeWhen?: (value: string) => boolean;
+  /** Shown when the value is filled but fails completeWhen. */
+  notCompleteReason?: string;
 };
 
 type PageDefinition = {
@@ -107,7 +112,17 @@ const systemRequirement = (
   reason,
 });
 
+// ─── Checklists ──────────────────────────────────────────────────────
+// Each step lists exactly the GHL custom values that its page reads and
+// saves — nothing else. A value that is missing or empty is "remaining".
+// Optional page fields (required = false) are listed so the user can see
+// them, but they never block a step.
+
+const optional = (id: string, label: string, aliases: string[]) =>
+  customValue(id, label, aliases, false);
+
 const ACCOUNT_SETUP_VALUES: Requirement[] = [
+  // Business Name writes both keys.
   customValue("business-name-homeflow", "Business Name (HomeFlow)", [
     "homeflow_business_name",
   ]),
@@ -119,6 +134,7 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
   ]),
   customValue("business-email", "Business Email", ["business_email"]),
   customValue("business-phone", "Business Phone", ["business_phone"]),
+  // Business Logo writes both keys.
   customValue("business-logo-homeflow", "Business Logo (HomeFlow)", [
     "homeflow_business_logo",
   ]),
@@ -126,6 +142,9 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
     "company_logo",
   ]),
   customValue("payment-link", "Payment Link", ["add_payment_link"]),
+  customValue("facebook-page-link", "Facebook Page Link", [
+    "facebook_page_link",
+  ]),
   customValue("lead-campaign-offer", "Lead Campaign Offer", [
     "discountfree_offer_for_lead_campaigns",
   ]),
@@ -136,20 +155,11 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
     "legal_business_name",
   ]),
   customValue("business-address", "Business Address", ["business_address"]),
+  optional("business-ein", "EIN Number", ["business_ein"]),
   customValue("state-two-letter-abbrev", "Service State", [
     "state_two_letter_abbrev",
   ]),
-  customValue("internal-notifications-email", "Internal Notification Email", [
-    "internal_notifications_email",
-  ]),
-  customValue("internal-notifications-phone", "Internal Notification Phone", [
-    "internal_notifications_phone_number",
-  ]),
-  customValue(
-    "receive-new-lead-notifications",
-    "Receive New Lead Notifications",
-    ["receive_newlead_notifications_true_or_false"]
-  ),
+  customValue("crm-selection", "CRM Selection", ["confirmation_page_link"]),
   customValue("on-the-way-notifications", "On the Way Notifications", [
     "on_the_way_notifications_truefalse",
   ]),
@@ -159,10 +169,6 @@ const ACCOUNT_SETUP_VALUES: Requirement[] = [
   customValue("off-schedule-notifications", "Off Schedule Notifications", [
     "off_schedule_notifications_truefalse",
   ]),
-  customValue("notification-channel", "Notification Channel", [
-    "notification_channel__pick_one_sms_email_call",
-  ]),
-  customValue("crm-selection", "CRM Selection", ["confirmation_page_link"]),
 ];
 
 const FOLLOW_UP_VALUES: Requirement[] = [
@@ -172,19 +178,33 @@ const FOLLOW_UP_VALUES: Requirement[] = [
   customValue("initial-outreach-timing", "Initial Outreach Scheduling", [
     "initial_request_scheduling",
   ]),
-  customValue("follow-up-limit", "Follow-Up Limit", [
-    "08. How Many Times Should We Follow-Up For A Review? (0, 1, 2, or 3)",
-    "follow_up_limit",
-    "followup_limit",
-  ]),
-  customField("initial-request-delay", "Initial Request Delay Contact Field", [
-    "initial_request_delay",
-  ]),
-  customField("service-type", "Service Type Contact Field", ["service_type"]),
 ];
 
+/** Added to Follow Up when the S&G Link option is selected. */
+const FOLLOW_UP_SG_LINK_VALUES: Requirement[] = [
+  customValue("sg-base-onboarding-link", "Sweep & Go Base Onboarding Link", [
+    "base_onboarding_link",
+  ]),
+];
+
+/** Gallery and testimonial fields shared by both Custom Quote popups. */
+const quoteGalleryAndReviews = (prefix: string): Requirement[] => [
+  ...[1, 2, 3, 4, 5, 6].map(n =>
+    optional(`${prefix}-gallery-${n}`, `Gallery Image ${n}`, [`image_${n}`])
+  ),
+  ...[1, 2, 3, 4].flatMap(n => [
+    optional(`${prefix}-review-${n}`, `Testimonial ${n}`, [`review_${n}`]),
+    optional(`${prefix}-review-${n}-name`, `Testimonial ${n} Name`, [
+      `review_${n}_name`,
+    ]),
+    optional(`${prefix}-review-${n}-photo`, `Testimonial ${n} Photo`, [
+      `review_${n}_photo`,
+    ]),
+  ]),
+];
+
+/** Added to Follow Up when Custom Quote & Link is selected (quote popup). */
 const FOLLOW_UP_QUOTE_VALUES: Requirement[] = [
-  customValue("quote-company-name", "Company Name", ["company_name"]),
   customValue("quote-company-logo", "Company Logo", [
     "company_logo",
     "homeflow_business_logo",
@@ -193,13 +213,26 @@ const FOLLOW_UP_QUOTE_VALUES: Requirement[] = [
   customValue("quote-company-description", "Company Description", [
     "company_description",
   ]),
-  customValue("quote-offer", "Lead Offer", ["leads_line_item_1"]),
+  optional("quote-company-image", "Company Image", ["company_image"]),
+  customValue("quote-offer", "Offer 1 Title", ["leads_line_item_1"]),
+  optional("quote-offer-description", "Offer 1 Description", [
+    "leads_line_item_description_1",
+  ]),
+  optional("quote-offer-image", "Offer 1 Image", ["leads_line_item_image_1"]),
+  optional("quote-offer-2", "Offer 2 Title", ["leads_line_item_2"]),
+  optional("quote-offer-2-description", "Offer 2 Description", [
+    "leads_line_item_description_2",
+  ]),
+  optional("quote-offer-2-image", "Offer 2 Image", ["leads_line_item_image_2"]),
   customValue("quote-terms-link", "Terms of Service Link", ["tos_link"]),
+  ...quoteGalleryAndReviews("quote"),
 ];
 
 const REACTIVATION_VALUES: Requirement[] = [
+  // The Reactivation page saves reactivation_options (not the Follow Up
+  // lead_followup_options value it was previously checked against).
   customValue("reactivation-option", "Reactivation Option", [
-    "lead_followup_options",
+    "reactivation_options",
   ]),
   customValue(
     "one-time-reactivation-timing",
@@ -208,22 +241,31 @@ const REACTIVATION_VALUES: Requirement[] = [
   ),
 ];
 
+/** Added to Reactivation when Custom Quote & Link is selected there. */
 const REACTIVATION_QUOTE_VALUES: Requirement[] = [
-  customValue("reactivation-company-name", "Company Name", ["company_name"]),
   customValue("reactivation-company-logo", "Company Logo", [
     "company_logo",
     "homeflow_business_logo",
   ]),
-  customValue("reactivation-business-owner", "Business Owner Name", [
-    "homeflow_business_owner_name",
-  ]),
   customValue("reactivation-quote-title", "Quote Title", ["quote_title"]),
+  customValue("reactivation-company-description", "Company Description", [
+    "company_description",
+  ]),
   customValue("reactivation-company-image", "Company Image", ["company_image"]),
-  customValue("reactivation-offer", "Reactivation Offer", [
+  customValue("reactivation-offer", "Reactivation Offer Title", [
     "onetime_line_item_1",
     "recurring_line_item_1",
-    "discountfree_offer_for_reengagement_campaigns",
   ]),
+  optional("reactivation-offer-description", "Reactivation Offer Description", [
+    "onetime_line_item_description_1",
+    "recurring_line_item_description_1",
+  ]),
+  optional("reactivation-offer-image", "Reactivation Offer Image", [
+    "onetime_line_item_image_1",
+    "recurring_line_item_image_1",
+  ]),
+  customValue("reactivation-terms-link", "Terms of Service Link", ["tos_link"]),
+  ...quoteGalleryAndReviews("reactivation"),
 ];
 
 const ALERT_VALUES: Requirement[] = [
@@ -303,14 +345,21 @@ const PRICING_VALUES: Requirement[] = [
   // field in the app at this time.
 ];
 
+/** Value saved by the Facebook Setup page ("yes" / "not-yet"). */
+export const FACEBOOK_SETUP_STATUS_KEY = "facebook_setup_status";
+
 const FACEBOOK_SETUP_VALUES: Requirement[] = [
-  customValue(
-    "facebook-page-link",
-    "Facebook Page Link from Account Setup",
-    ["facebook_page_link"],
-    true,
-    "The Facebook Page URL is collected on Account Setup; this step confirms the connection and Instant Form mapping."
-  ),
+  {
+    ...customValue(
+      "facebook-setup-status",
+      "Facebook Page connected and form mapped",
+      [FACEBOOK_SETUP_STATUS_KEY],
+      true,
+      "Answer the Facebook Setup question and save."
+    ),
+    completeWhen: value => value.trim().toLowerCase() === "yes",
+    notCompleteReason: "Facebook setup is marked as not done yet.",
+  },
 ];
 
 /** The two removed cards are intentionally absent from this list. */
@@ -414,6 +463,7 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
 const ALL_CUSTOM_VALUE_REQUIREMENTS: Requirement[] = [
   ...PAGE_DEFINITIONS.flatMap(page => page.requirements),
   ...FOLLOW_UP_QUOTE_VALUES,
+  ...FOLLOW_UP_SG_LINK_VALUES,
   ...REACTIVATION_QUOTE_VALUES,
 ].filter(requirement => requirement.kind === "custom_value");
 
@@ -503,22 +553,44 @@ function findCustomField(fields: PickerVariable[], aliases: string[]): boolean {
   });
 }
 
+function selectedOption(
+  customValues: Record<string, unknown>[],
+  key: string
+): string {
+  return findCustomValue(customValues, [key])
+    .value.toLowerCase()
+    .replace(/[\s_&]+/g, "-");
+}
+
 function isCustomQuoteSelected(
-  customValues: Record<string, unknown>[]
+  customValues: Record<string, unknown>[],
+  key = "lead_followup_options"
 ): boolean {
-  const selected = findCustomValue(customValues, ["lead_followup_options"]);
-  const value = selected.value.toLowerCase().replace(/[\s_]+/g, "-");
+  const value = selectedOption(customValues, key);
   return value.includes("custom") && value.includes("link");
+}
+
+/** Follow Up saves "SG-Link" for the S&G Link option. */
+function isSgLinkSelected(customValues: Record<string, unknown>[]): boolean {
+  return selectedOption(customValues, "lead_followup_options").startsWith("sg");
 }
 
 function getPageRequirements(
   page: PageDefinition,
   customValues: Record<string, unknown>[]
 ): Requirement[] {
-  if (page.id === "request-scheduling" && isCustomQuoteSelected(customValues)) {
-    return [...page.requirements, ...FOLLOW_UP_QUOTE_VALUES];
+  if (page.id === "request-scheduling") {
+    if (isCustomQuoteSelected(customValues)) {
+      return [...page.requirements, ...FOLLOW_UP_QUOTE_VALUES];
+    }
+    if (isSgLinkSelected(customValues)) {
+      return [...page.requirements, ...FOLLOW_UP_SG_LINK_VALUES];
+    }
   }
-  if (page.id === "reactivation" && isCustomQuoteSelected(customValues)) {
+  if (
+    page.id === "reactivation" &&
+    isCustomQuoteSelected(customValues, "reactivation_options")
+  ) {
     return [...page.requirements, ...REACTIVATION_QUOTE_VALUES];
   }
   return page.requirements;
@@ -606,9 +678,15 @@ export function buildOnboardingResults(options: {
           requirement.aliases,
           ownedElsewhere
         );
+        const failsRule = Boolean(
+          match.value &&
+            requirement.completeWhen &&
+            !requirement.completeWhen(match.value)
+        );
         const usable = Boolean(
           match.found &&
             match.value &&
+            !failsRule &&
             !(page.id === "pricing" && isPricingPlaceholder(match.value))
         );
         return {
@@ -625,7 +703,9 @@ export function buildOnboardingResults(options: {
                   match.value &&
                   isPricingPlaceholder(match.value)
                 ? "Pricing contains a placeholder value and must be completed before testing."
-                : requirement.reason || "Custom Value exists but is empty."
+                : failsRule
+                  ? requirement.notCompleteReason || "Not completed yet."
+                  : requirement.reason || "Custom Value exists but is empty."
             : requirement.reason ||
               "Custom Value is missing from this GHL location.",
         };
@@ -769,6 +849,42 @@ async function persistStepSnapshots(
 }
 
 export const onboardingRouter = router({
+  /** Facebook Setup page answer, stored in GHL so the checklist can see it. */
+  getFacebookStatus: locationProcedure
+    .input(z.object({ locationId: z.string().trim().min(1) }))
+    .query(async ({ input }) => {
+      const customValues = await getLocationCustomValues(input.locationId);
+      const id = findCustomValueId(customValues, FACEBOOK_SETUP_STATUS_KEY, {
+        allowFuzzy: false,
+      });
+      const entry = id
+        ? customValues.find(cv => (cv.id || cv._id) === id)
+        : undefined;
+      const value = String(entry?.value ?? "")
+        .trim()
+        .toLowerCase();
+      return {
+        status: value === "yes" || value === "not-yet" ? value : null,
+      } as { status: "yes" | "not-yet" | null };
+    }),
+
+  saveFacebookStatus: locationProcedure
+    .input(
+      z.object({
+        locationId: z.string().trim().min(1),
+        status: z.enum(["yes", "not-yet"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await saveCustomValuesOrThrow(
+        input.locationId,
+        { [FACEBOOK_SETUP_STATUS_KEY]: input.status },
+        "Facebook setup status",
+        { exactMatchOnly: true }
+      );
+      return { success: true, status: input.status } as const;
+    }),
+
   getStatus: locationProcedure
     .input(z.object({ locationId: z.string().trim().min(1) }))
     .query(async ({ input }) => {

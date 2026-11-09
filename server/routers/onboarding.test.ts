@@ -50,23 +50,141 @@ describe("onboarding wizard validation", () => {
     });
     const customQuote = buildOnboardingResults({
       ...baseOptions,
-      customValues: [customValue("lead_followup_options", "Custom-Link")],
+      customValues: [
+        customValue("lead_followup_options", "Custom-Link"),
+        customValue("reactivation_options", "Custom-Link"),
+      ],
     });
+    const has = (results: OnboardingPageResult[], pageId: string, id: string) =>
+      page(results, pageId).requirements.some(item => item.id === id);
+    expect(has(base, "request-scheduling", "quote-title")).toBe(false);
+    expect(has(customQuote, "request-scheduling", "quote-title")).toBe(true);
+    // Company Name is entered on Account Setup, not in the quote popup.
+    expect(has(customQuote, "request-scheduling", "quote-company-name")).toBe(
+      false
+    );
+    expect(has(customQuote, "reactivation", "reactivation-company-image")).toBe(
+      true
+    );
+  });
+
+  it("checks exactly the fields shown on Account Setup", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [],
+    });
+    const keys = page(results, "account-setup").requirements.map(r => r.key);
+    expect(keys).toEqual([
+      "homeflow_business_name",
+      "company_name",
+      "homeflow_business_owner_name",
+      "business_email",
+      "business_phone",
+      "homeflow_business_logo",
+      "company_logo",
+      "add_payment_link",
+      "facebook_page_link",
+      "discountfree_offer_for_lead_campaigns",
+      "discountfree_offer_for_reengagement_campaigns",
+      "legal_business_name",
+      "business_address",
+      "business_ein",
+      "state_two_letter_abbrev",
+      "confirmation_page_link",
+      "on_the_way_notifications_truefalse",
+      "job_completed_notifications_truefalse",
+      "off_schedule_notifications_truefalse",
+    ]);
+    // Internal notification values are not on this page any more (#31).
+    expect(keys).not.toContain("internal_notifications_email");
+    // EIN is optional: listed, but never blocks the step.
     expect(
-      page(base, "request-scheduling").requirements.some(
-        item => item.id === "quote-company-name"
-      )
+      page(results, "account-setup").requirements.find(
+        r => r.key === "business_ein"
+      )?.required
     ).toBe(false);
+  });
+
+  it("Account Setup completes when every required page field is filled (EIN optional)", () => {
+    const filled = [
+      "homeflow_business_name",
+      "company_name",
+      "homeflow_business_owner_name",
+      "business_email",
+      "business_phone",
+      "homeflow_business_logo",
+      "company_logo",
+      "add_payment_link",
+      "facebook_page_link",
+      "discountfree_offer_for_lead_campaigns",
+      "discountfree_offer_for_reengagement_campaigns",
+      "legal_business_name",
+      "business_address",
+      "state_two_letter_abbrev",
+      "confirmation_page_link",
+      "on_the_way_notifications_truefalse",
+      "job_completed_notifications_truefalse",
+      "off_schedule_notifications_truefalse",
+    ].map(key => customValue(key, key.endsWith("truefalse") ? "False" : "x"));
+    const accountSetup = page(
+      buildOnboardingResults({ ...baseOptions, customValues: filled }),
+      "account-setup"
+    );
+    expect(accountSetup.status).toBe("complete");
+    expect(accountSetup.missingCount).toBe(1); // only the optional EIN
+  });
+
+  it("requires the base onboarding link only when S&G Link is selected", () => {
+    const sg = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [customValue("lead_followup_options", "SG-Link")],
+    });
+    const lite = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [customValue("lead_followup_options", "Lite")],
+    });
+    const ids = (r: OnboardingPageResult[]) =>
+      page(r, "request-scheduling").requirements.map(item => item.id);
+    expect(ids(sg)).toContain("sg-base-onboarding-link");
+    expect(ids(lite)).not.toContain("sg-base-onboarding-link");
+    // Contact fields and the hidden follow-up limit are not page fields.
+    expect(ids(lite)).toEqual([
+      "lead-followup-option",
+      "initial-outreach-timing",
+    ]);
+  });
+
+  it("Reactivation checks its own option value", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [
+        customValue("lead_followup_options", "Custom-Link"),
+        customValue("reactivation_options", "Lite"),
+      ],
+    });
+    const reactivation = page(results, "reactivation");
+    expect(reactivation.requirements.map(r => r.key)).toEqual([
+      "reactivation_options",
+      "onetime_service_reactivation_scheduling",
+    ]);
     expect(
-      page(customQuote, "request-scheduling").requirements.some(
-        item => item.id === "quote-company-name"
-      )
-    ).toBe(true);
-    expect(
-      page(customQuote, "reactivation").requirements.some(
-        item => item.id === "reactivation-company-image"
-      )
-    ).toBe(true);
+      reactivation.requirements.find(r => r.id === "reactivation-option")
+        ?.status
+    ).toBe("complete");
+  });
+
+  it("Facebook Setup is complete only when the page answer is yes", () => {
+    const status = (value: string) =>
+      page(
+        buildOnboardingResults({
+          ...baseOptions,
+          customValues: [customValue("facebook_setup_status", value)],
+        }),
+        "facebook-setup"
+      ).requirements[0];
+    expect(status("yes").status).toBe("complete");
+    expect(status("not-yet").status).toBe("incomplete");
+    expect(status("not-yet").reason).toContain("not done");
   });
 
   it("contains the requested sequential steps including Facebook Setup", () => {
