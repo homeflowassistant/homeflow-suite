@@ -887,20 +887,21 @@ export const pricingRouter = router({
           premiumRecurringPricing: input.premiumRecurringPricing,
         });
         const oneTimeText = composeOneTime(input.oneTimePricing);
-        const addOnsText = input.crossSells.trim();
 
         // ── Encode to single-line "\n"-escaped form for GHL storage ──
         const encodedInitial = singleLineEncode(initialAndRecurringText);
         const encodedOneTime = singleLineEncode(oneTimeText);
-        const encodedAddOns = singleLineEncode(addOnsText);
-        // ── Payload: the three configured custom values only ──────────
+        // ── Payload: the two configured pricing values only ───────────
+        // add_on_pricing is not written: there is no Add-On Pricing field
+        // in the app at this time, so any existing value is left untouched
+        // (and it is never created). `crossSells` is still accepted for
+        // older clients but ignored.
         // Each value is rebuilt completely from the current UI state.
         // The update service sends a PUT for the existing custom-value ID,
         // so a save replaces the prior string instead of appending to it.
         const customValuePayload: Record<string, string> = {
           [PRICING_KEYS.initialAndRecurring]: encodedInitial,
           [PRICING_KEYS.onetime]: encodedOneTime,
-          [PRICING_KEYS.addOns]: encodedAddOns,
         };
 
         // Existing values are replaced by ID; a pricing value missing from
