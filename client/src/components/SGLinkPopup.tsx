@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { Play, Copy, ExternalLink, Save, Loader2 } from "lucide-react";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 
-const YOUTUBE_VIDEO_URL = "https://www.youtube.com/embed/5CySgZYJ7Qk";
+const YOUTUBE_VIDEO_URL = "https://www.youtube.com/embed/piBO7mrLpCc";
 
 const INSTRUCTIONS = [
   {
@@ -68,6 +68,7 @@ export default function SGLinkPopup({
   const [isSaving, setIsSaving] = useState(false);
 
   const saveMutation = trpc.requestScheduling.saveSgLinkSettings.useMutation();
+  const utils = trpc.useUtils();
   const settingsQuery = trpc.requestScheduling.getSgLinkSettings.useQuery(
     { locationId },
     { enabled: open, staleTime: 0, refetchOnMount: true }
@@ -137,6 +138,8 @@ export default function SGLinkPopup({
         locationId,
         baseOnboardingLink: normalizedLink,
       });
+      // Refresh the onboarding checklist so this step shows as done.
+      if (embedded) void utils.onboarding.getStatus.invalidate();
       toast.success(
         "Base onboarding link saved. Follow Up option set to S&G Link."
       );
@@ -281,23 +284,22 @@ export default function SGLinkPopup({
                   )}
                 </div>
 
-                {!embedded && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={isSaving || !baseLink.trim()}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                      {isSaving ? "Saving..." : "Save Base Link"}
-                    </button>
-                  </div>
-                )}
+                {/* Shown in onboarding too: the onboarding Save button sits behind this modal and cannot be clicked. */}
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving || !baseLink.trim()}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {isSaving ? "Saving..." : "Save Base Link"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

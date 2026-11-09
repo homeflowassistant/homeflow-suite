@@ -1275,33 +1275,32 @@ function QuoteFormFields({
         />
       </div>
 
-      {!embedded && (
-        <div className="border-t border-slate-200 pt-4">
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || isUploading}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Saving...
-              </>
-            ) : isUploading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Uploading image...
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                Save Settings
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      {/* Shown in onboarding too: the onboarding Save button sits behind this modal and cannot be clicked. */}
+      <div className="border-t border-slate-200 pt-4">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving || isUploading}
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Saving...
+            </>
+          ) : isUploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Uploading image...
+            </>
+          ) : (
+            <>
+              <Save size={14} />
+              Save Settings
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1326,6 +1325,7 @@ export default function CustomQuoteLinkPopup({
 
   const saveMutation =
     trpc.requestScheduling.saveCustomValuesSettings.useMutation();
+  const utils = trpc.useUtils();
 
   // ── Fetch latest saved values from GHL custom values on every open ──
   // staleTime: 0 makes the data always stale, so tRPC re-fetches from GHL
@@ -1448,6 +1448,8 @@ export default function CustomQuoteLinkPopup({
         },
       });
       toast.success("Settings saved successfully.");
+      // Refresh the onboarding checklist so this step shows as done.
+      if (embedded) void utils.onboarding.getStatus.invalidate();
       onSaveSuccess();
       onOpenChange(false);
     } catch (error) {
