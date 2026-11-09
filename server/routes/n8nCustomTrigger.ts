@@ -1,6 +1,13 @@
+import { timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
 import { ENV } from "../_core/env.js";
+
+function safeEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 import { getInstallation } from "../ghl-service.js";
 import {
   CustomTriggerHttpError,
@@ -34,7 +41,7 @@ function getLocationId(req: Request): string | undefined {
 function isAuthorized(req: Request): boolean {
   const configuredKey = ENV.internalApiKey.trim();
   if (!configuredKey) return false;
-  return req.get("authorization") === `Internal-Key ${configuredKey}`;
+  return safeEqual(req.get("authorization") ?? "", `Internal-Key ${configuredKey}`);
 }
 
 function sendError(res: Response, error: unknown): void {

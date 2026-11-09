@@ -211,6 +211,27 @@ const realFetch = globalThis.fetch;
 const fetchMock = vi.fn(async (input: any, init?: any) => {
   const url = String(typeof input === "string" ? input : (input?.url ?? ""));
   ghlCalls.push({ url, init });
+  if (/services\.leadconnectorhq\.com\/locations\/LOC_1\/customFields/.test(url)) {
+    return new Response(
+      JSON.stringify({
+        customFields: [
+          {
+            id: "FIELD_123",
+            name: "Customer Status",
+            fieldKey: "customer_status",
+            fieldType: "TEXT",
+          },
+          {
+            id: "FIELD_456",
+            name: "Some New Field",
+            fieldKey: "contact.some_new_field",
+            fieldType: "TEXT",
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }
   if (url.includes("services.leadconnectorhq.com/contacts/search")) {
     return new Response(
       JSON.stringify({
@@ -261,12 +282,13 @@ describe("POST /api/contacts/update-custom-field — happy path", () => {
     expect(res.body?.email).toBe("joe@example.com");
     expect(res.body?.locationId).toBe("LOC_1");
 
-    // Flow: contacts/search first, then PUT /contacts/{id}.
+    // Flow: custom-field list, then contacts/search, then PUT /contacts/{id}.
     // ghlCalls[0] is the test client's own POST to the local endpoint, so the
     // GHL calls start at index 1.
-    expect(ghlCalls[1].url).toContain("/contacts/search");
-    expect(ghlCalls[1].init?.method).toBe("POST");
-    const searchBody = JSON.parse(ghlCalls[1].init?.body);
+    expect(ghlCalls[1].url).toContain("/locations/LOC_1/customFields");
+    expect(ghlCalls[2].url).toContain("/contacts/search");
+    expect(ghlCalls[2].init?.method).toBe("POST");
+    const searchBody = JSON.parse(ghlCalls[2].init?.body);
     expect(searchBody.locationId).toBe("LOC_1");
     expect(searchBody.filters?.[0]).toEqual({
       field: "email",
@@ -274,32 +296,29 @@ describe("POST /api/contacts/update-custom-field — happy path", () => {
       value: "joe@example.com",
     });
 
-    expect(ghlCalls[2].url).toContain("/contacts/CONTACT_42");
-    expect(ghlCalls[2].init?.method).toBe("PUT");
-    const putBody = JSON.parse(ghlCalls[2].init?.body);
+    expect(ghlCalls[3].url).toContain("/contacts/CONTACT_42");
+    expect(ghlCalls[3].init?.method).toBe("PUT");
+    const putBody = JSON.parse(ghlCalls[3].init?.body);
     expect(putBody.customFields).toEqual([
-      { key: "FIELD_123", field_value: "Active" },
+      { id: "FIELD_123", key: "customer_status", fieldValue: "Active" },
     ]);
 
-    // Both GHL requests must carry the per-location bearer token and GHL API version
-    for (const call of [ghlCalls[1], ghlCalls[2]]) {
+    // Every GHL request must carry the per-location bearer token and GHL API version
+    for (const call of [ghlCalls[1], ghlCalls[2], ghlCalls[3]]) {
       expect(call.init.headers?.Authorization).toBe("Bearer mock_access_token");
       expect(call.init.headers?.Version).toBe("2021-07-28");
     }
   });
 
-  it("clears the field cache and retries when the field is not found on first lookup", async () => {
+  it("matches a custom field by its prefixed fieldKey (fresh list on every request)", async () => {
     const res = await basicRequest({
       locationId: "LOC_1",
       email: "joe@example.com",
-      customFieldName: "some_new_field",
+      customFieldName: "contact.some_new_field",
       value: "Value",
     });
     expect(res.status).toBe(200);
     expect(res.body?.customFieldId).toBe("FIELD_456");
-    expect(
-      vi.mocked(await import("../ghl-service")).clearCustomFieldCache
-    ).toHaveBeenCalledWith("LOC_1");
   });
 });
 
@@ -328,7 +347,7 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return realFetch(input, init);
+      return fetchMock(input, init);
     });
 
     const res = await basicRequest({
@@ -381,7 +400,7 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
           }
         );
       }
-      return realFetch(input, init);
+      return fetchMock(input, init);
     });
 
     const res = await basicRequest({
@@ -411,7 +430,7 @@ describe("POST /api/contacts/update-custom-field — error paths", () => {
           }
         );
       }
-      return realFetch(input, init);
+      return fetchMock(input, init);
     });
 
     const res = await basicRequest({

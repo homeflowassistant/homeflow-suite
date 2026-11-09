@@ -8,7 +8,7 @@ import {
   getLocationPickerVariables,
   type PickerVariable,
 } from "../ghl-service.js";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 
 type RequirementKind = "custom_value" | "custom_field" | "system";
 type RequirementStatus = "complete" | "incomplete" | "blocked";
@@ -703,7 +703,7 @@ async function persistStepSnapshots(
 }
 
 export const onboardingRouter = router({
-  getStatus: publicProcedure
+  getStatus: locationProcedure
     .input(z.object({ locationId: z.string().trim().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -845,7 +845,7 @@ export const onboardingRouter = router({
       };
     }),
 
-  recordProgress: publicProcedure
+  recordProgress: locationProcedure
     .input(
       z.object({
         locationId: z.string().trim().min(1),
@@ -905,7 +905,7 @@ export const onboardingRouter = router({
       } as const;
     }),
 
-  setStepState: publicProcedure
+  setStepState: locationProcedure
     .input(
       z.object({
         locationId: z.string().trim().min(1),
@@ -949,7 +949,7 @@ export const onboardingRouter = router({
       } as const;
     }),
 
-  acknowledgeReview: publicProcedure
+  acknowledgeReview: locationProcedure
     .input(z.object({ locationId: z.string().trim().min(1) }))
     .mutation(async ({ input }) => {
       const db = await getDb();

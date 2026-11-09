@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
-  updateExistingCustomValuesOnly,
+  saveGhlCustomValues,
 } from "../ghl-service.js";
 
 // ─── GHL custom value keys ────────────────────────────────────────────
@@ -476,7 +476,7 @@ export const pricingRouter = router({
    * parsed back into per-dog fields. Legacy per-section keys are used
    * as a fallback for sub-accounts not yet migrated.
    */
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       if (!input.locationId) return buildDefaults();
@@ -786,7 +786,7 @@ export const pricingRouter = router({
    * uses PUT to replace each existing custom value and never appends to the
    * previous string or creates additional pricing fields.
    */
-  saveSettings: publicProcedure
+  saveSettings: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1, "Location ID is required"),
@@ -903,7 +903,9 @@ export const pricingRouter = router({
           [PRICING_KEYS.addOns]: encodedAddOns,
         };
 
-        const updateResult = await updateExistingCustomValuesOnly(
+        // Existing values are replaced by ID; a pricing value missing from
+        // the sub-account is created so the save is never silently dropped.
+        const updateResult = await saveGhlCustomValues(
           locationId,
           customValuePayload
         );

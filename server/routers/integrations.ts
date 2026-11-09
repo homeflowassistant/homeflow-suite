@@ -1,11 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
-import {
-  getLocationCustomValueMap,
-  upsertGhlCustomValue,
-  updateExistingCustomValuesOnly,
-} from "../ghl-service.js";
+import { locationProcedure, router } from "../_core/trpc.js";
+import { getLocationCustomValueMap } from "../ghl-service.js";
+import { saveCustomValuesOrThrow } from "../helpers/customValueSave.js";
 import { getCustomTriggerWebhookForLocation } from "../services/custom-trigger-service.js";
 
 // Custom Value Keys for Integrations
@@ -26,7 +23,7 @@ export const integrationsRouter = router({
   /**
    * Fetch current Integrations settings from GHL custom values.
    */
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(z.object({ locationId: z.string() }))
     .query(async ({ input }) => {
       if (!input.locationId || input.locationId === "preview" || input.locationId === "test-location") {
@@ -97,7 +94,7 @@ export const integrationsRouter = router({
    * homeflow_webhook/render link is authoritative and cannot be overwritten
    * by client input.
    */
-  saveSettings: publicProcedure
+  saveSettings: locationProcedure
     .input(integrationsSchema)
     .mutation(async ({ input }) => {
       const { locationId, accessToken } = input;
@@ -108,14 +105,13 @@ export const integrationsRouter = router({
       };
 
       try {
-        // Step 1: Non-destructively update existing custom values
-        await updateExistingCustomValuesOnly(locationId, customValuePayload);
-
-        // Step 2: Upsert only the editable access-token key.
-        await upsertGhlCustomValue(
+        // The canonical key is created when missing; the legacy
+        // `access_token` alias is only updated where it already exists.
+        await saveCustomValuesOrThrow(
           locationId,
-          INTEGRATION_CV_KEYS.accessToken,
-          accessToken
+          customValuePayload,
+          "Integrations settings",
+          { optionalKeys: ["access_token"] }
         );
 
         return { success: true };

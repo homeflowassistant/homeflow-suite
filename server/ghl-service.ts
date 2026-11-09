@@ -407,8 +407,10 @@ function normalizeKey(key: string): string {
  */
 export function findCustomValueId(
   customValues: Record<string, unknown>[],
-  targetName: string
+  targetName: string,
+  options: { allowFuzzy?: boolean } = {}
 ): string | undefined {
+  const allowFuzzy = options.allowFuzzy ?? true;
   if (
     !customValues ||
     !Array.isArray(customValues) ||
@@ -524,6 +526,8 @@ export function findCustomValueId(
       }
     }
   }
+
+  if (!allowFuzzy) return undefined;
 
   // Tier 3: Substring / pattern match (e.g. "lead_followup_options" inside "Lead Follow-up Options (Lite, SG-Link, Custom-Link)")
   for (const cv of customValues) {
@@ -680,357 +684,535 @@ export async function uploadToGhlMedia(
   return "";
 }
 
-export async function updateExistingCustomValuesOnly(
+// ─── Custom Value Writes ─────────────────────────────────────────────
+//
+// Every HomeFlow settings page saves through saveGhlCustomValues so that a
+// save is only reported as successful when GHL actually stored each value:
+//   1. The current custom-value list is fetched strictly (a failed GET throws
+//      instead of looking like "no values", which used to cause skipped saves
+//      and duplicate creates).
+//   2. Each requested key is matched exactly / case-insensitively / by
+//      normalized key first. Fuzzy substring matching is only a fallback and
+//      can never redirect a key onto a record another key already owns
+//      (e.g. "review_1" must not overwrite "review_1_name").
+//   3. Existing records are updated by ID with PUT (retrying 429 / 5xx).
+//   4. Keys that genuinely do not exist are created (unless the caller marks
+//      them optional aliases or disables creation).
+//   5. Anything that was not stored is returned in missingKeys / failedKeys.
+
+const CUSTOM_VALUE_WRITE_CONCURRENCY = 4;
+const CUSTOM_VALUE_MAX_ATTEMPTS = 3;
+
+export interface CustomValueSaveResult {
+  missingKeys: string[];
+  failedKeys: string[];
+  createdKeys: string[];
+  updatedKeys: string[];
+  /** Requested key → GHL custom value ID that now holds its value. */
+  ids: Record<string, string>;
+}
+
+export interface CustomValueSaveOptions {
+  /** Create keys that do not exist yet. Defaults to true. */
+  createMissing?: boolean;
+  /**
+   * Alias keys: updated when they already exist, but never created and never
+   * reported as missing.
+   */
+  optionalKeys?: string[];
+  /** Extra names (e.g. GHL display names) that identify a requested key. */
+  aliases?: Record<string, string[]>;
+}
+
+function customValueRecordId(cv: Record<string, unknown>): string | undefined {
+  if (typeof cv.id === "string" && cv.id) return cv.id;
+  if (typeof cv._id === "string" && cv._id) return cv._id;
+  return undefined;
+}
+
+function extractCustomValueList(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) return data as Record<string, unknown>[];
+  const obj = (data ?? {}) as Record<string, unknown>;
+  for (const key of ["customValues", "custom_values", "values", "data"]) {
+    if (Array.isArray(obj[key])) return obj[key] as Record<string, unknown>[];
+  }
+  return [];
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * fetch() with retries for rate limits (429) and, for idempotent requests,
+ * transient 5xx / network failures. Non-idempotent requests (POST) are only
+ * retried on 429, which GHL returns before processing the request.
+ */
+async function ghlRequestWithRetry(
+  url: string,
+  init: RequestInit,
+  idempotent: boolean
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= CUSTOM_VALUE_MAX_ATTEMPTS; attempt += 1) {
+    const isLastAttempt = attempt === CUSTOM_VALUE_MAX_ATTEMPTS;
+    try {
+      const response = await fetch(url, init);
+      const retryable =
+        response.status === 429 || (idempotent && response.status >= 500);
+      if (retryable && !isLastAttempt) {
+        const retryAfterSeconds = Number(response.headers.get("retry-after"));
+        const waitMs =
+          Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+            ? Math.min(retryAfterSeconds * 1000, 10_000)
+            : 500 * 2 ** (attempt - 1);
+        await response.text().catch(() => "");
+        await sleep(waitMs);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (!idempotent || isLastAttempt) break;
+      await sleep(500 * 2 ** (attempt - 1));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  let next = 0;
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (next < items.length) {
+        const item = items[next];
+        next += 1;
+        await worker(item);
+      }
+    }
+  );
+  await Promise.all(runners);
+}
+
+/**
+ * Fetch all custom values, throwing when GHL does not return a valid list.
+ * Writes must never treat a failed read as "the location has no values".
+ */
+export async function fetchAllCustomValuesStrict(
   locationId: string,
-  updates: Record<string, string>
-): Promise<{ missingKeys: string[]; failedKeys: string[] }> {
-  const accessToken = await getValidAccessToken(locationId);
-
-  // Step 1: Fetch all existing custom values for this sub-account
-  const cvs = await fetchAllCustomValues(locationId, accessToken);
-  if (!cvs || cvs.length === 0) {
-    console.warn(
-      `[GHL] No custom values found for location ${locationId}. Skipping all updates.`
+  accessToken: string
+): Promise<Record<string, unknown>[]> {
+  const response = await ghlRequestWithRetry(
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        Version: GHL_API_VERSION,
+      },
+    },
+    true
+  );
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `GHL custom values could not be loaded (${response.status}): ${body}`
     );
-    return { missingKeys: Object.keys(updates), failedKeys: [] };
+  }
+  return extractCustomValueList(await response.json());
+}
+
+/** Known alternate names used by GHL snapshots for HomeFlow keys. */
+function builtInCustomValueAliases(name: string): string[] {
+  const aliases: string[] = [];
+  const norm = normalizeKey(name);
+  if (norm.includes("leadfollowup")) {
+    aliases.push(
+      "Lead Follow-up Options (Lite, SG-Link, Custom-Link)",
+      "lead_followup_options",
+      "lead_followup_option"
+    );
+  }
+  if (norm.includes("unpaused")) {
+    aliases.push(
+      "custom_subscription_unpaused_message",
+      "account_unpaused_message",
+      "Custom Subscription Unpaused Message"
+    );
+  } else if (norm.includes("custom") && norm.includes("paused")) {
+    aliases.push(
+      "custom_subscription_paused_message",
+      "Custom Subscription Paused Message"
+    );
+  } else if (norm.includes("subscription") && norm.includes("paused")) {
+    aliases.push("subscription_paused_message", "Subscription Paused Message");
+  }
+  return aliases.filter(alias => alias !== name);
+}
+
+function findStrictCustomValueId(
+  customValues: Record<string, unknown>[],
+  names: string[]
+): string | undefined {
+  for (const name of names) {
+    const id = findCustomValueId(customValues, name, { allowFuzzy: false });
+    if (id) return id;
+  }
+  return undefined;
+}
+
+/**
+ * Fallback matching for keys without an exact match. Returns only IDs that no
+ * other key in the same save already resolved to.
+ */
+function findLooseCustomValueId(
+  customValues: Record<string, unknown>[],
+  key: string,
+  callerAliases: string[],
+  isClaimed: (id: string) => boolean
+): string | undefined {
+  const names = [key, ...callerAliases, ...builtInCustomValueAliases(key)];
+  const strict = findStrictCustomValueId(customValues, names);
+  if (strict && !isClaimed(strict)) return strict;
+
+  for (const name of names) {
+    const fuzzy = findCustomValueId(customValues, name);
+    if (fuzzy && !isClaimed(fuzzy)) return fuzzy;
   }
 
-  // Step 2: Build a map of key → { id, displayName } from existing custom values
-  // (checking fieldKey, key, and name fields)
-  const existingMap = new Map<string, { id: string; displayName: string }>();
-  for (const cv of cvs) {
-    const id = (cv.id || cv._id) as string | undefined;
-    if (!id) continue;
-
-    // Find the display name — prefer 'name', then 'fieldKey', then 'key'
-    const displayName =
-      typeof cv.name === "string" && cv.name
-        ? cv.name
-        : typeof cv.fieldKey === "string" && cv.fieldKey
-          ? cv.fieldKey
-          : typeof cv.key === "string" && cv.key
-            ? cv.key
-            : ""; // fallback — will use the requested key as name in the PUT body
-
-    // GHL returns fieldKey wrapped in merge-field syntax, e.g.
-    // "{{ custom_values.lead_followup_options }}" — unwrap it so plain keys
-    // like "lead_followup_options" can be matched directly.
-    const unwrapped =
-      typeof cv.fieldKey === "string" && cv.fieldKey
-        ? extractCustomValueKey(cv.fieldKey)
-        : undefined;
-
-    const rawName = typeof cv.name === "string" ? cv.name : "";
-    const rawFieldKey = typeof cv.fieldKey === "string" ? cv.fieldKey : "";
-    const rawKey = typeof cv.key === "string" ? cv.key : "";
-
-    const normName = normalizeKey(rawName);
-    const normUnwrapped = unwrapped ? normalizeKey(unwrapped) : "";
-    const normFieldKey = normalizeKey(rawFieldKey);
-    const normKey = normalizeKey(rawKey);
-
-    const allNorms = [normName, normUnwrapped, normFieldKey, normKey];
-    const canonicalKeys: string[] = [];
-    let isSubscriptionCard = false;
-
-    if (allNorms.some(n => n.includes("unpaused"))) {
-      canonicalKeys.push(
-        "custom_subscription_unpaused_message",
-        "account_unpaused_message",
-        "Custom Subscription Unpaused Message"
+  if (normalizeKey(key).includes("leadfollowup")) {
+    const leadCv = customValues.find(cv => {
+      const cvName = String(cv.name || cv.key || cv.fieldKey || "").toLowerCase();
+      const id = customValueRecordId(cv);
+      return (
+        !!id && !isClaimed(id) && cvName.includes("lead") && cvName.includes("follow")
       );
-      isSubscriptionCard = true;
-    } else if (
-      allNorms.some(
-        n =>
-          n === "customsubscriptionpausedmessage" ||
-          n === "custom_subscription_paused_message" ||
-          n.includes("customsubscriptionpaused")
-      )
-    ) {
-      canonicalKeys.push(
-        "custom_subscription_paused_message",
-        "Custom Subscription Paused Message"
-      );
-      isSubscriptionCard = true;
-    } else if (
-      allNorms.some(
-        n =>
-          n === "subscriptionpausedmessage" ||
-          n === "subscription_paused_message" ||
-          (n.includes("subscriptionpaused") && !n.includes("custom"))
-      )
-    ) {
-      canonicalKeys.push(
-        "subscription_paused_message",
-        "Subscription Paused Message"
-      );
-      isSubscriptionCard = true;
+    });
+    if (leadCv) return customValueRecordId(leadCv);
+  }
+  return undefined;
+}
+
+function customValueJsonHeaders(accessToken: string, version: string) {
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    Version: version,
+  };
+}
+
+async function putCustomValue(
+  locationId: string,
+  accessToken: string,
+  id: string,
+  name: string,
+  value: string
+): Promise<{ ok: true } | { ok: false; status: number; body: string }> {
+  const response = await ghlRequestWithRetry(
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: customValueJsonHeaders(accessToken, GHL_API_VERSION),
+      body: JSON.stringify({ name, value }),
+    },
+    true
+  );
+  if (response.ok) {
+    await response.text().catch(() => "");
+    return { ok: true };
+  }
+  return { ok: false, status: response.status, body: await response.text() };
+}
+
+/**
+ * Save a set of custom values for a location. See the section comment above
+ * for the guarantees. Throws only when the location token or the initial
+ * custom-value list cannot be loaded.
+ */
+export async function saveGhlCustomValues(
+  locationId: string,
+  updates: Record<string, string>,
+  options: CustomValueSaveOptions = {}
+): Promise<CustomValueSaveResult> {
+  const createMissing = options.createMissing ?? true;
+  const optionalKeys = new Set(options.optionalKeys ?? []);
+  const result: CustomValueSaveResult = {
+    missingKeys: [],
+    failedKeys: [],
+    createdKeys: [],
+    updatedKeys: [],
+    ids: {},
+  };
+
+  const entries = Object.entries(updates).map(
+    ([key, value]) => [key, value == null ? "" : String(value)] as const
+  );
+  if (entries.length === 0) return result;
+
+  const accessToken = await getValidAccessToken(locationId);
+  let customValues = await fetchAllCustomValuesStrict(locationId, accessToken);
+
+  type PlannedWrite = {
+    id: string;
+    displayName: string;
+    value: string;
+    keys: string[];
+  };
+  const planned = new Map<string, PlannedWrite>();
+
+  const displayNameFor = (id: string, fallback: string): string => {
+    const cv = customValues.find(c => customValueRecordId(c) === id);
+    return (typeof cv?.name === "string" && cv.name) || fallback;
+  };
+
+  const claim = (id: string, key: string, value: string) => {
+    const existing = planned.get(id);
+    if (existing) {
+      if (existing.value !== value) {
+        console.warn(
+          `[GHL] Custom value keys '${existing.keys.join("', '")}' and '${key}' resolve to the same record (${id}) in location ${locationId}; saving the value for '${key}'.`
+        );
+      }
+      existing.value = value;
+      existing.keys.push(key);
+      return;
     }
+    planned.set(id, {
+      id,
+      displayName: displayNameFor(id, key),
+      value,
+      keys: [key],
+    });
+  };
 
-    const keys = [
-      ...canonicalKeys,
-      !isSubscriptionCard && typeof unwrapped === "string"
-        ? unwrapped
-        : undefined,
-      !isSubscriptionCard && typeof cv.fieldKey === "string"
-        ? cv.fieldKey
-        : undefined,
-      !isSubscriptionCard && typeof cv.key === "string" ? cv.key : undefined,
-      typeof cv.name === "string" ? cv.name : undefined,
-    ].filter(Boolean) as string[];
-
-    for (const k of keys) {
-      existingMap.set(k, { id, displayName });
-      existingMap.set(normalizeKey(k), { id, displayName });
-    }
+  // Pass 1: exact / case-insensitive / normalized matches.
+  const unresolved: Array<readonly [string, string]> = [];
+  for (const [key, value] of entries) {
+    const id = findStrictCustomValueId(customValues, [
+      key,
+      ...(options.aliases?.[key] ?? []),
+    ]);
+    if (id) claim(id, key, value);
+    else unresolved.push([key, value]);
   }
 
-  // Step 3: Deduplicate updates by target Custom Value ID to prevent race conditions & duplicate PUTs
-  const idToUpdateMap = new Map<
-    string,
-    { key: string; displayName: string; value: string; isExact: boolean }
-  >();
-  const missingKeys: string[] = [];
-  const failedKeys: string[] = [];
-
-  for (const [key, value] of Object.entries(updates)) {
-    let entry = existingMap.get(key);
-    let isExact = true;
-    if (!entry) {
-      entry = existingMap.get(normalizeKey(key));
-      isExact = false;
-    }
-
-    if (!entry) {
-      const fuzzyId = findCustomValueId(cvs, key);
-      if (fuzzyId) {
-        const matched = cvs.find(c => (c.id || c._id) === fuzzyId) as
-          | Record<string, unknown>
-          | undefined;
-        if (matched) {
-          const matchedName =
-            typeof matched.name === "string" && matched.name
-              ? matched.name
-              : typeof matched.fieldKey === "string" && matched.fieldKey
-                ? extractCustomValueKey(matched.fieldKey)
-                : key;
-          entry = { id: fuzzyId, displayName: matchedName };
-          isExact = false;
-        }
-      }
-    }
-
-    if (entry) {
-      const existing = idToUpdateMap.get(entry.id);
-      // Prefer exact key matches over fallback/alias matches
-      if (!existing || isExact) {
-        idToUpdateMap.set(entry.id, {
-          key,
-          displayName: entry.displayName,
-          value,
-          isExact,
-        });
-      }
+  // Pass 2: alias / fuzzy fallback restricted to unclaimed records.
+  const toCreate: Array<readonly [string, string]> = [];
+  for (const [key, value] of unresolved) {
+    const id = findLooseCustomValueId(
+      customValues,
+      key,
+      options.aliases?.[key] ?? [],
+      candidate => planned.has(candidate)
+    );
+    if (id) {
+      claim(id, key, value);
+    } else if (optionalKeys.has(key)) {
+      // Optional alias that this location does not use — nothing to save.
+    } else if (createMissing) {
+      toCreate.push([key, value]);
     } else {
       console.warn(
         `[GHL] Custom value key '${key}' not found in location ${locationId}. Skipping.`
       );
-      missingKeys.push(key);
+      result.missingKeys.push(key);
     }
   }
 
-  // Step 4: Perform PUT for each unique custom value ID
-  const promises = Array.from(idToUpdateMap.entries()).map(
-    async ([id, { key, displayName, value }]) => {
-      const url = `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(id)}`;
-      const resp = await fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          Version: GHL_API_VERSION,
-        },
-        body: JSON.stringify({ name: displayName || key, value }),
-      });
-
-      if (!resp.ok) {
-        const errBody = await resp.text();
-        failedKeys.push(key);
+  // Update existing records by ID.
+  await runWithConcurrency(
+    Array.from(planned.values()),
+    CUSTOM_VALUE_WRITE_CONCURRENCY,
+    async write => {
+      try {
+        const put = await putCustomValue(
+          locationId,
+          accessToken,
+          write.id,
+          write.displayName,
+          write.value
+        );
+        if (put.ok) {
+          result.updatedKeys.push(...write.keys);
+          for (const key of write.keys) result.ids[key] = write.id;
+          return;
+        }
         console.error(
-          `[GHL] PUT failed for custom value '${key}' (ID: '${id}', display name: '${displayName}'): ${resp.status} ${errBody}`
+          `[GHL] PUT failed for custom value '${write.keys.join("', '")}' (ID: '${write.id}', display name: '${write.displayName}'): ${put.status} ${put.body}`
+        );
+      } catch (error) {
+        console.error(
+          `[GHL] PUT failed for custom value '${write.keys.join("', '")}' (ID: '${write.id}'):`,
+          error
         );
       }
+      result.failedKeys.push(...write.keys);
     }
   );
 
-  await Promise.all(promises);
-  return { missingKeys, failedKeys };
+  // Create genuinely missing records one at a time (avoids duplicate races).
+  for (const [key, value] of toCreate) {
+    try {
+      const response = await ghlRequestWithRetry(
+        `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
+        {
+          method: "POST",
+          headers: customValueJsonHeaders(accessToken, "v3"),
+          body: JSON.stringify({ name: key, value }),
+        },
+        false
+      );
+
+      if (response.ok) {
+        const data = (await response.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >;
+        const created = (data.customValue ?? data) as Record<string, unknown>;
+        result.createdKeys.push(key);
+        result.ids[key] = customValueRecordId(created) ?? "created";
+        console.log(
+          `[GHL] Created missing custom value '${key}' in location ${locationId}`
+        );
+        continue;
+      }
+
+      const errorBody = await response.text();
+      const alreadyExists =
+        response.status === 409 ||
+        /already exists|already been taken|duplicate/i.test(errorBody);
+      if (!alreadyExists) {
+        console.error(
+          `[GHL] POST failed for custom value '${key}': ${response.status} ${errorBody}`
+        );
+        result.failedKeys.push(key);
+        continue;
+      }
+
+      // Created concurrently or under a slightly different name: re-read once
+      // and update the record that now matches.
+      customValues = await fetchAllCustomValuesStrict(locationId, accessToken);
+      const existingId =
+        findStrictCustomValueId(customValues, [
+          key,
+          ...(options.aliases?.[key] ?? []),
+        ]) ??
+        findLooseCustomValueId(
+          customValues,
+          key,
+          options.aliases?.[key] ?? [],
+          candidate =>
+            Object.values(result.ids).includes(candidate) ||
+            planned.has(candidate)
+        );
+      if (!existingId) {
+        console.error(
+          `[GHL] Custom value '${key}' reported as existing but could not be located: ${errorBody}`
+        );
+        result.failedKeys.push(key);
+        continue;
+      }
+      const put = await putCustomValue(
+        locationId,
+        accessToken,
+        existingId,
+        displayNameFor(existingId, key),
+        value
+      );
+      if (put.ok) {
+        result.updatedKeys.push(key);
+        result.ids[key] = existingId;
+      } else {
+        console.error(
+          `[GHL] PUT failed for custom value '${key}' after create conflict: ${put.status} ${put.body}`
+        );
+        result.failedKeys.push(key);
+      }
+    } catch (error) {
+      console.error(`[GHL] Failed to create custom value '${key}':`, error);
+      result.failedKeys.push(key);
+    }
+  }
+
+  return result;
 }
 
+/** Throw a readable error unless every requested custom value was stored. */
+export function describeUnsavedCustomValues(
+  result: Pick<CustomValueSaveResult, "missingKeys" | "failedKeys">
+): string | null {
+  const missing = Array.from(new Set(result.missingKeys));
+  const failed = Array.from(new Set(result.failedKeys));
+  if (missing.length === 0 && failed.length === 0) return null;
+  return [
+    missing.length > 0 ? `missing: ${missing.join(", ")}` : "",
+    failed.length > 0 ? `failed: ${failed.join(", ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+/**
+ * Update-only variant retained for callers that must never create values.
+ */
+export async function updateExistingCustomValuesOnly(
+  locationId: string,
+  updates: Record<string, string>
+): Promise<{ missingKeys: string[]; failedKeys: string[] }> {
+  const result = await saveGhlCustomValues(locationId, updates, {
+    createMissing: false,
+  });
+  return { missingKeys: result.missingKeys, failedKeys: result.failedKeys };
+}
+
+/** Update a single existing custom value (never creates). */
 export async function upsertGhlCustomValue(
   locationId: string,
   name: string,
   value: string
 ): Promise<{ id: string; name: string; value: string }> {
-  const accessToken = await getValidAccessToken(locationId);
-
-  // Step 1: Fetch all existing custom values from the location
-  let customValues: Record<string, unknown>[] = [];
-  try {
-    customValues = await fetchAllCustomValues(locationId, accessToken);
-  } catch (err) {
-    console.warn("[GHL] Failed pre-fetching custom values during update:", err);
+  const result = await saveGhlCustomValues(
+    locationId,
+    { [name]: value },
+    { createMissing: false }
+  );
+  if (result.updatedKeys.includes(name)) {
+    return { id: result.ids[name], name, value };
   }
-
-  // Step 2: Search for existing custom value ID by key, name, or aliases
-  const nameAliases: string[] = [name];
-  const normName = normalizeKey(name);
-  if (normName.includes("leadfollowup")) {
-    nameAliases.push("Lead Follow-up Options (Lite, SG-Link, Custom-Link)");
-    nameAliases.push("lead_followup_options");
-    nameAliases.push("lead_followup_option");
-  }
-
-  if (
-    normName.includes("subscription") ||
-    normName.includes("unpaused") ||
-    normName.includes("paused")
-  ) {
-    if (normName.includes("unpaused")) {
-      nameAliases.push("custom_subscription_unpaused_message");
-      nameAliases.push("account_unpaused_message");
-      nameAliases.push("Custom Subscription Unpaused Message");
-    } else if (normName.includes("custom") && normName.includes("paused")) {
-      nameAliases.push("custom_subscription_paused_message");
-      nameAliases.push("Custom Subscription Paused Message");
-    } else if (normName.includes("subscription")) {
-      nameAliases.push("subscription_paused_message");
-      nameAliases.push("Subscription Paused Message");
-    }
-  }
-
-  let existingId: string | undefined;
-  for (const alias of nameAliases) {
-    existingId = findCustomValueId(customValues, alias);
-    if (existingId) break;
-  }
-
-  // Broad fuzzy fallback for lead follow-up custom value if still not found
-  if (!existingId && normName.includes("leadfollowup")) {
-    const leadCv = customValues.find(cv => {
-      const cvName = String(
-        cv.name || cv.key || cv.fieldKey || ""
-      ).toLowerCase();
-      return cvName.includes("lead") && cvName.includes("follow");
-    });
-    if (leadCv && typeof leadCv.id === "string") {
-      existingId = leadCv.id;
-    }
-  }
-
-  // Step 3: If no existing custom value ID is found in the sub-account, skip (NEVER POST)
-  if (!existingId) {
+  if (result.missingKeys.includes(name)) {
     console.warn(
       `[GHL] Custom value '${name}' not found in sub-account location ${locationId}. Skipping PUT — will NOT create.`
     );
     return { id: "skipped_not_found", name, value };
   }
-
-  // Step 4: Send PUT strictly to update the existing custom value
-  const matchedCv = customValues.find(cv => (cv.id || cv._id) === existingId);
-  const existingDisplayName =
-    matchedCv && typeof matchedCv.name === "string" && matchedCv.name
-      ? matchedCv.name
-      : name;
-
-  const url = `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues/${encodeURIComponent(existingId)}`;
-
-  const resp = await fetch(url, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      Version: GHL_API_VERSION,
-    },
-    body: JSON.stringify({ name: existingDisplayName, value }),
-  });
-
-  if (resp.ok) {
-    const data = (await resp.json()) as Record<string, any>;
-    const cv = data.customValue ?? data;
-    return {
-      id: existingId,
-      name: typeof cv.name === "string" ? cv.name : name,
-      value: typeof cv.value === "string" ? cv.value : value,
-    };
-  }
-
-  const errBody = await resp.text();
-  console.error(
-    `[GHL] PUT failed for custom value '${name}': ${resp.status} ${errBody}`
-  );
   return { id: "update_failed", name, value };
 }
 
 /**
- * Create or update a location custom value. Most existing HomeFlow settings
- * intentionally use update-only semantics, but the generated custom-trigger
- * webhook must be guaranteed to exist because new locations may not yet have
- * `homeflow_webhook` in their snapshot.
- *
- * HighLevel documents POST /locations/:locationId/customValues with the v3
- * header and locations/customValues.write scope for this operation.
+ * Create or update a single location custom value. HighLevel documents
+ * POST /locations/:locationId/customValues with the v3 header and the
+ * locations/customValues.write scope for creation.
  */
 export async function ensureGhlCustomValue(
   locationId: string,
   name: string,
   value: string
 ): Promise<{ id: string; name: string; value: string }> {
-  const existing = await upsertGhlCustomValue(locationId, name, value);
-  if (existing.id !== "skipped_not_found") return existing;
-
-  const accessToken = await getValidAccessToken(locationId);
-  const response = await fetch(
-    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customValues`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        Version: "v3",
-      },
-      body: JSON.stringify({ name, value }),
-    }
+  const result = await saveGhlCustomValues(
+    locationId,
+    { [name]: value },
+    { createMissing: true }
   );
-
-  if (response.ok) {
-    const data = (await response.json()) as Record<string, unknown>;
-    const customValue = (data.customValue ?? data) as Record<string, unknown>;
-    return {
-      id: typeof customValue.id === "string" ? customValue.id : "created",
-      name: typeof customValue.name === "string" ? customValue.name : name,
-      value: typeof customValue.value === "string" ? customValue.value : value,
-    };
+  if (result.createdKeys.includes(name) || result.updatedKeys.includes(name)) {
+    return { id: result.ids[name] || "created", name, value };
   }
-
-  const errorBody = await response.text();
-  // A concurrent installer or a display-name mismatch may mean the value
-  // already exists even when the API returns 400 instead of 409. Re-read and
-  // update once before reporting a real creation failure.
-  if (
-    response.status === 409 ||
-    /already exists|already been taken|duplicate/i.test(errorBody)
-  ) {
-    return upsertGhlCustomValue(locationId, name, value);
-  }
-
-  console.error(
-    `[GHL] POST failed for custom value '${name}': ${response.status} ${errorBody}`
-  );
   return { id: "create_failed", name, value };
 }
 

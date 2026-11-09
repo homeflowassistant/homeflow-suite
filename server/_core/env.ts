@@ -13,6 +13,19 @@ export const ENV = {
   // GHL Marketplace OAuth
   ghlClientId: process.env.GHL_CLIENT_ID ?? "",
   ghlClientSecret: process.env.GHL_CLIENT_SECRET ?? "",
+  // Marketplace app "Shared Secret" used to decrypt HighLevel SSO payloads.
+  // When set, location-scoped endpoints require a HomeFlow session.
+  ghlSsoKey: (process.env.GHL_APP_SSO_KEY ?? "").trim(),
+  // enforce (default when the SSO key is set) | report (log only) | off
+  authMode: process.env.HOMEFLOW_AUTH_MODE ?? "enforce",
+  // PEM public key HighLevel uses to sign webhooks (x-wh-signature). When
+  // set, unsigned or invalid /api/ghl/webhook requests are rejected.
+  ghlWebhookPublicKey: (process.env.GHL_WEBHOOK_PUBLIC_KEY ?? "")
+    .replace(/\\n/g, "\n")
+    .trim(),
+  // Shared secret for the Marketplace SMS custom action endpoints. When set,
+  // requests must send it as X-Homeflow-Action-Secret or ?secret=.
+  customActionSecret: (process.env.GHL_CUSTOM_ACTION_SECRET ?? "").trim(),
   // Zapier private app integration
   zapierInviteUrl: process.env.ZAPIER_INVITE_URL ?? "",
   zapierKeyPrefix: process.env.ZAPIER_KEY_PREFIX ?? "zap_live_",

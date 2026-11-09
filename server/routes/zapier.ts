@@ -1,6 +1,14 @@
+import { timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
+import { requireLocationSession } from "./auth.js";
 import { z } from "zod";
 import { ENV } from "../_core/env.js";
+
+function safeEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 import { getInstallation } from "../ghl-service.js";
 import {
   createOrGetZapierConnection,
@@ -229,6 +237,8 @@ export function registerZapierRoutes(app: Express): void {
         });
       }
 
+      if (!(await requireLocationSession(req, res, locationId))) return;
+
       if (!(await requireInstalledLocation(locationId, res))) return;
 
       const data = await createOrGetZapierConnection(locationId);
@@ -259,6 +269,8 @@ export function registerZapierRoutes(app: Express): void {
         });
       }
 
+      if (!(await requireLocationSession(req, res, locationId))) return;
+
       if (!(await requireInstalledLocation(locationId, res))) return;
 
       const rotated = await rotateZapierConnection(locationId);
@@ -283,6 +295,8 @@ export function registerZapierRoutes(app: Express): void {
           message: "locationId is required.",
         });
       }
+
+      if (!(await requireLocationSession(req, res, locationId))) return;
 
       if (!(await requireInstalledLocation(locationId, res))) return;
 
@@ -380,7 +394,7 @@ export function registerZapierRoutes(app: Express): void {
       }
 
       const apiKey = getHeaderValue(req, "x-api-key");
-      if (apiKey !== ENV.internalApiKey) {
+      if (!safeEqual(apiKey ?? "", ENV.internalApiKey)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 

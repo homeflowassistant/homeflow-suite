@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import {
   getLocationCustomValueMap,
-  updateExistingCustomValuesOnly,
+  saveGhlCustomValues,
   ensureGhlCustomValue,
   getInstallation,
   getLocationPickerVariables,
@@ -142,7 +142,7 @@ export const alertsNotificationsRouter = router({
   /**
    * Fetch live Custom Values & Contact Custom Fields metadata for the tag picker.
    */
-  getPickerVariables: publicProcedure
+  getPickerVariables: locationProcedure
     .input(
       z.object({ locationId: z.string().min(1, "Location ID is required") })
     )
@@ -258,7 +258,7 @@ export const alertsNotificationsRouter = router({
    * Fetch current alert settings from GHL custom values.
    * Performs flexible key matching supporting exact GHL folder keys as well as fallback aliases.
    */
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(z.object({ locationId: z.string() }))
     .query(async ({ input }) => {
       if (!input.locationId) {
@@ -468,7 +468,7 @@ export const alertsNotificationsRouter = router({
    * Maps typed form values to the exact custom value keys matching client requirement.
    * Dual-writes "true"/"false" and "ON"/"OFF" for full automation snippet compatibility.
    */
-  saveSettings: publicProcedure
+  saveSettings: locationProcedure
     .input(alertsNotificationsSchema)
     .mutation(async ({ input }) => {
       const { locationId, ...data } = input;
@@ -554,7 +554,8 @@ export const alertsNotificationsRouter = router({
           const ensured = await ensureGhlCustomValue(locationId, key, value);
           if (
             ensured.id === "create_failed" ||
-            ensured.id === "skipped_not_found"
+            ensured.id === "skipped_not_found" ||
+            ensured.id === "update_failed"
           ) {
             throw new Error(
               `Unable to create or update required Custom Value '${key}'.`
@@ -566,7 +567,7 @@ export const alertsNotificationsRouter = router({
         // existing GHL display name. Missing fields are returned explicitly
         // so the page cannot report a false successful save.
         const { missingKeys, failedKeys } =
-          await updateExistingCustomValuesOnly(locationId, customValuePayload);
+          await saveGhlCustomValues(locationId, customValuePayload);
 
         if (missingKeys.length > 0 || failedKeys.length > 0) {
           const details = [

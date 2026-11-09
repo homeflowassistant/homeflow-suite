@@ -10,7 +10,9 @@
  * Route: GET /api/ghl/oauth/callback?code=...
  */
 
+import { createPublicKey, verify as verifySignature } from "crypto";
 import type { Express, Request, Response } from "express";
+import { ENV } from "./_core/env.js";
 import {
   exchangeCodeForTokens,
   getAgencyInstallation,
@@ -21,6 +23,12 @@ import {
   getValidAccessToken,
 } from "./ghl-service.js";
 import { ensureCustomTriggerWebhook } from "./services/custom-trigger-service.js";
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, ch =>
+    ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch === '"' ? "&quot;" : "&#39;"
+  );
+}
 
 async function delay(ms: number): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, ms));
@@ -179,6 +187,70 @@ async function processLocationInstall(
   throw lastError ?? new Error("GHL location-token exchange failed");
 }
 
+/**
+ * Verify HighLevel's webhook signature over the raw request body.
+ * Supports the RSA-SHA256 `x-wh-signature` header and the Ed25519
+ * `x-ghl-signature` header. Only enforced when GHL_WEBHOOK_PUBLIC_KEY is set.
+ */
+function isWebhookSignatureValid(req: Request): boolean {
+  if (!ENV.ghlWebhookPublicKey) return true;
+  const rawBody = (req as Request & { rawBody?: string }).rawBody;
+  if (typeof rawBody !== "string") return false;
+
+  const headerValue = (name: string) => {
+    const value = req.headers[name];
+    return typeof value === "string" ? value.trim() : "";
+  };
+  const ed25519Signature = headerValue("x-ghl-signature");
+  const rsaSignature = headerValue("x-wh-signature");
+  const signature = ed25519Signature || rsaSignature;
+  if (!signature) return false;
+
+  try {
+    const key = createPublicKey(ENV.ghlWebhookPublicKey);
+    const algorithm = key.asymmetricKeyType === "ed25519" ? null : "sha256";
+    return verifySignature(
+      algorithm,
+      Buffer.from(rawBody, "utf8"),
+      key,
+      Buffer.from(signature, "base64")
+    );
+  } catch (error) {
+    console.error("[GHL Webhook] Signature verification error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Without signature verification, an UNINSTALL event is only honoured when
+ * the stored token really stopped working. Prevents anyone from deleting a
+ * live installation by posting a fake UNINSTALL event.
+ */
+async function isInstallationRevoked(locationId: string): Promise<boolean> {
+  const installation = await getInstallation(locationId);
+  if (!installation) return true;
+  try {
+    const accessToken = await getValidAccessToken(locationId);
+    const response = await fetch(
+      `https://services.leadconnectorhq.com/locations/${encodeURIComponent(locationId)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Version: "2021-07-28",
+        },
+      }
+    );
+    await response.text().catch(() => "");
+    return response.status === 401 || response.status === 403;
+  } catch {
+    // Refresh failed: HighLevel revoked the tokens.
+    return true;
+  }
+}
+
 export function registerGHLOAuthRoutes(app: Express): void {
   /**
    * OAuth callback endpoint.
@@ -203,9 +275,13 @@ export function registerGHLOAuthRoutes(app: Express): void {
 
     try {
       // Build the redirect URI (must match what's registered in GHL app settings)
+      // GHL_OAUTH_REDIRECT_URI pins the redirect URI; otherwise it is derived
+      // from the request as before.
       const protocol = req.headers["x-forwarded-proto"] || req.protocol;
       const host = req.headers["x-forwarded-host"] || req.headers.host;
-      const redirectUri = `${protocol}://${host}/api/ghl/oauth/callback`;
+      const redirectUri =
+        process.env.GHL_OAUTH_REDIRECT_URI?.trim() ||
+        `${protocol}://${host}/api/ghl/oauth/callback`;
 
       // Exchange authorization code for tokens
       const tokenResponse = await exchangeCodeForTokens(code, redirectUri);
@@ -264,7 +340,7 @@ export function registerGHLOAuthRoutes(app: Express): void {
           <body style="font-family: sans-serif; text-align: center; padding: 60px;">
             <h2 style="color: #dc2626;">Installation Failed</h2>
             <p>There was an error connecting to GoHighLevel.</p>
-            <p style="color: #6b7280; font-size: 14px;">${error instanceof Error ? error.message : "Unknown error"}</p>
+            <p style="color: #6b7280; font-size: 14px;">${escapeHtml(error instanceof Error ? error.message : "Unknown error")}</p>
             <p>Please try installing the app again.</p>
           </body>
         </html>
@@ -277,9 +353,18 @@ export function registerGHLOAuthRoutes(app: Express): void {
    * GHL sends a POST when the app is installed/uninstalled.
    */
   app.post("/api/ghl/webhook", async (req: Request, res: Response) => {
+    if (!isWebhookSignatureValid(req)) {
+      console.warn("[GHL Webhook] Rejected request with missing or invalid signature");
+      return res.status(401).json({ error: "Invalid webhook signature" });
+    }
+
     try {
       const payload = req.body ?? {};
-      console.log("[GHL Webhook] Received:", JSON.stringify(payload));
+      console.log("[GHL Webhook] Received:", {
+        type: payload.type,
+        locationId: payload.locationId ?? payload.location_id ?? null,
+        companyId: payload.companyId ?? payload.company_id ?? null,
+      });
 
       const locationId =
         typeof payload.locationId === "string"
@@ -432,6 +517,13 @@ export function registerGHLOAuthRoutes(app: Express): void {
             timestamp: new Date().toISOString(),
           }
         );
+        if (!ENV.ghlWebhookPublicKey && !(await isInstallationRevoked(locationId))) {
+          console.warn(
+            "[GHL Webhook] Ignoring UNINSTALL: the stored token is still valid (unsigned or forged event)",
+            { locationId }
+          );
+          return res.json({ success: true, ignored: true });
+        }
         await removeInstallation(locationId);
         console.log("[GHL Webhook] ========== UNINSTALL SUCCESS ==========", {
           locationId,

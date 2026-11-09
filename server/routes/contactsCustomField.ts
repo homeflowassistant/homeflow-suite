@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 /**
  * Contact Custom-Field Update API
  *
@@ -21,6 +22,12 @@
 
 import type { Express, Request, Response } from "express";
 import { ENV } from "../_core/env.js";
+
+function safeEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 import { getValidAccessToken, getInstallation } from "../ghl-service.js";
 
 /**
@@ -675,7 +682,7 @@ export function registerContactsCustomFieldRoutes(app: Express): void {
     const authHeader = req.headers.authorization || "";
     const expectedKey = ENV.internalApiKey;
 
-    if (!authHeader || authHeader !== `Internal-Key ${expectedKey}`) {
+    if (!expectedKey || !safeEqual(authHeader, `Internal-Key ${expectedKey}`)) {
       console.warn(
         "[contacts-custom-field] Unauthorized request: Invalid or missing Internal-Key"
       );

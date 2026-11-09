@@ -1,6 +1,14 @@
+import { timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
+import { requireLocationSession } from "./auth.js";
 import { z } from "zod";
 import { ENV } from "../_core/env.js";
+
+function safeEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 import { getInstallation } from "../ghl-service.js";
 import {
   CustomTriggerHttpError,
@@ -57,7 +65,7 @@ function isSubscriptionAuthorized(req: Request): boolean {
     console.warn("[Custom Trigger] CUSTOM_TRIGGER_SUBSCRIPTION_SECRET is not configured; accepting unsigned subscription callbacks");
     return true;
   }
-  return getSubscriptionSecret(req) === configuredSecret;
+  return safeEqual(getSubscriptionSecret(req) ?? "", configuredSecret);
 }
 
 function sendError(res: Response, error: unknown): void {
@@ -133,6 +141,7 @@ export function registerCustomTriggerRoutes(app: Express): void {
       res.status(400).json({ success: false, code: "LOCATION_ID_REQUIRED", message: "locationId is required." });
       return;
     }
+    if (!(await requireLocationSession(req, res, locationId))) return;
     if (!(await requireInstalledLocation(locationId, res))) return;
 
     try {
@@ -157,6 +166,7 @@ export function registerCustomTriggerRoutes(app: Express): void {
       res.status(400).json({ success: false, code: "LOCATION_ID_REQUIRED", message: "locationId is required." });
       return;
     }
+    if (!(await requireLocationSession(req, res, locationId))) return;
     if (!(await requireInstalledLocation(locationId, res))) return;
 
     try {

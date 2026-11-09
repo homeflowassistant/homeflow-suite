@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import TopSaveButton from "@/components/TopSaveButton";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
+import { apiFetch } from "@/lib/ghlSession";
 
 const DEFAULT_INVITE_URL =
   "https://zapier.com/developer/public-invite/245439/2f155a56598b7113ed6afdea1ebbee3b/";
@@ -248,7 +249,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
     }
     setIsLoading(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         getApiUrl(
           `/api/zapier/connection?locationId=${encodeURIComponent(locationId)}`
         ),
@@ -287,7 +288,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
     if (!locationId) return;
     setIsLoadingCustomTriggerWebhook(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         getApiUrl(
           `/api/custom-trigger/webhook?locationId=${encodeURIComponent(locationId)}`
         ),
@@ -394,7 +395,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
     if (!locationId) return;
     setIsRotating(true);
     try {
-      const response = await fetch(getApiUrl("/api/zapier/connection/rotate"), {
+      const response = await apiFetch(getApiUrl("/api/zapier/connection/rotate"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -450,7 +451,7 @@ export default function ZapierIntegrationPage(props: any = {}) {
 
     setIsRevoking(true);
     try {
-      const response = await fetch(getApiUrl("/api/zapier/connection/revoke"), {
+      const response = await apiFetch(getApiUrl("/api/zapier/connection/revoke"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
