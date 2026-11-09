@@ -3,18 +3,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the GHL service before importing the router
 vi.mock("../ghl-service", () => ({
   getLocationCustomValueMap: vi.fn(),
-  updateExistingCustomValuesOnly: vi.fn(),
+  saveGhlCustomValues: vi.fn(),
 }));
 
 import {
   getLocationCustomValueMap,
-  updateExistingCustomValuesOnly,
+  saveGhlCustomValues,
 } from "../ghl-service.js";
 import { appRouter } from "../routers.js";
 import type { AppRouter } from "../routers.js";
 
 const mockedGetMap = vi.mocked(getLocationCustomValueMap);
-const mockedUpdate = vi.mocked(updateExistingCustomValuesOnly);
+const mockedUpdate = vi.mocked(saveGhlCustomValues);
+const saved = (keys: string[] = []) => ({
+  missingKeys: [],
+  failedKeys: [],
+  createdKeys: [],
+  updatedKeys: keys,
+  ids: {},
+});
 
 function createCaller() {
   return appRouter.createCaller({
@@ -30,7 +37,7 @@ beforeEach(() => {
 
 // Empty map simulates a location with no pricing custom values yet.
 mockedGetMap.mockResolvedValue(new Map());
-mockedUpdate.mockResolvedValue({ missingKeys: [], failedKeys: [] });
+mockedUpdate.mockResolvedValue(saved());
 
 describe("pricing.getSettings", () => {
   it("returns seeded defaults when no GHL values exist", async () => {
@@ -311,18 +318,18 @@ describe("pricing.saveSettings", () => {
     );
   });
 
-  it("never creates fields — updateExistingCustomValuesOnly only updates existing values", async () => {
+  it("saves all three values in a single save call (missing values are created by the service)", async () => {
     const caller = createCaller();
     await caller.pricing.saveSettings(validInput());
-    // The service contract is update-only; verify our code path uses it (no POST).
-    expect(updateExistingCustomValuesOnly).toHaveBeenCalled();
     expect(mockedUpdate).toHaveBeenCalledTimes(1);
+    // Default options: create values that are missing from the sub-account.
+    expect(mockedUpdate.mock.calls[0][2]).toBeUndefined();
   });
 
   it("reports missing existing custom values instead of claiming success", async () => {
     mockedUpdate.mockResolvedValueOnce({
+      ...saved(),
       missingKeys: ["add_on_pricing"],
-      failedKeys: [],
     });
     const caller = createCaller();
     await expect(caller.pricing.saveSettings(validInput())).rejects.toThrow(

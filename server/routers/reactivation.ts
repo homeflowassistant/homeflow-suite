@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
+import { getLocationCustomValueMap } from "../ghl-service.js";
 import {
-  getLocationCustomValueMap,
-  updateExistingCustomValuesOnly,
-  uploadToGhlMedia,
-} from "../ghl-service.js";
+  resolveImageCustomValue,
+  saveCustomValuesOrThrow,
+} from "../helpers/customValueSave.js";
 import {
   buildReactivationOfferCustomValueUpdates,
   readReactivationOfferCustomValues,
@@ -151,7 +151,7 @@ const customQuoteDataSchema = z.object({
 
 export type CustomQuoteData = z.infer<typeof customQuoteDataSchema>;
 
-const saveCustomValuesSettingsProcedure = publicProcedure
+const saveCustomValuesSettingsProcedure = locationProcedure
   .input(
     z.object({
       locationId: z.string().min(1),
@@ -169,10 +169,11 @@ const saveCustomValuesSettingsProcedure = publicProcedure
       });
     }
 
-    await updateExistingCustomValuesOnly(locationId, {
+    const baseUpdates: Record<string, string> = {
       [CV.reactivationOptions]: OPTION_TO_GHL_VALUE[input.reactivationOption],
       [CV.onetimeServiceScheduling]: input.onetimeTiming,
-    });
+    };
+    let quoteUpdates: Record<string, string> = {};
 
     if (
       input.reactivationOption === "Custom Quote & Link" &&
@@ -180,28 +181,10 @@ const saveCustomValuesSettingsProcedure = publicProcedure
     ) {
       const d = input.customQuoteData;
 
-      const MIME_TO_EXT: Record<string, string> = {
-        "image/png": ".png",
-        "image/jpeg": ".jpg",
-        "image/jpg": ".jpg",
-        "image/webp": ".webp",
-        "image/gif": ".gif",
-        "image/svg+xml": ".svg",
-      };
-
-      const handleImg = async (
-        val: string | undefined,
-        name: string
-      ): Promise<string> => {
-        if (!val) return "";
-        if (val.startsWith("data:image")) {
-          const mimeMatch = val.match(/^data:([A-Za-z-+\/]+);/);
-          const ext = mimeMatch ? MIME_TO_EXT[mimeMatch[1]] || ".png" : ".png";
-          const fileName = `${name}_${Date.now()}${ext}`;
-          return await uploadToGhlMedia(locationId, val, fileName);
-        }
-        return val;
-      };
+      // Images are uploaded before anything is written; a failed upload
+      // aborts the save instead of blanking the stored image.
+      const handleImg = (val: string | undefined, name: string) =>
+        resolveImageCustomValue(locationId, val, name);
 
       const [
         businessLogoUrl,
@@ -269,8 +252,14 @@ const saveCustomValuesSettingsProcedure = publicProcedure
         [CV.review4Photo]: rev4Photo,
       };
 
-      await updateExistingCustomValuesOnly(locationId, exactUpdates);
+      quoteUpdates = exactUpdates;
     }
+
+    await saveCustomValuesOrThrow(
+      locationId,
+      { ...baseUpdates, ...quoteUpdates },
+      "Reactivation settings"
+    );
 
     return { success: true };
   });
@@ -282,7 +271,7 @@ export const reactivationRouter = router({
    * Returns the saved option, one-time timing index, and all custom quote fields.
    * Does NOT read or modify any Follow-Up page custom values.
    */
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();

@@ -12,7 +12,7 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import { getValidAccessToken } from "../ghl-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
@@ -405,7 +405,7 @@ export const contactsRouter = router({
   /**
    * Fetch contacts with workflow status information.
    */
-  getContacts: publicProcedure
+  getContacts: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -440,7 +440,7 @@ export const contactsRouter = router({
   /**
    * Refresh a single contact's data by fetching it directly from GHL.
    */
-  refreshContact: publicProcedure
+  refreshContact: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -457,7 +457,7 @@ export const contactsRouter = router({
    * Update a contact's basic fields (name, email, phone) in GHL.
    * Uses PUT /contacts/{id} to preserve existing data.
    */
-  updateContact: publicProcedure
+  updateContact: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -511,7 +511,7 @@ export const contactsRouter = router({
   /**
    * Toggle Do Not Disturb (DND) status for a contact.
    */
-  toggleDnd: publicProcedure
+  toggleDnd: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -586,7 +586,7 @@ export const contactsRouter = router({
   /**
    * Add a tag to a contact.
    */
-  addTag: publicProcedure
+  addTag: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -687,7 +687,7 @@ export const contactsRouter = router({
   /**
    * Remove a tag from a contact.
    */
-  removeTag: publicProcedure
+  removeTag: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -727,7 +727,7 @@ export const contactsRouter = router({
    * Fetch all tags available in the GHL account/location.
    * Used to populate the tag selection dropdown in the Manage Tags dialog.
    */
-  getAccountTags: publicProcedure
+  getAccountTags: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -791,7 +791,7 @@ export const contactsRouter = router({
   /**
    * Delete a contact from GHL.
    */
-  deleteContact: publicProcedure
+  deleteContact: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 /**
  * Custom Values (sub-account settings) Read API
  *
@@ -20,6 +21,12 @@
 
 import type { Express } from "express";
 import { ENV } from "../_core/env.js";
+
+function safeEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 import {
   getInstallation,
   getValidAccessToken,
@@ -123,7 +130,7 @@ export function registerCustomValuesRoutes(app: Express): void {
     const authHeader = req.headers.authorization || "";
     const expectedKey = ENV.internalApiKey;
 
-    if (!authHeader || authHeader !== `Internal-Key ${expectedKey}`) {
+    if (!expectedKey || !safeEqual(authHeader, `Internal-Key ${expectedKey}`)) {
       console.warn(
         "[custom-values] Unauthorized request: Invalid or missing Internal-Key"
       );
@@ -204,7 +211,7 @@ export function registerCustomValuesRoutes(app: Express): void {
     const authHeader = req.headers.authorization || "";
     const expectedKey = ENV.internalApiKey;
 
-    if (!authHeader || authHeader !== `Internal-Key ${expectedKey}`) {
+    if (!expectedKey || !safeEqual(authHeader, `Internal-Key ${expectedKey}`)) {
       console.warn(
         "[custom-values] Unauthorized request: Invalid or missing Internal-Key"
       );

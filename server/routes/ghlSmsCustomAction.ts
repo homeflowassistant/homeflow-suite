@@ -1,4 +1,6 @@
 import type { Express, Request, Response } from "express";
+import { timingSafeEqual } from "crypto";
+import { ENV } from "../_core/env.js";
 import { z } from "zod";
 import {
   GhlSmsActionError,
@@ -170,8 +172,43 @@ async function requireLocation(locationId: string, res: Response): Promise<boole
   return true;
 }
 
+let warnedActionSecret = false;
+/**
+ * HighLevel calls these endpoints server-to-server. When
+ * GHL_CUSTOM_ACTION_SECRET is set, each call must carry it, either as the
+ * X-Homeflow-Action-Secret header or as ?secret= on the action URL configured
+ * in the Marketplace app.
+ */
+function isActionAuthorized(req: Request): boolean {
+  const configured = ENV.customActionSecret;
+  if (!configured) {
+    if (!warnedActionSecret) {
+      warnedActionSecret = true;
+      console.warn(
+        "[GHL SMS Action] GHL_CUSTOM_ACTION_SECRET is not configured; SMS action endpoints accept unauthenticated calls"
+      );
+    }
+    return true;
+  }
+  const header = req.headers["x-homeflow-action-secret"];
+  const provided =
+    (typeof header === "string" ? header : "") ||
+    (typeof req.query.secret === "string" ? req.query.secret : "");
+  const a = Buffer.from(provided.trim());
+  const b = Buffer.from(configured);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export function registerGhlSmsCustomActionRoutes(app: Express): void {
   app.post("/api/ghl/custom-action/sms-fields", async (req: Request, res: Response) => {
+    if (!isActionAuthorized(req)) {
+      res.status(401).json({
+        success: false,
+        code: "INVALID_ACTION_SECRET",
+        message: "Invalid or missing HomeFlow action secret.",
+      });
+      return;
+    }
     logIncomingRequest(req, req.body);
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -227,6 +264,14 @@ export function registerGhlSmsCustomActionRoutes(app: Express): void {
   });
 
   app.post("/api/ghl/custom-action/send-sms", async (req: Request, res: Response) => {
+    if (!isActionAuthorized(req)) {
+      res.status(401).json({
+        success: false,
+        code: "INVALID_ACTION_SECRET",
+        message: "Invalid or missing HomeFlow action secret.",
+      });
+      return;
+    }
     logIncomingRequest(req, req.body);
     const parsed = actionEnvelopeSchema.safeParse(req.body ?? {});
     if (!parsed.success) {

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { clearSession, getSessionHeaders } from "./lib/ghlSession";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -51,11 +52,15 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: getTrpcUrl(),
       transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      // HighLevel SSO session (no header when SSO is not configured).
+      headers: () => getSessionHeaders(),
+      async fetch(input, init) {
+        const response = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
+        if (response.status === 401) clearSession();
+        return response;
       },
     }),
   ],

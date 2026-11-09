@@ -8,12 +8,13 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import {
   getValidAccessToken,
   findCustomValueId,
   fetchAllCustomValues,
   addTagToContact,
+  ensureGhlCustomValue,
 } from "../ghl-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
@@ -36,7 +37,7 @@ export const quickSendRouter = router({
    * Search and list contacts for the contact selection modal.
    * Uses GHL contacts/search endpoint with pagination.
    */
-  getContacts: publicProcedure
+  getContacts: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -69,7 +70,7 @@ export const quickSendRouter = router({
    * 1. Updates the "Mass SMS Message" custom value (existing only, never creates new)
    * 2. Tags all selected contacts with "quick-send"
    */
-  saveMessage: publicProcedure
+  saveMessage: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1, "Location ID is required"),
@@ -258,11 +259,21 @@ async function saveMessageToCustomValue(
         message
       );
     }
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message:
-        'Custom value "Mass SMS Message" not found in your GHL account. Please ensure it exists before saving.',
-    });
+    // The sub-account does not have the value yet: create it so the message
+    // is saved instead of failing.
+    const created = await ensureGhlCustomValue(
+      locationId,
+      "Mass SMS Message",
+      message
+    );
+    if (created.id === "create_failed") {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          'Custom value "Mass SMS Message" could not be created in your GHL account. Please try again.',
+      });
+    }
+    return true;
   }
 
   // Get the display name to preserve it

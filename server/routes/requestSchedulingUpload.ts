@@ -5,6 +5,7 @@ import express, {
   type Response,
 } from "express";
 import { uploadToGhlMedia } from "../ghl-service.js";
+import { requireLocationSession } from "./auth.js";
 
 const UPLOAD_PATH = "/api/request-scheduling/upload-image";
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
@@ -44,6 +45,8 @@ export function registerRequestSchedulingUploadRoutes(app: Express): void {
         return;
       }
 
+      if (!(await requireLocationSession(req, res, locationId))) return;
+
       if (!contentType.startsWith("image/")) {
         res.status(415).json({
           success: false,
@@ -63,26 +66,41 @@ export function registerRequestSchedulingUploadRoutes(app: Express): void {
         return;
       }
 
-      const fileName = safeFileName(queryText(req.query.fileName), contentType);
-      const dataUri = `data:${contentType};base64,${body.toString("base64")}`;
-      const url = await uploadToGhlMedia(locationId, dataUri, fileName);
+      // Any failure (unknown location, expired token, GHL outage) must turn
+      // into a JSON error. An unhandled rejection here used to crash the
+      // whole server process.
+      try {
+        const fileName = safeFileName(queryText(req.query.fileName), contentType);
+        const dataUri = `data:${contentType};base64,${body.toString("base64")}`;
+        const url = await uploadToGhlMedia(locationId, dataUri, fileName);
 
-      if (!url || url.startsWith("data:")) {
+        if (!url || url.startsWith("data:")) {
+          res.status(502).json({
+            success: false,
+            code: "IMAGE_UPLOAD_FAILED",
+            message: "The image could not be uploaded to the media library.",
+          });
+          return;
+        }
+
+        console.log("[Request Scheduling] image uploaded", {
+          locationId,
+          fileName,
+          contentType,
+          size: body.length,
+        });
+        res.status(200).json({ success: true, url, fileName });
+      } catch (error) {
+        console.error("[Request Scheduling] image upload failed", {
+          locationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         res.status(502).json({
           success: false,
           code: "IMAGE_UPLOAD_FAILED",
           message: "The image could not be uploaded to the media library.",
         });
-        return;
       }
-
-      console.log("[Request Scheduling] image uploaded", {
-        locationId,
-        fileName,
-        contentType,
-        size: body.length,
-      });
-      res.status(200).json({ success: true, url, fileName });
     }
   );
 

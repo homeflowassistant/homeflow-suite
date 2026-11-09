@@ -13,6 +13,22 @@ import { registerGhlSmsCustomActionRoutes } from "../routes/ghlSmsCustomAction.j
 import { registerRequestSchedulingUploadRoutes } from "../routes/requestSchedulingUpload.js";
 import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
+import { registerAuthRoutes } from "../routes/auth.js";
+import { warnIfAuthDisabled } from "./ghlSso.js";
+
+let safetyNetInstalled = false;
+/**
+ * Express 4 does not catch rejected promises from async handlers. Without
+ * this, one failing request (e.g. an unknown locationId) terminated the
+ * whole Node process. Log instead of crashing.
+ */
+function installProcessSafetyNet(): void {
+  if (safetyNetInstalled) return;
+  safetyNetInstalled = true;
+  process.on("unhandledRejection", reason => {
+    console.error("[Process] Unhandled promise rejection (request failed, server kept running)", reason);
+  });
+}
 
 export async function createApp(options?: {
   serveClient?: boolean;
@@ -62,6 +78,8 @@ export async function createApp(options?: {
     );
   }
 
+  registerAuthRoutes(app);
+  warnIfAuthDisabled();
   registerOAuthRoutes(app);
   registerGHLOAuthRoutes(app);
   registerContactsCustomFieldRoutes(app);
@@ -85,5 +103,30 @@ export async function createApp(options?: {
     serveStatic(app);
   }
 
+  // Last-resort JSON error handler so a thrown route error never leaks a
+  // stack trace or leaves the request hanging.
+  app.use(
+    (
+      error: unknown,
+      _req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      if (res.headersSent) return next(error);
+      const status =
+        typeof (error as { status?: unknown })?.status === "number"
+          ? ((error as { status: number }).status as number)
+          : 500;
+      if (status >= 500) console.error("[Express] Unhandled route error", error);
+      res.status(status).json({
+        success: false,
+        code: status >= 500 ? "INTERNAL_ERROR" : "REQUEST_ERROR",
+        message:
+          status >= 500 ? "Unexpected server error." : "Invalid request.",
+      });
+    }
+  );
+
+  installProcessSafetyNet();
   return app;
 }

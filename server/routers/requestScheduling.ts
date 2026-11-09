@@ -1,17 +1,18 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import { getLocationAccessToken } from "../helpers/tokenHelper.js";
 import {
   getCustomFieldIdByName,
-  upsertGhlCustomValue,
-  uploadToGhlMedia,
-  updateExistingCustomValuesOnly,
   fetchAllCustomValues,
   findCustomValueId,
   resolveCustomValue as resolveGhlCustomValue,
   extractCustomValueKey,
 } from "../ghl-service.js";
+import {
+  resolveImageCustomValue,
+  saveCustomValuesOrThrow,
+} from "../helpers/customValueSave.js";
 import { buildFollowUpOffer2CustomValueUpdates } from "./quoteOfferMappings.js";
 
 const FOLLOW_UP_CUSTOM_VALUE_NAME =
@@ -23,18 +24,6 @@ export const FOLLOW_UP_OPTION_TO_GHL_VALUE = {
   "Custom Quote & Link": "Custom-Link",
 } as const;
 
-function assertCustomValueUpdated(
-  locationId: string,
-  key: string,
-  result: { missingKeys: string[]; failedKeys: string[] }
-) {
-  if (result.missingKeys.includes(key) || result.failedKeys.includes(key)) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: `Unable to save the Follow Up setting '${key}' for location ${locationId}. Verify that this custom value exists and try again.`,
-    });
-  }
-}
 
 const TIMING_MAP = {
   0: "within_24h",
@@ -97,7 +86,7 @@ async function getRequestSchedulingFieldIds(locationId: string): Promise<{
   };
 }
 
-const saveSettingsProcedure = publicProcedure
+const saveSettingsProcedure = locationProcedure
   .input(
     z.object({
       locationId: z.string().min(1),
@@ -267,7 +256,7 @@ const CV = {
 } as const;
 
 export const requestSchedulingRouter = router({
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -328,7 +317,7 @@ export const requestSchedulingRouter = router({
       };
     }),
 
-  getLocationSettings: publicProcedure
+  getLocationSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -402,7 +391,7 @@ export const requestSchedulingRouter = router({
    * Empty strings mean the value is missing/unavailable; the client
    * then falls back to its existing/default value for that field.
    */
-  getQuoteSettings: publicProcedure
+  getQuoteSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -501,7 +490,7 @@ export const requestSchedulingRouter = router({
    * Also includes the standard built-in placeholders (company name,
    * service area, etc.) used by the quote templates.
    */
-  getCustomValueTags: publicProcedure
+  getCustomValueTags: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -558,7 +547,7 @@ export const requestSchedulingRouter = router({
    * from the same GHL custom values lookup, falling back to the tag
    * itself when no value is stored.
    */
-  resolveCustomValue: publicProcedure
+  resolveCustomValue: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -609,7 +598,7 @@ export const requestSchedulingRouter = router({
    * STRICT UPDATE ONLY: it updates the existing custom value in place and
    * never creates a new one (same discipline as saveCustomValuesSettings).
    */
-  saveLeadFollowUpOption: publicProcedure
+  saveLeadFollowUpOption: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -629,14 +618,13 @@ export const requestSchedulingRouter = router({
         });
       }
 
-      const optionUpdate = await updateExistingCustomValuesOnly(locationId, {
-        [CV.leadFollowupOptions]:
-          FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
-      });
-      assertCustomValueUpdated(
+      await saveCustomValuesOrThrow(
         locationId,
-        CV.leadFollowupOptions,
-        optionUpdate
+        {
+          [CV.leadFollowupOptions]:
+            FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
+        },
+        "Lead Follow-Up option"
       );
 
       return {
@@ -664,7 +652,7 @@ export const requestSchedulingRouter = router({
    * STRICT UPDATE ONLY: it updates the existing custom value in place and
    * never creates a new one (same discipline as saveCustomValuesSettings).
    */
-  saveInitialRequestScheduling: publicProcedure
+  saveInitialRequestScheduling: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -686,9 +674,11 @@ export const requestSchedulingRouter = router({
         });
       }
 
-      await updateExistingCustomValuesOnly(locationId, {
-        initial_request_scheduling: input.initialRequestScheduling,
-      });
+      await saveCustomValuesOrThrow(
+        locationId,
+        { initial_request_scheduling: input.initialRequestScheduling },
+        "Initial outreach scheduling"
+      );
 
       return {
         success: true,
@@ -705,7 +695,7 @@ export const requestSchedulingRouter = router({
     }),
 
   // Backwards-compatible alias used by the client bundle and older builds
-  saveCustomValuesSettings: publicProcedure
+  saveCustomValuesSettings: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -735,25 +725,13 @@ export const requestSchedulingRouter = router({
       }
 
       // ── Always-saved base fields ──────────────────────────────────
-      // STRICT UPDATE ONLY: We do not want to ever POST/create these base fields,
-      // because doing so causes the 400 "already exists" error if the name/key matching fails.
-      // We will strictly PUT to the existing keys.
-      const baseUpdateResult = await updateExistingCustomValuesOnly(
-        locationId,
-        {
-          [CV.leadFollowupOptions]:
-            FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
-          initial_request_scheduling: input.initialRequestScheduling,
-          [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
-        }
-      );
-      assertCustomValueUpdated(
-        locationId,
-        CV.leadFollowupOptions,
-        baseUpdateResult
-      );
+      const baseUpdates: Record<string, string> = {
+        [CV.leadFollowupOptions]:
+          FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
+        initial_request_scheduling: input.initialRequestScheduling,
+        [FOLLOW_UP_CUSTOM_VALUE_NAME]: input.followUpLimit,
+      };
 
-      // We no longer return the created IDs, because we only updated existing ones.
       const leadOptionResults = {
         value: FOLLOW_UP_OPTION_TO_GHL_VALUE[input.leadFollowUpOption],
         id: "updated",
@@ -765,39 +743,16 @@ export const requestSchedulingRouter = router({
       const followUpResults = { value: input.followUpLimit, id: "updated" };
 
       // ── Custom Quote fields (only when Custom Quote & Link is selected) ──
+      // Images are uploaded BEFORE anything is written, so a failed upload
+      // aborts the save instead of blanking the stored image.
+      let quoteUpdates: Record<string, string> = {};
       if (
         input.leadFollowUpOption === "Custom Quote & Link" &&
         input.customQuoteData
       ) {
         const d = input.customQuoteData;
-
-        // Upload any base64 images to GHL Media Library; pass through existing URLs unchanged
-        const MIME_TO_EXT: Record<string, string> = {
-          "image/png": ".png",
-          "image/jpeg": ".jpg",
-          "image/jpg": ".jpg",
-          "image/webp": ".webp",
-          "image/gif": ".gif",
-          "image/svg+xml": ".svg",
-        };
-
-        const handleImg = async (
-          val: string | undefined,
-          name: string
-        ): Promise<string> => {
-          if (!val) return "";
-          if (val.startsWith("data:image")) {
-            // Extract MIME type from the data URI and pick the correct extension
-            const mimeMatch = val.match(/^data:([A-Za-z-+\/]+);/);
-            const ext = mimeMatch
-              ? MIME_TO_EXT[mimeMatch[1]] || ".png"
-              : ".png";
-            const fileName = `${name}_${Date.now()}${ext}`;
-            return await uploadToGhlMedia(locationId, val, fileName);
-          }
-          // Already a URL — return as-is
-          return val;
-        };
+        const handleImg = (val: string | undefined, name: string) =>
+          resolveImageCustomValue(locationId, val, name);
 
         // Upload all images concurrently
         const [
@@ -832,8 +787,6 @@ export const requestSchedulingRouter = router({
           handleImg(d.review4Photo, "review_4_photo"),
         ]);
 
-        // Exact custom value keys — strictly update existing, never create new
-        // Maps every popup field to its corresponding GHL Custom Value key
         const exactUpdates: Record<string, string> = {
           // Business Information
           [CV.companyLogo]: businessLogoUrl,
@@ -884,8 +837,17 @@ export const requestSchedulingRouter = router({
           [CV.review4Photo]: rev4Photo,
         };
 
-        await updateExistingCustomValuesOnly(locationId, exactUpdates);
+        quoteUpdates = exactUpdates;
       }
+
+      // One save for every value: existing values are updated by ID, values
+      // missing from the sub-account are created, and any value GHL did not
+      // store makes the request fail instead of reporting success.
+      await saveCustomValuesOrThrow(
+        locationId,
+        { ...baseUpdates, ...quoteUpdates },
+        "Follow Up settings"
+      );
 
       return {
         success: true,
@@ -918,7 +880,7 @@ export const requestSchedulingRouter = router({
    * the value is missing/unavailable; the client then falls back to its
    * existing/default value (default placeholder text).
    */
-  getSgLinkSettings: publicProcedure
+  getSgLinkSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -948,7 +910,7 @@ export const requestSchedulingRouter = router({
    * Save the S&G Link base onboarding link and synchronize the Follow-Up option.
    * Saves base_onboarding_link and lead_followup_options = "SG-Link".
    */
-  saveSgLinkSettings: publicProcedure
+  saveSgLinkSettings: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -966,31 +928,24 @@ export const requestSchedulingRouter = router({
         });
       }
 
-      const linkResult = await upsertGhlCustomValue(
+      const baseOnboardingLink = input.baseOnboardingLink.trim();
+      const sgLinkOption = FOLLOW_UP_OPTION_TO_GHL_VALUE["S&G Link"];
+      const saveResult = await saveCustomValuesOrThrow(
         locationId,
-        "base_onboarding_link",
-        input.baseOnboardingLink.trim()
+        {
+          base_onboarding_link: baseOnboardingLink,
+          [CV.leadFollowupOptions]: sgLinkOption,
+        },
+        "Sweep & Go link"
       );
-      if (["skipped_not_found", "update_failed"].includes(linkResult.id)) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message:
-            "Unable to save the Sweep & Go base onboarding link. Verify that its custom value exists and try again.",
-        });
-      }
-
-      const optionResult = await upsertGhlCustomValue(
-        locationId,
-        CV.leadFollowupOptions,
-        FOLLOW_UP_OPTION_TO_GHL_VALUE["S&G Link"]
-      );
-      if (["skipped_not_found", "update_failed"].includes(optionResult.id)) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message:
-            "The base onboarding link was saved, but lead_followup_options could not be set to SG-Link. Verify that the custom value exists and try again.",
-        });
-      }
+      const linkResult = {
+        value: baseOnboardingLink,
+        id: saveResult.ids.base_onboarding_link ?? "updated",
+      };
+      const optionResult = {
+        value: sgLinkOption,
+        id: saveResult.ids[CV.leadFollowupOptions] ?? "updated",
+      };
 
       return {
         success: true,

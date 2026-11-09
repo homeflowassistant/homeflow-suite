@@ -1,10 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
-import {
-  getLocationCustomValueMap,
-  upsertGhlCustomValue,
-} from "../ghl-service.js";
+import { locationProcedure, router } from "../_core/trpc.js";
+import { getLocationCustomValueMap } from "../ghl-service.js";
+import { saveCustomValuesOrThrow } from "../helpers/customValueSave.js";
 
 // ─── Add-On Duration options ─────────────────────────────────────────
 // UI labels shown to the user
@@ -83,7 +81,7 @@ export const addOnCampaignRouter = router({
    * Load current add-on campaign settings from GHL custom values.
    * Reads from {{custom_values.addon_duration}} key.
    */
-  getSettings: publicProcedure
+  getSettings: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const locationId = input.locationId.trim();
@@ -116,7 +114,7 @@ export const addOnCampaignRouter = router({
    * Updates the existing "Add-On Duration" custom value (fieldKey: addon_duration).
    * Stores the GHL option token (e.g., "4_weeks", "10_weeks").
    */
-  saveSettings: publicProcedure
+  saveSettings: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1, "Location ID is required"),
@@ -137,7 +135,14 @@ export const addOnCampaignRouter = router({
         // The stored value is the option token (e.g., "10_weeks")
         const ghlValue = ADDON_DURATION_TO_GHL_VALUE[input.addonDuration];
 
-        await upsertGhlCustomValue(locationId, CV_WRITE_NAME, ghlValue);
+        // Match the {{custom_values.addon_duration}} key first, then the GHL
+        // display name; create the value if the sub-account is missing it.
+        await saveCustomValuesOrThrow(
+          locationId,
+          { [CV_READ_KEY]: ghlValue },
+          "Add-On campaign duration",
+          { aliases: { [CV_READ_KEY]: [CV_WRITE_NAME] } }
+        );
 
         return { success: true };
       } catch (error) {

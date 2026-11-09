@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import {
   getInstallation,
   processContact,
@@ -50,7 +50,7 @@ export const ghlRouter = router({
   /**
    * Check if a GHL location is connected (has valid OAuth tokens).
    */
-  connectionStatus: publicProcedure
+  connectionStatus: locationProcedure
     .input(z.object({ locationId: z.string().min(1) }))
     .query(async ({ input }) => {
       const normalizedLocationId = input.locationId.trim();
@@ -76,7 +76,7 @@ export const ghlRouter = router({
   /**
    * Create a single contact and optionally enroll in workflow.
    */
-  createContact: publicProcedure
+  createContact: locationProcedure
     .input(
       z.object({
         locationId: z.string().min(1),
@@ -128,7 +128,7 @@ export const ghlRouter = router({
   /**
    * Process a batch of contacts (CSV upload).
    */
-  processBatch: publicProcedure
+  processBatch: locationProcedure
     .input(batchContactSchema)
     .mutation(async ({ input }) => {
       const normalizedLocationId = input.locationId.trim();

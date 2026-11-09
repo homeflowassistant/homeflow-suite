@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc.js";
+import { locationProcedure, router } from "../_core/trpc.js";
 import { getLocationAccessToken } from "../helpers/tokenHelper.js";
 import {
   updateExistingCustomValuesOnly,
@@ -126,7 +126,7 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
  *   - If the value is a base64 data URI → upload to GHL Media Library → store the URL.
  *   - If it is already a URL or plain text → pass through unchanged.
  */
-const saveAccountSetupFieldProcedure = publicProcedure
+const saveAccountSetupFieldProcedure = locationProcedure
   .input(
     z.object({
       locationId: z.string().min(1),
@@ -234,7 +234,7 @@ const saveAccountSetupFieldProcedure = publicProcedure
  * One key is read per field (e.g. homeflow_business_logo) and the second
  * key (company_logo) is read separately so the client can surface both.
  */
-const getAccountSetupSettingsProcedure = publicProcedure
+const getAccountSetupSettingsProcedure = locationProcedure
   .input(z.object({ locationId: z.string().min(1) }))
   .query(async ({ input }) => {
     const locationId = input.locationId.trim();

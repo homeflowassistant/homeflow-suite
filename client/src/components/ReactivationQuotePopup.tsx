@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
+import { apiFetch } from "@/lib/ghlSession";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ async function uploadReactivationQuoteImage(
 
   const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
   const params = new URLSearchParams({ locationId, fileName });
-  const response = await fetch(
+  const response = await apiFetch(
     `${apiUrl}/api/request-scheduling/upload-image?${params.toString()}`,
     {
       method: "POST",
