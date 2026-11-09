@@ -1,8 +1,16 @@
 import {
+  findCustomValueId,
+  getContactCustomFieldDefinitions,
   getCustomValueMap,
   getLocationCustomValues,
   getValidAccessToken,
 } from "../ghl-service.js";
+
+type ContactFieldDefinition = {
+  id: string;
+  fieldKey: string;
+  displayName?: string;
+};
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "v3";
@@ -183,7 +191,11 @@ function getContactName(contact: ContactRecord): string {
   );
 }
 
-function getContactFieldValue(contact: ContactRecord, key: string): string | undefined {
+function getContactFieldValue(
+  contact: ContactRecord,
+  key: string,
+  fieldDefinitions: ContactFieldDefinition[] = []
+): string | undefined {
   const normalizedKey = normalizeTokenKey(key);
   if (normalizedKey === "name" || normalizedKey === "fullname") {
     return getContactName(contact) || undefined;
@@ -215,6 +227,28 @@ function getContactFieldValue(contact: ContactRecord, key: string): string | und
       const value = record.fieldValue ?? record.value;
       return value === undefined || value === null ? "" : String(value);
     }
+  }
+
+  // GHL returns a contact's custom fields as {id, value} without the key, and
+  // leaves out fields that have no value. Resolve the key through the
+  // location's field definitions; a defined field with no value renders as
+  // an empty string instead of failing the whole SMS (#35).
+  const definition = fieldDefinitions.find(field =>
+    [field.fieldKey, field.displayName ?? ""]
+      .filter(Boolean)
+      .map(name => normalizeTokenKey(name.replace(/^contact\./i, "")))
+      .includes(normalizedKey)
+  );
+  if (definition) {
+    const match = customFields.find(
+      field =>
+        field &&
+        typeof field === "object" &&
+        asText((field as Record<string, unknown>).id) === definition.id
+    ) as Record<string, unknown> | undefined;
+    const value = match?.fieldValue ?? match?.value;
+    if (Array.isArray(value)) return value.map(String).join(", ");
+    return value === undefined || value === null ? "" : String(value);
   }
 
   return undefined;
@@ -272,6 +306,23 @@ function getCustomValue(
         const value = customValue.value;
         return value === undefined || value === null ? "" : String(value);
       }
+    }
+  }
+
+  // Same exact matcher the settings pages use when SAVING, so values stored
+  // under their alternative GHL names are found, e.g.
+  // custom_subscription_pausedunpaused_message saved to
+  // "Custom Subscription Paused Message" (#37/#38).
+  const savedId = findCustomValueId(customValues, extractedKey, {
+    allowFuzzy: false,
+  });
+  if (savedId) {
+    const saved = customValues.find(
+      customValue => (customValue.id || customValue._id) === savedId
+    );
+    if (saved) {
+      const value = saved.value;
+      return value === undefined || value === null ? "" : String(value);
     }
   }
 
@@ -357,6 +408,7 @@ export function renderSmsMessage(
     locationId: string;
     location?: ContactRecord;
     customValues: Record<string, unknown>[];
+    contactFieldDefinitions?: ContactFieldDefinition[];
   }
 ): string {
   let rendered = template;
@@ -378,7 +430,8 @@ export function renderSmsMessage(
       } else if (normalizedLower.startsWith("contact.")) {
         value = getContactFieldValue(
           options.contact,
-          sourceToken.slice("contact.".length).trim()
+          sourceToken.slice("contact.".length).trim(),
+          options.contactFieldDefinitions
         );
       } else if (normalizedLower.startsWith("location.")) {
         value = getLocationValue(
@@ -492,9 +545,22 @@ async function getContactByEmail(locationId: string, email: string): Promise<Con
   return getContactById(locationId, getContactId(contacts[0]));
 }
 
-function normalizePhoneForLookup(phone: string): string {
+/**
+ * Convert a phone number to E.164. US/Canada numbers typed without a country
+ * code, e.g. "(555) 123-4567" or "1-555-123-4567", become +15551234567 (#34).
+ */
+export function toE164Phone(phone: string): string {
   const compact = phone.trim().replace(/[\s().-]/g, "");
-  const normalized = compact.startsWith("00") ? `+${compact.slice(2)}` : compact;
+  if (compact.startsWith("+")) return compact;
+  if (compact.startsWith("00")) return `+${compact.slice(2)}`;
+  const digits = compact.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return compact;
+}
+
+function normalizePhoneForLookup(phone: string): string {
+  const normalized = toE164Phone(phone);
 
   if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
     throw new GhlSmsActionError(
@@ -781,11 +847,27 @@ export async function sendSavedSms(
     ? await getLocationRecord(locationId)
     : undefined;
 
+  // Only fetch field definitions when the template uses contact fields.
+  let contactFieldDefinitions: ContactFieldDefinition[] = [];
+  if (/\{\{\s*contact\./i.test(template)) {
+    try {
+      contactFieldDefinitions = await getContactCustomFieldDefinitions(
+        locationId
+      );
+    } catch (error) {
+      console.warn("[GHL SMS Action][FIELD_DEFINITIONS_UNAVAILABLE]", {
+        locationId: locationId.slice(-6),
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   const message = renderSmsMessage(template, {
     contact: mergeContact,
     locationId,
     location,
     customValues,
+    contactFieldDefinitions,
   });
   console.log("[GHL SMS Action][MESSAGE_RENDERED]", {
     locationId: locationId.slice(-6),

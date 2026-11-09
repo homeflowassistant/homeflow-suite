@@ -324,6 +324,18 @@ async function fetchLocationCustomFields(
     .filter((field: any) => field.id && field.fieldKey);
 }
 
+/**
+ * Contact custom field definitions (id + fieldKey) for a location. The GHL
+ * contact API returns a contact's custom fields as {id, value} only, so this
+ * is needed to resolve merge fields like {{contact.skip_reason}}.
+ */
+export async function getContactCustomFieldDefinitions(
+  locationId: string
+): Promise<Array<{ id: string; fieldKey: string; displayName?: string }>> {
+  const accessToken = await getValidAccessToken(locationId);
+  return fetchLocationCustomFields(locationId, accessToken);
+}
+
 export async function getCustomFieldIdByName(
   locationId: string,
   fieldNamePattern: string
@@ -670,12 +682,14 @@ export async function uploadToGhlMedia(
     return hostedUrl;
   }
 
-  // Fallback: try fileId
+  // A bare fileId is not a usable image URL in emails or quote pages, so it
+  // is treated as a failed upload (callers then keep the existing image and
+  // report the error) instead of being saved into the custom value.
   if (data.fileId) {
-    console.warn(
-      `[GHL Media] No 'url' in response for '${fileName}', falling back to fileId: ${data.fileId}`
+    console.error(
+      `[GHL Media] No 'url' in response for '${fileName}' (fileId: ${data.fileId}); treating the upload as failed.`
     );
-    return data.fileId;
+    return "";
   }
 
   console.error(

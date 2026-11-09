@@ -3,6 +3,7 @@ import { CheckCircle2, Facebook } from "lucide-react";
 import { toast } from "sonner";
 import TopSaveButton from "@/components/TopSaveButton";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
+import { trpc } from "@/lib/trpc";
 
 type FacebookSetupStatus = "yes" | "not-yet";
 
@@ -28,15 +29,33 @@ export default function FacebookSetupPage(props: any = {}) {
   const [setupStatus, setSetupStatus] =
     useState<FacebookSetupStatus>("not-yet");
 
+  // The answer is stored in the facebook_setup_status GHL custom value so
+  // onboarding progress can see it on any device. The older browser-only
+  // copy is used only when nothing is stored in GHL yet.
+  const statusQuery = trpc.onboarding.getFacebookStatus.useQuery(
+    { locationId },
+    { enabled: Boolean(locationId), staleTime: 0 }
+  );
+  const saveMutation = trpc.onboarding.saveFacebookStatus.useMutation();
+  const utils = trpc.useUtils();
+
   useEffect(() => {
-    if (!locationId) return;
-    const storedStatus = window.localStorage.getItem(
-      getFacebookStatusStorageKey(locationId)
-    );
-    if (storedStatus === "yes" || storedStatus === "not-yet") {
-      setSetupStatus(storedStatus);
+    if (!locationId || statusQuery.isLoading) return;
+    const remote = statusQuery.data?.status;
+    if (remote) {
+      setSetupStatus(remote);
+      return;
     }
-  }, [locationId]);
+    let local: string | null = null;
+    try {
+      local = window.localStorage.getItem(
+        getFacebookStatusStorageKey(locationId)
+      );
+    } catch {
+      /* storage unavailable */
+    }
+    if (local === "yes" || local === "not-yet") setSetupStatus(local);
+  }, [locationId, statusQuery.isLoading, statusQuery.data?.status]);
 
   const handleSave = useCallback(async () => {
     if (!locationId) {
@@ -46,12 +65,26 @@ export default function FacebookSetupPage(props: any = {}) {
       return;
     }
 
-    window.localStorage.setItem(
-      getFacebookStatusStorageKey(locationId),
-      setupStatus
-    );
-    toast.success("Facebook setup status saved.");
-  }, [locationId, setupStatus]);
+    try {
+      await saveMutation.mutateAsync({ locationId, status: setupStatus });
+      try {
+        window.localStorage.setItem(
+          getFacebookStatusStorageKey(locationId),
+          setupStatus
+        );
+      } catch {
+        /* storage unavailable */
+      }
+      void utils.onboarding.getStatus.invalidate();
+      toast.success("Facebook setup status saved.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Facebook setup status could not be saved."
+      );
+    }
+  }, [locationId, setupStatus, saveMutation, utils]);
 
   useOnboardingSaveHandler(embedded, handleSave);
 

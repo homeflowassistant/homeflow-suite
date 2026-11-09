@@ -524,12 +524,22 @@ export default function AccountSetupPage(props: any = {}) {
     if (!locationId) return;
     if (saveFieldMutation.isPending || logoUploading) return;
     // Re-derive in case of rapid successive clicks.
+    // Business Name and Business Logo each write two custom values. Compare
+    // against both, so a field is re-saved when either copy is missing or
+    // out of date (#31: the logo was not reaching company_logo).
+    const SECOND_COPY: Partial<Record<AccountField, string>> = {
+      businessName: "companyName",
+      businessLogo: "companyLogo",
+    };
     const toSave = savedValues
-      ? FIELDS.filter(
-          meta =>
-            (values[meta.key] ?? "") !==
-            (savedValues[mapFieldToGhlKey(meta.key)] ?? "")
-        )
+      ? FIELDS.filter(meta => {
+          const value = values[meta.key] ?? "";
+          if (value !== (savedValues[mapFieldToGhlKey(meta.key)] ?? "")) {
+            return true;
+          }
+          const second = SECOND_COPY[meta.key];
+          return Boolean(second && value !== (savedValues[second] ?? ""));
+        })
       : FIELDS;
     if (toSave.length === 0) {
       toast("Your settings are already up to date.");
