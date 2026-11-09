@@ -6,6 +6,8 @@ import {
   updateExistingCustomValuesOnly,
   ensureGhlCustomValue,
   fetchAllCustomValues,
+  findCustomValueId,
+  saveGhlCustomValues,
   resolveCustomValue as resolveGhlCustomValue,
   uploadToGhlMedia,
 } from "../ghl-service.js";
@@ -47,6 +49,7 @@ const accountSetupDataSchema = z.object({
   reengagementOffer: z.string().trim().max(5000).optional(),
   legalBusinessName: z.string().trim().max(500).optional(),
   businessAddress: z.string().trim().max(1000).optional(),
+  businessEin: z.string().trim().max(20).optional(),
   stateTwoLetterAbbrev: z
     .string()
     .trim()
@@ -82,6 +85,8 @@ const FIELD_KEY_MAP: Record<keyof AccountSetupData, string[]> = {
   reengagementOffer: ["discountfree_offer_for_reengagement_campaigns"],
   legalBusinessName: ["legal_business_name"],
   businessAddress: ["business_address"],
+  // New custom value; created automatically on first save.
+  businessEin: ["business_ein"],
   stateTwoLetterAbbrev: ["state_two_letter_abbrev"],
   internalNotificationsEmail: ["internal_notifications_email"],
   internalNotificationsPhone: ["internal_notifications_phone_number"],
@@ -107,6 +112,7 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
   "reengagementOffer",
   "legalBusinessName",
   "businessAddress",
+  "businessEin",
   "stateTwoLetterAbbrev",
   "internalNotificationsEmail",
   "internalNotificationsPhone",
@@ -126,6 +132,22 @@ const FIELD_ORDER: (keyof AccountSetupData)[] = [
  *   - If the value is a base64 data URI → upload to GHL Media Library → store the URL.
  *   - If it is already a URL or plain text → pass through unchanged.
  */
+/**
+ * EIN: accept "123456789", "12-3456789", spaces etc.; store as XX-XXXXXXX.
+ * Empty clears the value. Anything that is not exactly 9 digits is rejected.
+ */
+function normalizeEin(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length !== 9) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "EIN must be exactly 9 digits (format 12-3456789).",
+    });
+  }
+  return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+}
+
 const saveAccountSetupFieldProcedure = locationProcedure
   .input(
     z.object({
@@ -143,8 +165,11 @@ const saveAccountSetupFieldProcedure = locationProcedure
       });
     }
 
-    const rawValue = input.value ?? "";
     const field = input.field as keyof AccountSetupData;
+    const rawValue =
+      field === "businessEin"
+        ? normalizeEin(input.value ?? "")
+        : (input.value ?? "");
 
     let storedValue: string;
 
@@ -181,10 +206,14 @@ const saveAccountSetupFieldProcedure = locationProcedure
       updates[key] = storedValue;
     }
 
-    const updateResult = await updateExistingCustomValuesOnly(
-      locationId,
-      updates
-    );
+    // The EIN is a brand-new key: match it exactly (never by similar name)
+    // and create it on first save.
+    const updateResult =
+      field === "businessEin"
+        ? await saveGhlCustomValues(locationId, updates, {
+            exactMatchOnly: true,
+          })
+        : await updateExistingCustomValuesOnly(locationId, updates);
     const failedKeys = [...updateResult.failedKeys];
     const ensured: Record<string, { id: string; action: string }> = {};
 
@@ -246,6 +275,13 @@ const getAccountSetupSettingsProcedure = locationProcedure
 
       const get = (key: string): string =>
         resolveGhlCustomValue(customValues, key);
+      const getExact = (key: string): string => {
+        const id = findCustomValueId(customValues, key, { allowFuzzy: false });
+        const match = id
+          ? customValues.find(cv => (cv.id || cv._id) === id)
+          : undefined;
+        return match?.value == null ? "" : String(match.value).trim();
+      };
 
       return {
         businessName: get("homeflow_business_name"),
@@ -261,6 +297,9 @@ const getAccountSetupSettingsProcedure = locationProcedure
         reengagementOffer: get("discountfree_offer_for_reengagement_campaigns"),
         legalBusinessName: get("legal_business_name"),
         businessAddress: get("business_address"),
+        // Exact-key read only: the fuzzy fallback must never show another
+        // value in the EIN field for locations that have not saved one yet.
+        businessEin: getExact("business_ein"),
         stateTwoLetterAbbrev: get("state_two_letter_abbrev"),
         internalNotificationsEmail: get("internal_notifications_email"),
         internalNotificationsPhone: get("internal_notifications_phone_number"),
@@ -295,6 +334,7 @@ const getAccountSetupSettingsProcedure = locationProcedure
         reengagementOffer: empty(),
         legalBusinessName: empty(),
         businessAddress: empty(),
+        businessEin: empty(),
         stateTwoLetterAbbrev: empty(),
         internalNotificationsEmail: empty(),
         internalNotificationsPhone: empty(),

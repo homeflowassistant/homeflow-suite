@@ -722,6 +722,12 @@ export interface CustomValueSaveOptions {
   optionalKeys?: string[];
   /** Extra names (e.g. GHL display names) that identify a requested key. */
   aliases?: Record<string, string[]>;
+  /**
+   * Skip the alias / fuzzy fallback: a key that has no exact or normalized
+   * match is treated as missing (and created when createMissing is on).
+   * Use for brand-new keys that must never land in a similarly named value.
+   */
+  exactMatchOnly?: boolean;
 }
 
 function customValueRecordId(cv: Record<string, unknown>): string | undefined {
@@ -1006,12 +1012,14 @@ export async function saveGhlCustomValues(
   // Pass 2: alias / fuzzy fallback restricted to unclaimed records.
   const toCreate: Array<readonly [string, string]> = [];
   for (const [key, value] of unresolved) {
-    const id = findLooseCustomValueId(
-      customValues,
-      key,
-      options.aliases?.[key] ?? [],
-      candidate => planned.has(candidate)
-    );
+    const id = options.exactMatchOnly
+      ? undefined
+      : findLooseCustomValueId(
+          customValues,
+          key,
+          options.aliases?.[key] ?? [],
+          candidate => planned.has(candidate)
+        );
     if (id) {
       claim(id, key, value);
     } else if (optionalKeys.has(key)) {

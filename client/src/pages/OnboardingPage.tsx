@@ -274,6 +274,8 @@ function OnboardingPageContent() {
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
+  // Shown after "Finish setup" on the last step (#29).
+  const [showSummary, setShowSummary] = useState(false);
   const statusQuery = trpc.onboarding.getStatus.useQuery(
     { locationId },
     {
@@ -424,6 +426,8 @@ function OnboardingPageContent() {
           latest.data?.pages.find(page => page.id === currentPage.id) ||
           currentPage;
         await saveCurrentProgress(latestPage as PageResult);
+        setShowSummary(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
       return;
     }
@@ -448,8 +452,17 @@ function OnboardingPageContent() {
     if (activeIndex < pages.length - 1) {
       setDetailsOpen(false);
       setActiveStepId(pages[activeIndex + 1].id);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      setShowSummary(true);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openStepFromSummary = (stepId: string) => {
+    setShowSummary(false);
+    setDetailsOpen(false);
+    setActiveStepId(stepId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -461,9 +474,13 @@ function OnboardingPageContent() {
           </h1>
           <div className="mt-5 flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-slate-700">
-              Step {activeIndex + 1} of {pages.length}
+              {showSummary
+                ? "Onboarding finished"
+                : `Step ${activeIndex + 1} of ${pages.length}`}
             </span>
-            <span className="text-xs text-slate-500">{currentPage?.title}</span>
+            <span className="text-xs text-slate-500">
+              {showSummary ? "Final checklist" : currentPage?.title}
+            </span>
           </div>
           <div
             className="mt-3 flex items-center gap-1.5"
@@ -498,7 +515,11 @@ function OnboardingPageContent() {
           />
         </header>
 
-        {currentPage && (
+        {showSummary && (
+          <OnboardingSummary pages={pages} onOpenStep={openStepFromSummary} />
+        )}
+
+        {!showSummary && currentPage && (
           <>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -653,6 +674,97 @@ function OnboardingPageContent() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Final onboarding page with the full checklist from every step (#29). */
+function OnboardingSummary({
+  pages,
+  onOpenStep,
+}: {
+  pages: PageResult[];
+  onOpenStep: (stepId: string) => void;
+}) {
+  const doneCount = pages.filter(page => page.status === "complete").length;
+  const allDone = pages.length > 0 && doneCount === pages.length;
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardHeader className="p-5 pb-3 sm:p-7 sm:pb-4">
+        <CardTitle className="text-2xl text-slate-900">
+          <span aria-hidden="true">🎉</span> You've Reached the End of
+          Onboarding!
+        </CardTitle>
+        <CardDescription className="mt-2 text-sm leading-relaxed">
+          Before getting started with HomeFlow Assistant, be sure to go back and
+          complete any steps you may have missed. Each feature's onboarding
+          steps must be fully completed before you can start using that feature.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-5 pt-1 sm:p-7 sm:pt-1">
+        <div
+          className={`rounded-lg px-3 py-2.5 text-sm font-medium ${allDone ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}
+        >
+          {allDone
+            ? "All steps are complete."
+            : `${doneCount} of ${pages.length} steps complete.`}
+        </div>
+        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+          {pages.map(page => {
+            const missing = page.requirements.filter(
+              item => item.status !== "complete"
+            );
+            return (
+              <li key={page.id} className="p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <StatusIcon status={page.status} />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900">
+                        Step {page.stepOrder}: {page.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {page.totalCount === 0
+                          ? "No validation fields"
+                          : `${page.completedCount} of ${page.totalCount} checks complete`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={page.status} />
+                    {page.status !== "complete" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenStep(page.id)}
+                      >
+                        Go to step
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {page.status !== "complete" && missing.length > 0 && (
+                  <ul className="mt-3 space-y-1 pl-9 text-xs text-slate-600">
+                    {missing.map(item => (
+                      <li key={item.id} className="flex gap-1.5">
+                        <Circle className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                        <span>
+                          <span className="font-medium text-slate-800">
+                            {item.label}
+                          </span>
+                          {" — "}
+                          {item.reason}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 

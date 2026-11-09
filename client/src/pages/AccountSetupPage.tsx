@@ -75,11 +75,20 @@ type AccountField =
   | "reengagementOffer"
   | "legalBusinessName"
   | "businessAddress"
+  | "businessEin"
   | "stateTwoLetterAbbrev"
   | "onTheWayNotifications"
   | "jobCompletedNotifications"
   | "offScheduleNotifications"
   | "crmSelection";
+
+/** Keep only digits (max 9) and show them as XX-XXXXXXX while typing. */
+function formatEinInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 9);
+  return digits.length > 2
+    ? `${digits.slice(0, 2)}-${digits.slice(2)}`
+    : digits;
+}
 
 interface FieldMeta {
   key: AccountField;
@@ -230,6 +239,13 @@ const FIELDS: FieldMeta[] = [
     help: "Use the address shown on your EIN paperwork.",
   },
   {
+    key: "businessEin",
+    label: "EIN Number",
+    placeholder: "12-3456789",
+    icon: <BadgeCheck size={15} />,
+    help: "Your 9-digit Employer Identification Number, used to complete your A2P (texting) registration. Leave blank if you register as a sole proprietor without an EIN.",
+  },
+  {
     key: "stateTwoLetterAbbrev",
     label: "Which state do you service in?",
     placeholder: "Select a state",
@@ -313,6 +329,7 @@ export default function AccountSetupPage(props: any = {}) {
     reengagementOffer: "",
     legalBusinessName: "",
     businessAddress: "",
+    businessEin: "",
     stateTwoLetterAbbrev: "",
     onTheWayNotifications: "True",
     jobCompletedNotifications: "True",
@@ -341,6 +358,7 @@ export default function AccountSetupPage(props: any = {}) {
     reengagementOffer: "idle",
     legalBusinessName: "idle",
     businessAddress: "idle",
+    businessEin: "idle",
     stateTwoLetterAbbrev: "idle",
     onTheWayNotifications: "idle",
     jobCompletedNotifications: "idle",
@@ -424,6 +442,7 @@ export default function AccountSetupPage(props: any = {}) {
       reengagementOffer: s.reengagementOffer,
       legalBusinessName: s.legalBusinessName,
       businessAddress: s.businessAddress,
+      businessEin: s.businessEin ?? "",
       stateTwoLetterAbbrev: s.stateTwoLetterAbbrev,
       onTheWayNotifications: s.onTheWayNotifications || "True",
       jobCompletedNotifications: s.jobCompletedNotifications || "True",
@@ -449,7 +468,9 @@ export default function AccountSetupPage(props: any = {}) {
   // prevents partially completed business-registration data from being
   // written while the client is still editing the form.
   const handleValueChange = useCallback(
-    (field: AccountField, newValue: string) => {
+    (field: AccountField, rawValue: string) => {
+      const newValue =
+        field === "businessEin" ? formatEinInput(rawValue) : rawValue;
       setValues(prev => ({ ...prev, [field]: newValue }));
       if (field === "businessLogo") {
         setTypedLogo(newValue);
@@ -479,6 +500,7 @@ export default function AccountSetupPage(props: any = {}) {
         reengagementOffer: "reengagementOffer",
         legalBusinessName: "legalBusinessName",
         businessAddress: "businessAddress",
+        businessEin: "businessEin",
         stateTwoLetterAbbrev: "stateTwoLetterAbbrev",
         onTheWayNotifications: "onTheWayNotifications",
         jobCompletedNotifications: "jobCompletedNotifications",

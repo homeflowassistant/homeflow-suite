@@ -123,14 +123,12 @@ describe("onboarding wizard validation", () => {
         item => item.id === "pricing-initial-recurring"
       )?.reason
     ).toContain("placeholder");
+    // The mislabelled add_on_pricing check was removed (#30).
     expect(
       page(results, "pricing").requirements.find(
         item => item.id === "pricing-add-ons"
       )
-    ).toMatchObject({
-      label: "Recurring Pricing",
-      key: "add_on_pricing",
-    });
+    ).toBeUndefined();
   });
 
   it("treats an optional campaign as skipped rather than complete", () => {
@@ -152,5 +150,91 @@ describe("onboarding wizard validation", () => {
     });
     expect(page(results, "account-setup").status).toBe("skipped");
     expect(page(results, "account-setup").skipped).toBe(true);
+  });
+
+  it("finds paused/unpaused values saved under their alternative GHL names (#30)", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [
+        { id: "t", name: "Subscription Paused Message", value: "True" },
+        {
+          id: "p",
+          name: "Custom Subscription Paused Message",
+          value: "Your service has been paused.",
+        },
+        {
+          id: "u",
+          name: "Custom Subscription Unpaused Message",
+          value: "Your service has been unpaused.",
+        },
+      ],
+    });
+    const alerts = page(results, "alerts-notifications");
+    const req = (id: string) =>
+      alerts.requirements.find(item => item.id === id);
+    expect(req("alert-subscription-toggle")?.status).toBe("complete");
+    expect(req("alert-subscription-paused-message")?.status).toBe("complete");
+    expect(req("alert-subscription-unpaused-message")?.status).toBe("complete");
+  });
+
+  it("does not let the paused toggle match the paused message", () => {
+    // Only the message exists: the toggle must still be reported missing.
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [
+        customValue("custom_subscription_pausedunpaused_message", "Paused!"),
+      ],
+    });
+    const alerts = page(results, "alerts-notifications");
+    expect(
+      alerts.requirements.find(item => item.id === "alert-subscription-toggle")
+        ?.status
+    ).toBe("incomplete");
+    expect(
+      alerts.requirements.find(
+        item => item.id === "alert-subscription-paused-message"
+      )?.status
+    ).toBe("complete");
+  });
+
+  it("pricing has only two checks and accepts unused $XX lines (#30)", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [
+        customValue(
+          "initial_and_recurring_pricing",
+          "# Initial Service Pricing for 1 Dog\n### One week OR less: $45 (1 dog)\n## Recurring Service Premium Prices for 6+ Dogs: $XX"
+        ),
+        customValue(
+          "onetime_pricing",
+          "## One-Time Quote Rate: $60 per service"
+        ),
+        customValue("add_on_pricing", "Add-on name: $XX per visit"),
+      ],
+    });
+    const pricing = page(results, "pricing");
+    expect(pricing.requirements.map(item => item.id)).toEqual([
+      "pricing-initial-recurring",
+      "pricing-one-time",
+    ]);
+    expect(pricing.status).toBe("complete");
+  });
+
+  it("still flags pricing that is only the untouched $XX template", () => {
+    const results = buildOnboardingResults({
+      ...baseOptions,
+      customValues: [
+        customValue(
+          "initial_and_recurring_pricing",
+          "### One week OR less: $XX (1 dog)\n### 1 Month: $XX (1 dog)"
+        ),
+        customValue("onetime_pricing", "## One-Time Quote Rate: $60"),
+      ],
+    });
+    const initial = page(results, "pricing").requirements.find(
+      item => item.id === "pricing-initial-recurring"
+    );
+    expect(initial?.status).toBe("incomplete");
+    expect(initial?.reason).toContain("placeholder");
   });
 });

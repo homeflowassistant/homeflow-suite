@@ -289,7 +289,7 @@ describe("pricing.saveSettings", () => {
     ...overrides,
   });
 
-  it("replaces only the three configured custom values", async () => {
+  it("replaces only the two configured pricing values (never add_on_pricing)", async () => {
     const caller = createCaller();
     const result = await caller.pricing.saveSettings(validInput());
 
@@ -297,7 +297,6 @@ describe("pricing.saveSettings", () => {
     expect(mockedUpdate).toHaveBeenCalledTimes(1);
     const payload = mockedUpdate.mock.calls[0][1];
     expect(Object.keys(payload).sort()).toEqual([
-      "add_on_pricing",
       "initial_and_recurring_pricing",
       "onetime_pricing",
     ]);
@@ -318,7 +317,7 @@ describe("pricing.saveSettings", () => {
     );
   });
 
-  it("saves all three values in a single save call (missing values are created by the service)", async () => {
+  it("saves both values in a single save call (missing values are created by the service)", async () => {
     const caller = createCaller();
     await caller.pricing.saveSettings(validInput());
     expect(mockedUpdate).toHaveBeenCalledTimes(1);
@@ -329,11 +328,11 @@ describe("pricing.saveSettings", () => {
   it("reports missing existing custom values instead of claiming success", async () => {
     mockedUpdate.mockResolvedValueOnce({
       ...saved(),
-      missingKeys: ["add_on_pricing"],
+      missingKeys: ["onetime_pricing"],
     });
     const caller = createCaller();
     await expect(caller.pricing.saveSettings(validInput())).rejects.toThrow(
-      /Missing custom values: add_on_pricing/
+      /Missing custom values: onetime_pricing/
     );
   });
 

@@ -946,33 +946,32 @@ function QuoteFormFields({
         />
       </div>
 
-      {!embedded && (
-        <div className="border-t border-slate-200 pt-4">
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || isUploading}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Saving...
-              </>
-            ) : isUploading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Uploading image...
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                Save Settings
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      {/* Shown in onboarding too: the onboarding Save button sits behind this modal and cannot be clicked. */}
+      <div className="border-t border-slate-200 pt-4">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving || isUploading}
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Saving...
+            </>
+          ) : isUploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Uploading image...
+            </>
+          ) : (
+            <>
+              <Save size={14} />
+              Save Settings
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -993,6 +992,7 @@ export default function ReactivationQuotePopup({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const saveMutation = trpc.reactivation.saveCustomValuesSettings.useMutation();
+  const utils = trpc.useUtils();
 
   const settingsQuery = trpc.reactivation.getSettings.useQuery(
     { locationId },
@@ -1095,6 +1095,8 @@ export default function ReactivationQuotePopup({
         },
       });
       toast.success("Reactivation settings saved successfully.");
+      // Refresh the onboarding checklist so this step shows as done.
+      if (embedded) void utils.onboarding.getStatus.invalidate();
       onSaveSuccess();
       onOpenChange(false);
     } catch (error) {

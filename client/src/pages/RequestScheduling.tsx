@@ -385,10 +385,10 @@ export default function RequestScheduling(props: any = {}) {
                       "Use this walkthrough when the Custom Quote & Link option is selected.",
                   },
                   {
-                    title: "Setting Up Client Portal and Offers",
-                    youtubeId: "5CySgZYJ7Qk",
+                    title: "Finding Your Sweep & Go Base Onboarding Link",
+                    youtubeId: "piBO7mrLpCc",
                     description:
-                      "Use this walkthrough to configure the client-facing portal and offers.",
+                      "Use this walkthrough to find the base onboarding link used by the S&G Link option.",
                   },
                 ]}
               />

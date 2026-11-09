@@ -3,6 +3,7 @@ import { z } from "zod";
 import { onboardingStepStates } from "../../drizzle/schema.js";
 import { getDb } from "../db.js";
 import {
+  findCustomValueId,
   getInstallation,
   getLocationCustomValues,
   getLocationPickerVariables,
@@ -298,7 +299,8 @@ const PRICING_VALUES: Requirement[] = [
     "initial_and_recurring_pricing",
   ]),
   customValue("pricing-one-time", "One-Time Pricing", ["onetime_pricing"]),
-  customValue("pricing-add-ons", "Recurring Pricing", ["add_on_pricing"]),
+  // add_on_pricing is intentionally not checked: there is no Add-On Pricing
+  // field in the app at this time.
 ];
 
 const FACEBOOK_SETUP_VALUES: Requirement[] = [
@@ -328,7 +330,7 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
     stepOrder: 2,
     title: "Pricing",
     description:
-      "Initial, one-time, recurring, premium-area, and add-on pricing content.",
+      "Initial, one-time, recurring, and premium-area pricing content.",
     route: "/pricing",
     required: true,
     requirements: PRICING_VALUES,
@@ -409,6 +411,12 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
   },
 ];
 
+const ALL_CUSTOM_VALUE_REQUIREMENTS: Requirement[] = [
+  ...PAGE_DEFINITIONS.flatMap(page => page.requirements),
+  ...FOLLOW_UP_QUOTE_VALUES,
+  ...REACTIVATION_QUOTE_VALUES,
+].filter(requirement => requirement.kind === "custom_value");
+
 function normalizeKey(value: string): string {
   return value
     .trim()
@@ -435,12 +443,37 @@ function rawEntryValue(entry: Record<string, unknown>): string {
   return value === undefined || value === null ? "" : String(value).trim();
 }
 
-function findCustomValue(
+function findStrictCustomValueId(
   customValues: Record<string, unknown>[],
   aliases: string[]
+): string | undefined {
+  for (const alias of aliases) {
+    const id = findCustomValueId(customValues, alias, { allowFuzzy: false });
+    if (id) return id;
+  }
+  return undefined;
+}
+
+function findCustomValue(
+  customValues: Record<string, unknown>[],
+  aliases: string[],
+  /** Records another checklist item matches exactly; never taken loosely. */
+  ownedElsewhere: Set<string> = new Set()
 ) {
+  // 1) Resolve exactly the way the settings pages SAVE (same normalization
+  //    and the same paused/unpaused alternative names). This keeps the
+  //    checklist in agreement with what was actually saved.
+  const strictId = findStrictCustomValueId(customValues, aliases);
+  if (strictId) {
+    const entry = customValues.find(cv => (cv.id || cv._id) === strictId);
+    if (entry) return { found: true, value: rawEntryValue(entry) };
+  }
+  // 2) Previous loose match, kept as a fallback so nothing that showed as
+  //    configured before stops matching.
   const normalizedAliases = aliases.map(normalizeKey).filter(Boolean);
   for (const entry of customValues) {
+    const entryId = String(entry.id ?? entry._id ?? "");
+    if (entryId && ownedElsewhere.has(entryId)) continue;
     const keys = rawEntryKeys(entry);
     const matched = keys.some(candidate =>
       normalizedAliases.some(
@@ -491,10 +524,17 @@ function getPageRequirements(
   return page.requirements;
 }
 
+/**
+ * Pricing is "still a placeholder" only when it contains $XX-style
+ * placeholders and no real price at all. The Pricing page deliberately allows
+ * $XX on lines a business does not use (premium tiers, unused frequencies),
+ * so a leftover $XX must not mark filled-in pricing as incomplete.
+ */
 function isPricingPlaceholder(value: string): boolean {
-  return (
-    /\$\s*X{2}(?:\.X{2})?/i.test(value) || /\b(?:xx|xx\.xx)\b/i.test(value)
-  );
+  const hasPlaceholder =
+    /\$\s*X{2}(?:\.X{2})?/i.test(value) || /\b(?:xx|xx\.xx)\b/i.test(value);
+  const hasRealPrice = /\$\s?\d/.test(value);
+  return hasPlaceholder && !hasRealPrice;
 }
 
 export function buildOnboardingResults(options: {
@@ -507,6 +547,19 @@ export function buildOnboardingResults(options: {
   skippedStepIds?: Set<string>;
   sourceError?: string;
 }): OnboardingPageResult[] {
+  // Which custom value record each checklist item matches EXACTLY. The loose
+  // fallback must not hand one item's record to a different item (e.g. the
+  // paused toggle must never be satisfied by the paused message).
+  const strictOwners = new Map<string, string>();
+  for (const requirement of ALL_CUSTOM_VALUE_REQUIREMENTS) {
+    const id = findStrictCustomValueId(
+      options.customValues,
+      requirement.aliases
+    );
+    if (id && !strictOwners.has(id)) {
+      strictOwners.set(id, requirement.aliases.join("|"));
+    }
+  }
   return PAGE_DEFINITIONS.map(page => {
     const skipped = Boolean(options.skippedStepIds?.has(page.id));
     const requirements = getPageRequirements(page, options.customValues);
@@ -536,9 +589,22 @@ export function buildOnboardingResults(options: {
               "Unable to read GHL Custom Values right now.",
           };
         }
-        const match = findCustomValue(
+        const ownId = findStrictCustomValueId(
           options.customValues,
           requirement.aliases
+        );
+        const ownedElsewhere = new Set(
+          Array.from(strictOwners.entries())
+            .filter(
+              ([entryId, owner]) =>
+                entryId !== ownId && owner !== requirement.aliases.join("|")
+            )
+            .map(([entryId]) => entryId)
+        );
+        const match = findCustomValue(
+          options.customValues,
+          requirement.aliases,
+          ownedElsewhere
         );
         const usable = Boolean(
           match.found &&

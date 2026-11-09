@@ -218,4 +218,21 @@ describe("saveGhlCustomValues", () => {
     expect(result.updatedKeys).toEqual(["tos_link"]);
     expect(result.ids.tos_link).toBe("CV_RACE");
   });
+
+  it("exactMatchOnly creates a new key instead of using a similarly named value", async () => {
+    // Without exactMatchOnly, "business_ein" would fuzzy-match "Business".
+    customValues = [{ id: "CV_BIZ", name: "Business", value: "Acme" }];
+    const result = await saveGhlCustomValues(
+      "LOC_1",
+      { business_ein: "12-3456789" },
+      { exactMatchOnly: true }
+    );
+    expect(result.createdKeys).toEqual(["business_ein"]);
+    expect(writes()).toEqual([
+      expect.objectContaining({
+        method: "POST",
+        body: { name: "business_ein", value: "12-3456789" },
+      }),
+    ]);
+  });
 });
