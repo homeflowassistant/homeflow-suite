@@ -30,6 +30,8 @@ export default function ActionsMenu({
   const [open, setOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<ActionType>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showStaffDndConfirm, setShowStaffDndConfirm] = useState(false);
+  const isStaff = Boolean(contact.isStaff);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -75,6 +77,11 @@ export default function ActionsMenu({
 
   const handleToggleDnd = () => {
     setOpen(false);
+    // Turning DND on for the staff contact stops team texts — confirm first.
+    if (isStaff && !isDnd) {
+      setShowStaffDndConfirm(true);
+      return;
+    }
     toggleDndMutation.mutate({
       locationId,
       contactId,
@@ -195,6 +202,13 @@ export default function ActionsMenu({
               Are you sure you want to delete <strong>{contactName}</strong>?
               This action cannot be undone.
             </p>
+            {isStaff && (
+              <p className="-mt-3 mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                This is your team notification (Staff) contact. Staff texts
+                pause until it is recreated by the next staff alert or by saving
+                Alerts &amp; Notifications.
+              </p>
+            )}
             <div className="flex gap-3 justify-center">
               <button
                 type="button"
@@ -221,6 +235,47 @@ export default function ActionsMenu({
                     Delete
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Staff DND confirmation */}
+      {showStaffDndConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowStaffDndConfirm(false)}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Ban className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
+              Enable DND for the Staff contact?
+            </h3>
+            <p className="text-sm text-slate-600 text-center mb-6">
+              <strong>{contactName}</strong> receives your team notification
+              texts. With DND on, staff texts stop until the next staff alert
+              or Alerts &amp; Notifications save turns SMS DND back off.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setShowStaffDndConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStaffDndConfirm(false);
+                  toggleDndMutation.mutate({ locationId, contactId });
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Enable DND
               </button>
             </div>
           </div>

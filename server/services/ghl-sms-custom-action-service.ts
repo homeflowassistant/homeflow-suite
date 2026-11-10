@@ -5,6 +5,13 @@ import {
   getLocationCustomValues,
   getValidAccessToken,
 } from "../ghl-service.js";
+import { toE164Phone } from "../helpers/phone.js";
+import {
+  resolveStaffContactForSend,
+  StaffContactError,
+} from "./staff-contact-service.js";
+
+export { toE164Phone };
 
 type ContactFieldDefinition = {
   id: string;
@@ -545,20 +552,6 @@ async function getContactByEmail(locationId: string, email: string): Promise<Con
   return getContactById(locationId, getContactId(contacts[0]));
 }
 
-/**
- * Convert a phone number to E.164. US/Canada numbers typed without a country
- * code, e.g. "(555) 123-4567" or "1-555-123-4567", become +15551234567 (#34).
- */
-export function toE164Phone(phone: string): string {
-  const compact = phone.trim().replace(/[\s().-]/g, "");
-  if (compact.startsWith("+")) return compact;
-  if (compact.startsWith("00")) return `+${compact.slice(2)}`;
-  const digits = compact.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  return compact;
-}
-
 function normalizePhoneForLookup(phone: string): string {
   const normalized = toE164Phone(phone);
 
@@ -689,6 +682,37 @@ type ResolvedContacts = {
   mergeContact: ContactRecord;
 };
 
+/**
+ * Staff texts go to the single staff contact found by the team phone (the
+ * send_team_notification_phone custom value); merge fields still come from
+ * the contact that entered the workflow.
+ */
+async function resolveStaffContacts(
+  locationId: string,
+  customValues: Record<string, unknown>[],
+  team: { email: string; phone: string },
+  workflowContactId: string
+): Promise<ResolvedContacts> {
+  let recipientContact: ContactRecord;
+  try {
+    recipientContact = await resolveStaffContactForSend(locationId, {
+      ...team,
+      storedId: asText(getCustomValue(customValues, "homeflow_staff_contact_id")),
+    });
+  } catch (error) {
+    if (error instanceof StaffContactError) {
+      throw new GhlSmsActionError(error.code, error.message, error.statusCode);
+    }
+    throw error;
+  }
+  const workflowId = asText(workflowContactId);
+  const mergeContact =
+    workflowId && workflowId !== getContactId(recipientContact)
+      ? await getContactById(locationId, workflowId)
+      : recipientContact;
+  return { recipientContact, mergeContact };
+}
+
 async function resolveContacts(
   locationId: string,
   input: ActionInput,
@@ -805,12 +829,23 @@ export async function sendSavedSms(
         ? resolveRecipientValue(staffPhone, customValues)
         : resolveRecipientValue(input.contactPhone, customValues),
   };
-  const { recipientContact, mergeContact } = await resolveContacts(
-    locationId,
-    resolvedInput,
-    workflowContactId,
-    recipientType
-  );
+  const { recipientContact, mergeContact } =
+    recipientType === "staff"
+      ? await resolveStaffContacts(
+          locationId,
+          customValues,
+          {
+            email: asText(resolvedInput.contactEmail),
+            phone: asText(resolvedInput.contactPhone),
+          },
+          workflowContactId
+        )
+      : await resolveContacts(
+          locationId,
+          resolvedInput,
+          workflowContactId,
+          recipientType
+        );
   console.log("[GHL SMS Action][CONTACT_RESOLVED]", {
     recipientContactId: getContactId(recipientContact).slice(-6),
     mergeContactId: getContactId(mergeContact).slice(-6),

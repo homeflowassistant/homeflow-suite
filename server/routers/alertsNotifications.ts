@@ -7,9 +7,9 @@ import {
   ensureGhlCustomValue,
   getInstallation,
   getLocationPickerVariables,
-  syncStaffNotificationContact,
 } from "../ghl-service.js";
-import { toE164Phone } from "../services/ghl-sms-custom-action-service.js";
+import { toE164Phone } from "../helpers/phone.js";
+import { syncStaffContact } from "../services/staff-contact-service.js";
 
 // ─── Default Templates matching UI layout exact specifications ─────────
 export const DEFAULT_ALERT_TEMPLATES = {
@@ -547,12 +547,6 @@ export const alertsNotificationsRouter = router({
       };
 
       try {
-        const currentValues = await getLocationCustomValueMap(locationId);
-        const previousStaffEmail =
-          currentValues.get(CV_KEYS.teamNotifyEmail)?.value ?? "";
-        const previousStaffPhone =
-          currentValues.get(CV_KEYS.teamNotifyPhone)?.value ?? "";
-
         // These two values are the stable inputs used by the Staff branch of
         // the marketplace SMS action. Create them when a location does not
         // have them yet; subsequent saves update the same records by ID.
@@ -590,19 +584,34 @@ export const alertsNotificationsRouter = router({
           );
         }
 
-        const staffContact = await syncStaffNotificationContact(
-          locationId,
-          data.teamNotifyEmail,
-          data.teamNotifyPhone,
-          previousStaffEmail,
-          previousStaffPhone
-        );
-        console.log("[AlertsNotifications] Staff contact synchronized", {
-          locationId: locationId.slice(-6),
-          contactId: staffContact.contactId.slice(-6),
-        });
+        // Keep the single staff contact in step with the team phone/email.
+        // The custom values above are already saved, so a staff-contact
+        // problem is reported as a warning instead of failing the save.
+        let staffContactWarning: string | null = null;
+        if (data.teamNotifyPhone) {
+          try {
+            const staff = await syncStaffContact(locationId, {
+              email: data.teamNotifyEmail,
+              phone: data.teamNotifyPhone,
+            });
+            console.log("[AlertsNotifications] Staff contact synchronized", {
+              locationId: locationId.slice(-6),
+              contactId: staff.contactId.slice(-6),
+              created: staff.created,
+              adopted: staff.adopted,
+              untagged: staff.untaggedIds.length,
+            });
+          } catch (staffError) {
+            console.error(
+              "[AlertsNotifications] Staff contact sync failed",
+              staffError
+            );
+            staffContactWarning =
+              "Settings saved, but the staff contact for team texts could not be updated. It will be retried on the next staff alert.";
+          }
+        }
 
-        return { success: true };
+        return { success: true, staffContactWarning };
       } catch (err) {
         console.error("[AlertsNotifications] Error saving settings:", err);
         throw new TRPCError({

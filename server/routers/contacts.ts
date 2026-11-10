@@ -55,6 +55,8 @@ export interface GHLContact {
   dateAdded: string | null;
   dateUpdated: string | null;
   tags: string[];
+  /** Tagged `staff`: the contact that receives team notification texts. */
+  isStaff: boolean;
   customFields: Array<{
     id: string;
     key: string;
@@ -84,8 +86,22 @@ export function isStaffContact(contact: Pick<GHLContact, "tags">): boolean {
   return hasTag(contact.tags, HIDDEN_CONTACT_TAG);
 }
 
-function filterStaffContacts(contacts: GHLContact[]): GHLContact[] {
-  return contacts.filter(contact => !isStaffContact(contact));
+/** True when the contact was added to any HomeFlow campaign. */
+export function hasCampaignTag(contact: Pick<GHLContact, "tags">): boolean {
+  return Object.values(CAMPAIGN_TAGS).some(tag => hasTag(contact.tags, tag));
+}
+
+/**
+ * The staff contact is hidden while it only exists for team texts. Once it is
+ * added to a campaign (e.g. the owner testing with their own details) it is
+ * shown, with a Staff badge in the UI.
+ */
+export function isHiddenStaffContact(contact: Pick<GHLContact, "tags">): boolean {
+  return isStaffContact(contact) && !hasCampaignTag(contact);
+}
+
+export function filterStaffContacts(contacts: GHLContact[]): GHLContact[] {
+  return contacts.filter(contact => !isHiddenStaffContact(contact));
 }
 
 /**
@@ -369,7 +385,12 @@ async function filterLocalSearch(
 /**
  * Normalize a raw GHL contact response into our typed GHLContact.
  */
-function normalizeContact(c: any): GHLContact {
+export function normalizeContact(c: any): GHLContact {
+  const tags: string[] = Array.isArray(c.tags)
+    ? c.tags.map((t: any) =>
+        typeof t === "string" ? t : t?.name || t?.tagName || ""
+      )
+    : [];
   return {
     id: c.id || "",
     firstName: c.firstName || "",
@@ -383,11 +404,8 @@ function normalizeContact(c: any): GHLContact {
     dnd: !!c.dnd,
     dateAdded: c.dateAdded || c.date_created || null,
     dateUpdated: c.dateUpdated || c.date_updated || null,
-    tags: Array.isArray(c.tags)
-      ? c.tags.map((t: any) =>
-          typeof t === "string" ? t : t?.name || t?.tagName || ""
-        )
-      : [],
+    tags,
+    isStaff: hasTag(tags, HIDDEN_CONTACT_TAG),
     customFields: Array.isArray(c.customFields)
       ? c.customFields.map((cf: any) => ({
           id: cf.id || "",
