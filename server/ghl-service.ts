@@ -271,12 +271,17 @@ function normalizeFieldName(name: string): string {
     .toLowerCase();
 }
 
-async function fetchLocationCustomFields(
+/**
+ * Contact custom field definitions for a location. GHL's endpoint is
+ * /locations/{id}/customFields (camelCase); /custom-fields returns 404, which
+ * left {{contact.skip_reason}} and other contact fields unresolvable.
+ */
+export async function fetchLocationCustomFields(
   locationId: string,
   accessToken: string
 ): Promise<Array<{ id: string; fieldKey: string; displayName?: string }>> {
   const response = await fetch(
-    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/custom-fields`,
+    `${GHL_BASE_URL}/locations/${encodeURIComponent(locationId)}/customFields?model=contact`,
     {
       method: "GET",
       headers: {
