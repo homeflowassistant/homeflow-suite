@@ -50,6 +50,14 @@ export default function ContactRow({
       {/* Name */}
       <td className="px-3 py-2.5 text-sm text-slate-800 font-medium whitespace-nowrap">
         {formatDisplayName(contact)}
+        {contact.isStaff && (
+          <span
+            className="ml-2 inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-700"
+            title="Team notification contact: staff texts go to this contact's phone."
+          >
+            Staff
+          </span>
+        )}
       </td>
 
       {/* Phone */}

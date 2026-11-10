@@ -16,7 +16,6 @@ import { INSTALL_CUSTOM_VALUE_DEFAULTS } from "./install-custom-value-defaults.j
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
-const STAFF_CONTACT_TAG = "staff";
 // Refresh tokens 10 minutes before they expire
 const TOKEN_REFRESH_BUFFER_MS = 10 * 60 * 1000;
 
@@ -1945,128 +1944,6 @@ export async function createContact(
       locationId,
       dnd: contact.dnd || false,
     },
-  };
-}
-
-export async function syncStaffNotificationContact(
-  locationId: string,
-  email: string,
-  phone: string,
-  previousEmail = "",
-  previousPhone = ""
-): Promise<{ contactId: string; email: string; phone: string }> {
-  const normalizedEmail = email.trim();
-  const normalizedPhone = phone.trim();
-  const accessToken = await getValidAccessToken(locationId);
-  const normalizedPreviousEmail = previousEmail.trim().toLowerCase();
-  const normalizedPreviousPhone = normalizePhone(previousPhone);
-  const searchTerms = [
-    normalizedPreviousEmail,
-    previousPhone.trim(),
-    "Staff",
-  ].filter((term, index, values) => term && values.indexOf(term) === index);
-  let existingContactId: string | undefined;
-
-  for (const searchText of searchTerms) {
-    const response = await fetch(`${GHL_BASE_URL}/contacts/search`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        Version: GHL_API_VERSION,
-      },
-      body: JSON.stringify({ locationId, searchText, page: 1, limit: 20 }),
-    });
-    if (!response.ok) continue;
-
-    const body = (await response.json()) as {
-      contacts?: Array<Record<string, unknown>>;
-    };
-    const match = (body.contacts ?? []).find(contact => {
-      const contactName = String(
-        contact.name ?? `${contact.firstName ?? ""} ${contact.lastName ?? ""}`
-      )
-        .trim()
-        .toLowerCase();
-      const contactEmail = String(contact.email ?? "")
-        .trim()
-        .toLowerCase();
-      const contactPhone = normalizePhone(String(contact.phone ?? ""));
-      if (searchText === "Staff") return contactName === "staff";
-      return (
-        (normalizedPreviousEmail && contactEmail === normalizedPreviousEmail) ||
-        (normalizedPreviousPhone && contactPhone === normalizedPreviousPhone)
-      );
-    });
-    if (typeof match?.id === "string" && match.id) {
-      existingContactId = match.id;
-      break;
-    }
-  }
-
-  const contactPayload = {
-    firstName: "Staff",
-    lastName: "",
-    name: "Staff",
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    dnd: false,
-    source: "HomeFlow Alerts & Notifications",
-  };
-
-  if (existingContactId) {
-    const response = await fetch(
-      `${GHL_BASE_URL}/contacts/${encodeURIComponent(existingContactId)}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          Version: "v3",
-        },
-        body: JSON.stringify(contactPayload),
-      }
-    );
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(
-        `Failed to update Staff contact: ${response.status} ${body}`
-      );
-    }
-    await addTagToContact(locationId, existingContactId, STAFF_CONTACT_TAG);
-    console.log("[GHL Staff Contact] Updated Staff contact", {
-      locationId: locationId.slice(-6),
-      contactId: existingContactId.slice(-6),
-      emailProvided: Boolean(normalizedEmail),
-      phoneProvided: Boolean(normalizedPhone),
-    });
-    return {
-      contactId: existingContactId,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-    };
-  }
-
-  const result = await createContact(locationId, {
-    firstName: "Staff",
-    lastName: "",
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    dnd: false,
-  });
-  await addTagToContact(locationId, result.contact.id, STAFF_CONTACT_TAG);
-  console.log("[GHL Staff Contact] Created or matched Staff contact", {
-    locationId: locationId.slice(-6),
-    contactId: result.contact.id.slice(-6),
-    emailProvided: Boolean(normalizedEmail),
-    phoneProvided: Boolean(normalizedPhone),
-  });
-  return {
-    contactId: result.contact.id,
-    email: normalizedEmail,
-    phone: normalizedPhone,
   };
 }
 

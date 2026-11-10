@@ -90,6 +90,7 @@ export default function ReviewConfirm({
       let totalEnrolled = 0;
       const allErrors: Array<{ index: number; name: string; error: string }> =
         [];
+      const staffNotices: Array<{ name: string; notice: string }> = [];
 
       for (let i = 0; i < mappedContacts.length; i += BATCH_SIZE) {
         const batch = mappedContacts.slice(i, i + BATCH_SIZE);
@@ -125,6 +126,7 @@ export default function ReviewConfirm({
         totalFailed += result.failed;
         totalEnrolled += result.enrolled;
         allErrors.push(...result.errors);
+        staffNotices.push(...(result.staffNotices ?? []));
 
         setProgress(
           Math.round(
@@ -154,6 +156,16 @@ export default function ReviewConfirm({
         toast.warning(`Upload completed with some errors`, {
           description: `${totalSuccessful} succeeded, ${totalFailed} failed. ${totalEnrolled} enrolled in workflow.`,
           icon: <AlertCircle className="h-4 w-4" />,
+        });
+      }
+
+      // A row matched the team notification (Staff) contact — say so, since
+      // it changes who receives staff texts or shows a Staff badge.
+      if (staffNotices.length > 0) {
+        const first = staffNotices[0];
+        toast.warning(`${first.name || "A contact"} matches your team notification contact`, {
+          description: first.notice,
+          duration: 12000,
         });
       }
 

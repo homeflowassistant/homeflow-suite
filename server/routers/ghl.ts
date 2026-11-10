@@ -12,9 +12,45 @@ import { TRPCError } from "@trpc/server";
 import { locationProcedure, router } from "../_core/trpc.js";
 import {
   getInstallation,
+  getLocationCustomValueMap,
   processContact,
   type GHLContactData,
 } from "../ghl-service.js";
+import {
+  describeStaffOverlap,
+  staffOverlapNotice,
+  TEAM_EMAIL_KEY,
+  TEAM_PHONE_KEY,
+} from "../services/staff-contact-service.js";
+
+/**
+ * Team notification email/phone, used to tell the user when a contact they
+ * add is (or merges into) the staff contact. Never blocks adding contacts.
+ */
+async function loadTeamNotificationValues(
+  locationId: string
+): Promise<{ email: string; phone: string } | null> {
+  try {
+    const values = await getLocationCustomValueMap(locationId);
+    const email = values.get(TEAM_EMAIL_KEY)?.value?.trim() ?? "";
+    const phone = values.get(TEAM_PHONE_KEY)?.value?.trim() ?? "";
+    return email || phone ? { email, phone } : null;
+  } catch (error) {
+    console.warn("[GHL] Could not load team notification values", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+function staffNoticeFor(
+  team: { email: string; phone: string } | null,
+  contact: { email?: string; phone?: string },
+  dnd: boolean
+): string | null {
+  if (!team) return null;
+  return staffOverlapNotice(describeStaffOverlap(contact, team), dnd);
+}
 
 // Contact data schema
 const contactSchema = z.object({
@@ -120,9 +156,13 @@ export const ghlRouter = router({
           : {}),
       };
 
+      const team = await loadTeamNotificationValues(normalizedLocationId);
       const result = await processContact(normalizedLocationId, contactData);
 
-      return result;
+      return {
+        ...result,
+        staffNotice: staffNoticeFor(team, contactData, Boolean(contactData.dnd)),
+      };
     }),
 
   /**
@@ -144,6 +184,9 @@ export const ghlRouter = router({
       let failed = 0;
       let enrolled = 0;
       const errors: Array<{ index: number; name: string; error: string }> = [];
+      const staffNotices: Array<{ index: number; name: string; notice: string }> =
+        [];
+      const team = await loadTeamNotificationValues(normalizedLocationId);
 
       for (let i = 0; i < input.contacts.length; i++) {
         const contact = input.contacts[i];
@@ -179,6 +222,14 @@ export const ghlRouter = router({
           );
           successful++;
           if (result.enrolledInWorkflow) enrolled++;
+          const notice = staffNoticeFor(team, contactData, input.dnd);
+          if (notice) {
+            staffNotices.push({
+              index: i,
+              name: `${contact.firstName} ${contact.lastName}`.trim(),
+              notice,
+            });
+          }
         } catch (error) {
           failed++;
           errors.push({
@@ -199,6 +250,7 @@ export const ghlRouter = router({
         failed,
         enrolled,
         errors,
+        staffNotices,
         total: input.contacts.length,
       };
     }),

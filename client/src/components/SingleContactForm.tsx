@@ -76,6 +76,12 @@ export default function SingleContactForm({
             : "Contact created.",
         icon: <CheckCircle2 className="h-4 w-4 text-primary" />,
       });
+      if (result.staffNotice) {
+        toast.warning("This is your team notification contact", {
+          description: result.staffNotice,
+          duration: 12000,
+        });
+      }
 
       setFormData({
         firstName: "",

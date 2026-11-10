@@ -393,7 +393,7 @@ export default function AlertsNotificationsPage(props: any = {}) {
 
     setIsSaving(true);
     try {
-      await saveMutation.mutateAsync({
+      const saveResult = await saveMutation.mutateAsync({
         locationId,
         autoReplyNewLeadEnabled,
         autoReplyNewLeadMessage,
@@ -414,7 +414,11 @@ export default function AlertsNotificationsPage(props: any = {}) {
         subscriptionUnpausedNotifyMessage,
       });
 
-      toast.success("Alerts & Notifications settings saved successfully!");
+      if (saveResult?.staffContactWarning) {
+        toast.warning(saveResult.staffContactWarning);
+      } else {
+        toast.success("Alerts & Notifications settings saved successfully!");
+      }
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to save settings"
