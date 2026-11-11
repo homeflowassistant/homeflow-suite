@@ -19,24 +19,22 @@ import {
 import {
   describeStaffOverlap,
   staffOverlapNotice,
-  TEAM_EMAIL_KEY,
   TEAM_PHONE_KEY,
 } from "../services/staff-contact-service.js";
 
 /**
- * Team notification email/phone, used to tell the user when a contact they
- * add is (or merges into) the staff contact. Never blocks adding contacts.
+ * Team notification phone, used to tell the user when a contact they add has
+ * the staff phone (and so is the staff contact). Never blocks adding contacts.
  */
 async function loadTeamNotificationValues(
   locationId: string
-): Promise<{ email: string; phone: string } | null> {
+): Promise<{ phone: string } | null> {
   try {
     const values = await getLocationCustomValueMap(locationId);
-    const email = values.get(TEAM_EMAIL_KEY)?.value?.trim() ?? "";
     const phone = values.get(TEAM_PHONE_KEY)?.value?.trim() ?? "";
-    return email || phone ? { email, phone } : null;
+    return phone ? { phone } : null;
   } catch (error) {
-    console.warn("[GHL] Could not load team notification values", {
+    console.warn("[GHL] Could not load team notification phone", {
       error: error instanceof Error ? error.message : String(error),
     });
     return null;
@@ -44,8 +42,8 @@ async function loadTeamNotificationValues(
 }
 
 function staffNoticeFor(
-  team: { email: string; phone: string } | null,
-  contact: { email?: string; phone?: string },
+  team: { phone: string } | null,
+  contact: { phone?: string },
   dnd: boolean
 ): string | null {
   if (!team) return null;

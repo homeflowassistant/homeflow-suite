@@ -722,13 +722,13 @@ type ResolvedContacts = {
 async function resolveStaffContacts(
   locationId: string,
   customValues: Record<string, unknown>[],
-  team: { email: string; phone: string },
+  team: { phone: string },
   workflowContactId: string
 ): Promise<ResolvedContacts> {
   let recipientContact: ContactRecord;
   try {
     recipientContact = await resolveStaffContactForSend(locationId, {
-      ...team,
+      phone: team.phone,
     });
   } catch (error) {
     if (error instanceof StaffContactError) {
@@ -837,7 +837,6 @@ export async function sendSavedSms(
     );
   }
 
-  const staffEmail = getCustomValue(customValues, "send_team_notification_email");
   const staffPhone = getCustomValue(customValues, "send_team_notification_phone");
   if (recipientType === "staff" && !asText(staffPhone)) {
     throw new GhlSmsActionError(
@@ -849,11 +848,11 @@ export async function sendSavedSms(
 
   const resolvedInput: ActionInput = {
     ...input,
-    contactEmail: recipientType === "contact"
+    // Staff texts need only the team phone; the team email is used by
+    // GHL's own Internal Notification email step, not by a contact.
+    contactEmail: recipientType === "contact" || recipientType === "staff"
       ? undefined
-      : recipientType === "staff"
-        ? resolveRecipientValue(staffEmail, customValues)
-        : resolveRecipientValue(input.contactEmail, customValues),
+      : resolveRecipientValue(input.contactEmail, customValues),
     contactPhone: recipientType === "contact"
       ? undefined
       : recipientType === "staff"
@@ -866,7 +865,6 @@ export async function sendSavedSms(
           locationId,
           customValues,
           {
-            email: asText(resolvedInput.contactEmail),
             phone: asText(resolvedInput.contactPhone),
           },
           workflowContactId

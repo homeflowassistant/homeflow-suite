@@ -14,7 +14,8 @@ import {
   normalizeContact,
 } from "../routers/contacts.js";
 
-const TEAM = { email: "team@example.com", phone: "(801) 808-6639" };
+const TEAM = { phone: "(801) 808-6639" };
+const TEAM_EMAIL = "team@example.com";
 const TEAM_E164 = "+18018086639";
 
 /** In-memory GHL used to exercise every staff-contact case. */
@@ -91,21 +92,21 @@ const staffTagged = (contacts: Map<string, StaffContactRecord>) =>
   Array.from(contacts.values()).filter(contact => tagsOf(contact).includes("staff"));
 
 describe("syncStaffContactWith", () => {
-  it("case 1: no staff tag anywhere → creates one tagged Staff contact from the team values", async () => {
+  it("case 1: no staff tag anywhere → creates one tagged Staff contact with only the team phone", async () => {
     const { api, contacts, state } = fakeGhl([]);
     const result = await syncStaffContactWith(api, TEAM);
     expect(result.created).toBe(true);
     expect(state.created).toBe(1);
     const staff = contacts.get(result.contactId)!;
     expect(staff.firstName).toBe("Staff");
-    expect(staff.email).toBe(TEAM.email);
+    expect(staff.email).toBeUndefined();
     expect(staff.phone).toBe(TEAM_E164);
     expect(staffTagged(contacts).map(c => c.id)).toEqual([result.contactId]);
   });
 
-  it("case 2: the team phone/email already belongs to a contact → tags it, keeps its name", async () => {
+  it("case 2: the team phone already belongs to a contact → tags it, keeps its name and email", async () => {
     const { api, contacts, state } = fakeGhl([
-      { id: "owner", firstName: "Brent", lastName: "Winterton", email: TEAM.email, phone: "8018086639" },
+      { id: "owner", firstName: "Brent", lastName: "Winterton", email: "brent@example.com", phone: "8018086639" },
     ]);
     const result = await syncStaffContactWith(api, TEAM);
     expect(result.contactId).toBe("owner");
@@ -117,7 +118,7 @@ describe("syncStaffContactWith", () => {
 
   it("case 3: saving again with the same values changes nothing and creates nothing", async () => {
     const { api, contacts, state } = fakeGhl([
-      { id: "s1", firstName: "Brent", email: TEAM.email, phone: TEAM_E164, tags: ["staff", "homeflow: inactive customer"] },
+      { id: "s1", firstName: "Brent", email: TEAM_EMAIL, phone: TEAM_E164, tags: ["staff", "homeflow: inactive customer"] },
     ]);
     const result = await syncStaffContactWith(api, TEAM);
     expect(result.contactId).toBe("s1");
@@ -128,7 +129,7 @@ describe("syncStaffContactWith", () => {
 
   it("case 4: restores the team phone when a test add-contact changed it", async () => {
     const { api, contacts } = fakeGhl([
-      { id: "s1", firstName: "Brent", email: TEAM.email, phone: "+15550001111", tags: ["staff"] },
+      { id: "s1", firstName: "Brent", email: TEAM_EMAIL, phone: "+15550001111", tags: ["staff"] },
     ]);
     const result = await syncStaffContactWith(api, TEAM);
     expect(result.contactId).toBe("s1");
@@ -138,22 +139,24 @@ describe("syncStaffContactWith", () => {
 
   it("case 6: turns SMS DND back off on the staff contact", async () => {
     const { api, contacts } = fakeGhl([
-      { id: "s1", firstName: "Staff", email: TEAM.email, phone: TEAM_E164, dnd: true, tags: ["staff"] },
+      { id: "s1", firstName: "Staff", email: TEAM_EMAIL, phone: TEAM_E164, dnd: true, tags: ["staff"] },
     ]);
     const result = await syncStaffContactWith(api, TEAM);
     expect(result.restored).toBe(true);
     expect(contacts.get("s1")!.dnd).toBe(false);
   });
 
-  it("case 7: new team email and phone update the same tagged contact, no new contact", async () => {
+  it("case 7: a new team phone updates the same tagged contact, no new contact", async () => {
     const { api, contacts, state } = fakeGhl([
       { id: "s1", firstName: "Staff", email: "old@example.com", phone: "+15550001111", tags: ["staff"] },
     ]);
-    const result = await syncStaffContactWith(api, { email: "new@example.com", phone: "801-808-6639" });
+    const result = await syncStaffContactWith(api, { phone: "801-808-6639" });
     expect(result.contactId).toBe("s1");
     expect(state.created).toBe(0);
     expect(contacts.get("s1")!.phone).toBe(TEAM_E164);
-    expect(contacts.get("s1")!.email).toBe("new@example.com");
+    // The email on the contact is left exactly as it was.
+    expect(contacts.get("s1")!.email).toBe("old@example.com");
+    expect(state.updates.every(([, payload]) => !("email" in payload))).toBe(true);
     expect(staffTagged(contacts).map(c => c.id)).toEqual(["s1"]);
   });
 
@@ -168,6 +171,18 @@ describe("syncStaffContactWith", () => {
     expect(state.created).toBe(0);
     expect(staffTagged(contacts).map(c => c.id)).toEqual(["owner"]);
     expect(result.untaggedIds).toEqual(["old"]);
+  });
+
+  it("case 7b: a contact that only has the team email is not used as the staff contact", async () => {
+    const { api, contacts, state } = fakeGhl([
+      { id: "owner", firstName: "Brent", email: TEAM_EMAIL, phone: "+15550009999" },
+    ]);
+    const result = await syncStaffContactWith(api, TEAM);
+    expect(result.created).toBe(true);
+    expect(result.contactId).not.toBe("owner");
+    expect(state.created).toBe(1);
+    expect(tagsOf(contacts.get("owner"))).not.toContain("staff");
+    expect(contacts.get("owner")!.phone).toBe("+15550009999");
   });
 
   it("case 9: the tagged contact was deleted → a new one is created", async () => {
@@ -197,7 +212,7 @@ describe("syncStaffContactWith", () => {
 
   it("case 12: requires a team phone", async () => {
     const { api } = fakeGhl([]);
-    await expect(syncStaffContactWith(api, { email: "a@b.com", phone: "" })).rejects.toMatchObject({
+    await expect(syncStaffContactWith(api, { phone: "" })).rejects.toMatchObject({
       code: "STAFF_PHONE_REQUIRED",
     });
   });
@@ -259,24 +274,23 @@ describe("resolveStaffContactForSendWith", () => {
   it("fails clearly when no team phone is saved (case 12)", async () => {
     const { api } = fakeGhl([]);
     await expect(
-      resolveStaffContactForSendWith(api, { email: "", phone: "" })
+      resolveStaffContactForSendWith(api, { phone: "" })
     ).rejects.toMatchObject({ code: "STAFF_PHONE_CUSTOM_VALUE_REQUIRED" });
   });
 });
 
 describe("Add Contact / CSV staff notices", () => {
-  it("classifies how a new contact overlaps the team values", () => {
-    expect(describeStaffOverlap({ email: "TEAM@example.com", phone: "+18018086639" }, TEAM)).toBe("both");
-    expect(describeStaffOverlap({ email: "team@example.com", phone: "5551112222" }, TEAM)).toBe("email_only");
-    expect(describeStaffOverlap({ email: "x@y.com", phone: "8018086639" }, TEAM)).toBe("phone_only");
-    expect(describeStaffOverlap({ email: "x@y.com", phone: "5551112222" }, TEAM)).toBe("none");
+  it("only the team phone makes a new contact the staff contact", () => {
+    expect(describeStaffOverlap({ phone: "+18018086639" }, TEAM)).toBe("phone");
+    expect(describeStaffOverlap({ phone: "8018086639" }, TEAM)).toBe("phone");
+    expect(describeStaffOverlap({ phone: "5551112222" }, TEAM)).toBe("none");
+    expect(describeStaffOverlap({}, TEAM)).toBe("none");
   });
 
-  it("warns about DND and mismatched phone, stays quiet otherwise", () => {
+  it("warns about DND and the Staff badge, stays quiet otherwise", () => {
     expect(staffOverlapNotice("none", true)).toBeNull();
-    expect(staffOverlapNotice("both", true)).toMatch(/DND/);
-    expect(staffOverlapNotice("email_only", false)).toMatch(/phone is different/);
-    expect(staffOverlapNotice("both", false)).toMatch(/Staff badge/);
+    expect(staffOverlapNotice("phone", true)).toMatch(/DND/);
+    expect(staffOverlapNotice("phone", false)).toMatch(/Staff badge/);
   });
 });
 
