@@ -1,17 +1,20 @@
 /**
  * Single "Staff" contact per sub-account.
  *
- * GHL can only text a contact, so team notifications need one contact that
- * holds the team phone (send_team_notification_phone) and team email. Rules:
+ * GHL can only text a contact, so team texts need one contact that holds the
+ * team phone (send_team_notification_phone). Only the phone is used: the
+ * team email goes straight into the workflow's Internal Notification "custom
+ * email" from its custom value and never needs a contact. Rules:
  *
  * - The `staff` tag is how we find it: there is no stored contact ID. Every
  *   sub-account keeps exactly one contact with that tag. If none has it, one
- *   is created from the team email/phone; later changes to the team values
- *   update that same contact. Any extra contact with the tag loses it.
- * - GHL keeps one contact per email/phone, so when the owner uses their own
- *   details for the team values, the owner's contact IS the staff contact. We
- *   never overwrite a real name; "Staff" is only used when the contact has no
- *   name at all.
+ *   named "Staff" is created with just the team phone (no email); a later
+ *   team phone change updates that same contact. Any extra contact with the
+ *   tag loses it.
+ * - The staff contact's email is never written or cleared.
+ * - GHL keeps one contact per phone, so when the team phone already belongs
+ *   to a contact (e.g. the owner's own), that contact gets the tag. We never
+ *   overwrite a real name; "Staff" is only used when the contact has no name.
  * - The team phone from the custom value is the source of truth. Before a
  *   staff SMS we check the contact still has that phone and SMS is not on DND,
  *   and restore both if a test add-contact changed them.
@@ -66,12 +69,15 @@ export interface StaffContactApi {
   removeTag(id: string, tag: string): Promise<void>;
 }
 
+/** The only team value the staff contact needs. */
+export type StaffTeamValues = { phone: string };
+
 export type StaffSyncResult = {
   contactId: string;
   created: boolean;
   /** An existing contact (e.g. the owner's own) became the staff contact. */
   adopted: boolean;
-  /** Phone/email/DND were changed back to the team values. */
+  /** Phone/DND were changed back to the team values. */
   restored: boolean;
   /** Older contacts whose `staff` tag was removed. */
   untaggedIds: string[];
@@ -100,10 +106,6 @@ export function contactTags(contact: StaffContactRecord): string[] {
 
 export function hasStaffTag(contact: StaffContactRecord): boolean {
   return contactTags(contact).includes(STAFF_CONTACT_TAG);
-}
-
-function contactEmail(contact: StaffContactRecord): string {
-  return String(contact.email ?? "").trim().toLowerCase();
 }
 
 function hasName(contact: StaffContactRecord): boolean {
@@ -160,29 +162,13 @@ async function findByPhone(
   return pickStaffCandidate(Array.from(seen.values()));
 }
 
-async function findByEmail(
-  api: StaffContactApi,
-  email: string
-): Promise<StaffContactRecord | null> {
-  const target = email.trim().toLowerCase();
-  if (!target) return null;
-  const matches = (await api.searchContacts(target)).filter(
-    contact => contactEmail(contact) === target && contactId(contact)
-  );
-  return pickStaffCandidate(matches);
-}
-
-/** Changes needed so the contact matches the team values. */
+/** Changes needed so the contact has the team phone (and a name). */
 function teamValueChanges(
   contact: StaffContactRecord,
-  email: string,
   phone: string
 ): Record<string, unknown> {
   const changes: Record<string, unknown> = {};
   if (phone && !samePhone(contact.phone, phone)) changes.phone = phone;
-  if (email && contactEmail(contact) !== email.toLowerCase()) {
-    changes.email = email;
-  }
   if (!hasName(contact)) changes.firstName = STAFF_DEFAULT_NAME;
   return changes;
 }
@@ -244,21 +230,21 @@ async function untagOtherStaffContacts(
 // ─── Main sync ───────────────────────────────────────────────────────
 
 /**
- * Make sure exactly one contact has the `staff` tag, holds the team
- * phone/email and is not on SMS DND. Used by the Alerts save and, when
- * needed, right before a staff SMS.
+ * Make sure exactly one contact has the `staff` tag, holds the team phone
+ * and is not on SMS DND. Used by the Alerts save (when a team phone is set)
+ * and, when needed, right before a staff SMS.
  *
- * 1. A contact already tagged staff (the oldest, if several) is updated.
- * 2. Otherwise a contact that already has the team phone/email is tagged
- *    (GHL keeps one contact per phone/email, so a second can't be made).
- * 3. Otherwise a new "Staff" contact is created.
+ * 1. A contact already tagged staff (the oldest, if several) gets the phone.
+ *    If another contact already owns that phone, the tag moves there.
+ * 2. Otherwise a contact that already has the team phone is tagged
+ *    (GHL keeps one contact per phone, so a second can't be made).
+ * 3. Otherwise a new "Staff" contact is created with only the phone.
  * Every other contact with the tag loses it.
  */
 export async function syncStaffContactWith(
   api: StaffContactApi,
-  team: { email: string; phone: string }
+  team: StaffTeamValues
 ): Promise<StaffSyncResult> {
-  const email = team.email.trim();
   const phone = team.phone.trim() ? toE164Phone(team.phone) : "";
   if (!phone) {
     throw new StaffContactError(
@@ -280,14 +266,13 @@ export async function syncStaffContactWith(
   let contact = keep ? (await api.getContact(contactId(keep))) ?? keep : null;
 
   if (!contact) {
-    contact = (await findByPhone(api, phone)) ?? (await findByEmail(api, email));
+    contact = await findByPhone(api, phone);
     if (contact) result.adopted = true;
   }
 
   if (!contact) {
     const created = await api.createContact({
       firstName: STAFF_DEFAULT_NAME,
-      email: email || undefined,
       phone,
       dnd: false,
       source: STAFF_SOURCE,
@@ -311,17 +296,9 @@ export async function syncStaffContactWith(
 
   if (contact) {
     result.contactId = contactId(contact);
-    const changes = teamValueChanges(contact, email, phone);
+    const changes = teamValueChanges(contact, phone);
     if (Object.keys(changes).length > 0) {
       let ok = await api.updateContact(result.contactId, changes);
-      if (!ok && changes.email) {
-        // The team email may belong to a different contact; the phone is
-        // what matters for texts, so retry without it.
-        const { email: _ignored, ...withoutEmail } = changes;
-        ok =
-          Object.keys(withoutEmail).length === 0 ||
-          (await api.updateContact(result.contactId, withoutEmail));
-      }
       if (!ok && changes.phone) {
         // GHL refused the phone because another contact already has it. Two
         // contacts can't share it, so that contact becomes the staff contact.
@@ -330,7 +307,7 @@ export async function syncStaffContactWith(
           contact = owner;
           result.contactId = contactId(owner);
           result.adopted = true;
-          const ownerChanges = teamValueChanges(owner, email, phone);
+          const ownerChanges = teamValueChanges(owner, phone);
           if (Object.keys(ownerChanges).length > 0) {
             await api.updateContact(result.contactId, ownerChanges);
           }
@@ -344,7 +321,7 @@ export async function syncStaffContactWith(
           502
         );
       }
-      if ((changes.phone || changes.email) && !result.adopted) result.restored = true;
+      if (changes.phone && !result.adopted) result.restored = true;
     }
     if (await clearSmsDnd(api, contact)) result.restored = true;
     if (!hasStaffTag(contact)) await api.addTag(result.contactId, STAFF_CONTACT_TAG);
@@ -361,7 +338,7 @@ export async function syncStaffContactWith(
  */
 export async function resolveStaffContactForSendWith(
   api: StaffContactApi,
-  team: { email: string; phone: string }
+  team: StaffTeamValues
 ): Promise<StaffContactRecord> {
   const phone = team.phone.trim();
   if (!phone) {
@@ -586,40 +563,31 @@ export function createGhlStaffContactApi(locationId: string): StaffContactApi {
 
 export function syncStaffContact(
   locationId: string,
-  team: { email: string; phone: string }
+  team: StaffTeamValues
 ): Promise<StaffSyncResult> {
   return syncStaffContactWith(createGhlStaffContactApi(locationId), team);
 }
 
 export function resolveStaffContactForSend(
   locationId: string,
-  team: { email: string; phone: string }
+  team: StaffTeamValues
 ): Promise<StaffContactRecord> {
   return resolveStaffContactForSendWith(createGhlStaffContactApi(locationId), team);
 }
 
 /**
- * How a contact being added relates to the team notification values. Used by
- * Add Contact / CSV to warn before a test changes staff texts (cases 4–6).
+ * Whether a contact being added uses the team notification phone, which makes
+ * it the Staff contact. Used by Add Contact / CSV to warn before a test
+ * changes staff texts. The team email plays no part: it is never put on the
+ * staff contact.
  */
-export type StaffOverlap =
-  | "none"
-  | "both"
-  | "email_only"
-  | "phone_only";
+export type StaffOverlap = "none" | "phone";
 
 export function describeStaffOverlap(
-  contact: { email?: string; phone?: string },
-  team: { email: string; phone: string }
+  contact: { phone?: string },
+  team: StaffTeamValues
 ): StaffOverlap {
-  const emailMatch =
-    Boolean(team.email.trim()) &&
-    (contact.email ?? "").trim().toLowerCase() === team.email.trim().toLowerCase();
-  const phoneMatch = samePhone(contact.phone ?? "", team.phone);
-  if (emailMatch && phoneMatch) return "both";
-  if (emailMatch) return "email_only";
-  if (phoneMatch) return "phone_only";
-  return "none";
+  return samePhone(contact.phone ?? "", team.phone) ? "phone" : "none";
 }
 
 export function staffOverlapNotice(
@@ -628,13 +596,7 @@ export function staffOverlapNotice(
 ): string | null {
   if (overlap === "none") return null;
   if (dnd) {
-    return "This contact is your team notification (Staff) contact. Adding it with DND on pauses staff texts until the next staff alert or Alerts save turns DND back off.";
+    return "This phone is your team notification (Staff) phone. Adding it with DND on pauses staff texts until the next staff alert or Alerts save turns DND back off.";
   }
-  if (overlap === "both") {
-    return "This contact is also your team notification (Staff) contact. It was added and will show in Contacts with a red Staff badge.";
-  }
-  if (overlap === "email_only") {
-    return "This email is your team notification email but the phone is different. GHL merges them into the Staff contact, so staff texts may go to this phone until the next staff alert or Alerts save restores the team phone.";
-  }
-  return "This phone is your team notification phone. The contact was merged into the Staff contact and will show in Contacts with a red Staff badge.";
+  return "This phone is your team notification (Staff) phone, so this is the Staff contact. It will show in Contacts with a red Staff badge.";
 }

@@ -584,14 +584,15 @@ export const alertsNotificationsRouter = router({
           );
         }
 
-        // Keep the single staff contact in step with the team phone/email.
+        // Keep the single staff contact in step with the team phone. The
+        // team email is only saved as a custom value: GHL's Internal
+        // Notification step uses it directly, so it never goes on a contact.
         // The custom values above are already saved, so a staff-contact
         // problem is reported as a warning instead of failing the save.
         let staffContactWarning: string | null = null;
         if (data.teamNotifyPhone) {
           try {
             const staff = await syncStaffContact(locationId, {
-              email: data.teamNotifyEmail,
               phone: data.teamNotifyPhone,
             });
             console.log("[AlertsNotifications] Staff contact synchronized", {
