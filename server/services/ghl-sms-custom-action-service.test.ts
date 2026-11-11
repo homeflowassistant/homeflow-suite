@@ -95,10 +95,14 @@ describe("standard contact fields that GHL leaves out when empty", () => {
       customValues: [],
     });
 
-  it("renders a missing first name as blank instead of failing", () => {
+  it("uses 'there' for a missing first name instead of failing", () => {
     expect(render("Hi {{contact.first_name}}, paused.", { email: "a@b.com" })).toBe(
-      "Hi , paused."
+      "Hi there, paused."
     );
+  });
+
+  it("leaves a missing last name blank", () => {
+    expect(render("[{{contact.last_name}}]", { firstName: "Jaylan" })).toBe("[]");
   });
 
   it("uses the stored first name when present", () => {
