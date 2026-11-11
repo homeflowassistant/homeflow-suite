@@ -697,7 +697,6 @@ async function resolveStaffContacts(
   try {
     recipientContact = await resolveStaffContactForSend(locationId, {
       ...team,
-      storedId: asText(getCustomValue(customValues, "homeflow_staff_contact_id")),
     });
   } catch (error) {
     if (error instanceof StaffContactError) {

@@ -4,8 +4,10 @@
  * GHL can only text a contact, so team notifications need one contact that
  * holds the team phone (send_team_notification_phone) and team email. Rules:
  *
- * - Its contact ID is remembered in the homeflow_staff_contact_id custom
- *   value, so we always update the same contact instead of searching by name.
+ * - The `staff` tag is how we find it: there is no stored contact ID. Every
+ *   sub-account keeps exactly one contact with that tag. If none has it, one
+ *   is created from the team email/phone; later changes to the team values
+ *   update that same contact. Any extra contact with the tag loses it.
  * - GHL keeps one contact per email/phone, so when the owner uses their own
  *   details for the team values, the owner's contact IS the staff contact. We
  *   never overwrite a real name; "Staff" is only used when the contact has no
@@ -13,20 +15,17 @@
  * - The team phone from the custom value is the source of truth. Before a
  *   staff SMS we check the contact still has that phone and SMS is not on DND,
  *   and restore both if a test add-contact changed them.
- * - Only one contact keeps the `staff` tag; older duplicates lose the tag
- *   (they are never deleted).
+ * - Duplicates are never deleted, only untagged. The oldest tagged contact
+ *   is kept.
  */
 import {
   addTagToContact,
-  getLocationCustomValueMap,
   getValidAccessToken,
   removeTagFromContact,
-  saveGhlCustomValues,
 } from "../ghl-service.js";
 import { phoneMatchKey, samePhone, toE164Phone } from "../helpers/phone.js";
 
 export const STAFF_CONTACT_TAG = "staff";
-export const STAFF_CONTACT_ID_KEY = "homeflow_staff_contact_id";
 export const TEAM_EMAIL_KEY = "send_team_notification_email";
 export const TEAM_PHONE_KEY = "send_team_notification_phone";
 const STAFF_DEFAULT_NAME = "Staff";
@@ -34,6 +33,10 @@ const STAFF_SOURCE = "HomeFlow Alerts & Notifications";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
+/** Same Version header the Contacts page search uses for POST /contacts/search. */
+const GHL_SEARCH_VERSION = "v3";
+const TAG_SEARCH_PAGE_LIMIT = 100;
+const TAG_SEARCH_MAX_PAGES = 5;
 
 export type StaffContactRecord = Record<string, unknown>;
 
@@ -52,6 +55,8 @@ export class StaffContactError extends Error {
 export interface StaffContactApi {
   getContact(id: string): Promise<StaffContactRecord | null>;
   searchContacts(text: string): Promise<StaffContactRecord[]>;
+  /** Every contact in the sub-account that has the given tag. */
+  findByTag(tag: string): Promise<StaffContactRecord[]>;
   findDuplicateByPhone(phone: string): Promise<StaffContactRecord | null>;
   createContact(
     payload: Record<string, unknown>
@@ -59,8 +64,6 @@ export interface StaffContactApi {
   updateContact(id: string, payload: Record<string, unknown>): Promise<boolean>;
   addTag(id: string, tag: string): Promise<void>;
   removeTag(id: string, tag: string): Promise<void>;
-  readStoredId(): Promise<string>;
-  storeId(id: string): Promise<void>;
 }
 
 export type StaffSyncResult = {
@@ -195,25 +198,32 @@ async function clearSmsDnd(
   });
 }
 
-/** Remove the staff tag from any other contact that still has it. */
+/** Contacts that carry the staff tag (checked again locally). */
+export async function findStaffTagged(
+  api: StaffContactApi
+): Promise<StaffContactRecord[]> {
+  const byId = new Map<string, StaffContactRecord>();
+  for (const contact of await api.findByTag(STAFF_CONTACT_TAG)) {
+    if (contactId(contact) && hasStaffTag(contact)) {
+      byId.set(contactId(contact), contact);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+/** The oldest staff-tagged contact: the one we keep. */
+function oldestContact(contacts: StaffContactRecord[]): StaffContactRecord | null {
+  return pickStaffCandidate(contacts);
+}
+
+/** Remove the staff tag from every contact except the one we keep. */
 async function untagOtherStaffContacts(
   api: StaffContactApi,
   keepId: string,
-  extraIds: string[]
+  tagged: StaffContactRecord[]
 ): Promise<string[]> {
   const others = new Map<string, StaffContactRecord>();
-  try {
-    for (const contact of await api.searchContacts(STAFF_DEFAULT_NAME)) {
-      if (contactId(contact) && hasStaffTag(contact)) {
-        others.set(contactId(contact), contact);
-      }
-    }
-  } catch (error) {
-    console.warn("[Staff Contact] could not search older staff contacts", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  for (const id of extraIds) if (id) others.set(id, { id });
+  for (const contact of tagged) others.set(contactId(contact), contact);
 
   const removed: string[] = [];
   for (const id of Array.from(others.keys())) {
@@ -234,9 +244,15 @@ async function untagOtherStaffContacts(
 // ─── Main sync ───────────────────────────────────────────────────────
 
 /**
- * Make sure exactly one contact holds the team phone/email, is tagged staff,
- * is not on SMS DND, and is remembered by ID. Used by the Alerts save and,
- * when needed, right before a staff SMS.
+ * Make sure exactly one contact has the `staff` tag, holds the team
+ * phone/email and is not on SMS DND. Used by the Alerts save and, when
+ * needed, right before a staff SMS.
+ *
+ * 1. A contact already tagged staff (the oldest, if several) is updated.
+ * 2. Otherwise a contact that already has the team phone/email is tagged
+ *    (GHL keeps one contact per phone/email, so a second can't be made).
+ * 3. Otherwise a new "Staff" contact is created.
+ * Every other contact with the tag loses it.
  */
 export async function syncStaffContactWith(
   api: StaffContactApi,
@@ -259,19 +275,9 @@ export async function syncStaffContactWith(
     untaggedIds: [],
   };
 
-  const storedId = (await api.readStoredId()).trim();
-  let contact = storedId ? await api.getContact(storedId) : null;
-  const previousId = contactId(contact);
-
-  // The team phone already belongs to another contact (case 8): that
-  // contact becomes the staff contact instead of creating a duplicate.
-  if (contact && !samePhone(contact.phone, phone)) {
-    const owner = await findByPhone(api, phone);
-    if (owner && contactId(owner) !== previousId) {
-      contact = owner;
-      result.adopted = true;
-    }
-  }
+  const tagged = await findStaffTagged(api);
+  const keep = oldestContact(tagged);
+  let contact = keep ? (await api.getContact(contactId(keep))) ?? keep : null;
 
   if (!contact) {
     contact = (await findByPhone(api, phone)) ?? (await findByEmail(api, email));
@@ -316,6 +322,21 @@ export async function syncStaffContactWith(
           Object.keys(withoutEmail).length === 0 ||
           (await api.updateContact(result.contactId, withoutEmail));
       }
+      if (!ok && changes.phone) {
+        // GHL refused the phone because another contact already has it. Two
+        // contacts can't share it, so that contact becomes the staff contact.
+        const owner = await findByPhone(api, phone);
+        if (owner && contactId(owner) !== result.contactId) {
+          contact = owner;
+          result.contactId = contactId(owner);
+          result.adopted = true;
+          const ownerChanges = teamValueChanges(owner, email, phone);
+          if (Object.keys(ownerChanges).length > 0) {
+            await api.updateContact(result.contactId, ownerChanges);
+          }
+          ok = true;
+        }
+      }
       if (!ok) {
         throw new StaffContactError(
           "STAFF_CONTACT_UPDATE_FAILED",
@@ -323,25 +344,20 @@ export async function syncStaffContactWith(
           502
         );
       }
-      if (changes.phone || changes.email) result.restored = !result.adopted;
+      if ((changes.phone || changes.email) && !result.adopted) result.restored = true;
     }
     if (await clearSmsDnd(api, contact)) result.restored = true;
     if (!hasStaffTag(contact)) await api.addTag(result.contactId, STAFF_CONTACT_TAG);
   }
 
-  if (result.contactId !== storedId) await api.storeId(result.contactId);
-
-  result.untaggedIds = await untagOtherStaffContacts(
-    api,
-    result.contactId,
-    previousId && previousId !== result.contactId ? [previousId] : []
-  );
+  result.untaggedIds = await untagOtherStaffContacts(api, result.contactId, tagged);
   return result;
 }
 
 /**
- * Return the contact a staff SMS should go to. Uses the remembered contact
- * when it still has the team phone and SMS is allowed; otherwise re-syncs.
+ * Return the contact a staff SMS should go to. Uses the single staff-tagged
+ * contact when it still has the team phone and SMS is allowed; otherwise
+ * re-syncs first (no tag, several tagged, changed phone, or DND on).
  */
 export async function resolveStaffContactForSendWith(
   api: StaffContactApi,
@@ -354,15 +370,18 @@ export async function resolveStaffContactForSendWith(
       "The send_team_notification_phone Custom Value is required when Send To is Staff."
     );
   }
-  const storedId = (await api.readStoredId()).trim();
-  const stored = storedId ? await api.getContact(storedId) : null;
-  if (stored && samePhone(stored.phone, phone) && !isSmsDnd(stored)) {
-    return stored;
+  const tagged = await findStaffTagged(api);
+  if (tagged.length === 1) {
+    const current = await api.getContact(contactId(tagged[0]));
+    if (current && samePhone(current.phone, phone) && !isSmsDnd(current)) {
+      return current;
+    }
   }
 
   const synced = await syncStaffContactWith(api, team);
   console.log("[Staff Contact] re-synced before staff SMS", {
     contactId: synced.contactId.slice(-6),
+    taggedBefore: tagged.length,
     created: synced.created,
     adopted: synced.adopted,
     restored: synced.restored,
@@ -409,11 +428,37 @@ function unwrapContact(body: unknown): StaffContactRecord | null {
   return contactId(contact) ? contact : null;
 }
 
-export function createGhlStaffContactApi(
+type SearchPage = { ok: boolean; contacts: StaffContactRecord[]; total: number };
+
+/** One page of GHL's POST /contacts/search, in the format the Contacts page uses. */
+async function searchPage(
   locationId: string,
-  options: { storedId?: string } = {}
-): StaffContactApi {
-  let cachedStoredId = options.storedId;
+  body: Record<string, unknown>
+): Promise<SearchPage> {
+  const response = await ghlFetch(
+    locationId,
+    "/contacts/search",
+    { method: "POST", body: JSON.stringify({ locationId, ...body }) },
+    GHL_SEARCH_VERSION
+  );
+  if (!response.ok) {
+    console.warn("[Staff Contact] contact search rejected", {
+      status: response.status,
+      body: (await response.text()).slice(0, 300),
+    });
+    return { ok: false, contacts: [], total: 0 };
+  }
+  const data = (await response.json()) as {
+    contacts?: StaffContactRecord[];
+    total?: number;
+    totalCount?: number;
+  };
+  const contacts = Array.isArray(data.contacts) ? data.contacts : [];
+  const total = Number(data.total ?? data.totalCount) || contacts.length;
+  return { ok: true, contacts, total };
+}
+
+export function createGhlStaffContactApi(locationId: string): StaffContactApi {
   return {
     async getContact(id) {
       const response = await ghlFetch(
@@ -432,15 +477,48 @@ export function createGhlStaffContactApi(
     },
 
     async searchContacts(text) {
-      const response = await ghlFetch(locationId, "/contacts/search", {
-        method: "POST",
-        body: JSON.stringify({ locationId, searchText: text, page: 1, limit: 20 }),
-      });
-      if (!response.ok) return [];
-      const body = (await response.json()) as {
-        contacts?: StaffContactRecord[];
-      };
-      return Array.isArray(body.contacts) ? body.contacts : [];
+      // `limit`/`searchText` are not valid here (GHL answers 400), so this
+      // uses `query` + `pageLimit` like the Contacts page.
+      const page = await searchPage(locationId, { query: text, page: 1, pageLimit: 20 });
+      return page.contacts;
+    },
+
+    async findByTag(tag) {
+      // Try the tag filter shapes in turn; the first one GHL accepts is used
+      // for every page.
+      const filterShapes = [
+        { field: "tags", operator: "eq", value: tag },
+        { field: "tags", operator: "contains", value: [tag] },
+      ];
+      for (const filter of filterShapes) {
+        const found: StaffContactRecord[] = [];
+        let accepted = true;
+        for (let page = 1; page <= TAG_SEARCH_MAX_PAGES; page += 1) {
+          const result = await searchPage(locationId, {
+            filters: [filter],
+            sort: [{ field: "dateAdded", direction: "asc" }],
+            page,
+            pageLimit: TAG_SEARCH_PAGE_LIMIT,
+          });
+          if (!result.ok) {
+            accepted = false;
+            break;
+          }
+          found.push(...result.contacts);
+          if (
+            result.contacts.length < TAG_SEARCH_PAGE_LIMIT ||
+            found.length >= result.total
+          ) {
+            break;
+          }
+        }
+        if (accepted) return found;
+      }
+      throw new StaffContactError(
+        "STAFF_TAG_SEARCH_FAILED",
+        "HighLevel rejected the search for contacts tagged staff.",
+        502
+      );
     },
 
     async findDuplicateByPhone(phone) {
@@ -503,30 +581,6 @@ export function createGhlStaffContactApi(
     async removeTag(id, tag) {
       await removeTagFromContact(locationId, id, tag);
     },
-
-    async readStoredId() {
-      if (cachedStoredId === undefined) {
-        const values = await getLocationCustomValueMap(locationId);
-        cachedStoredId = values.get(STAFF_CONTACT_ID_KEY)?.value ?? "";
-      }
-      return cachedStoredId;
-    },
-
-    async storeId(id) {
-      const { failedKeys, missingKeys } = await saveGhlCustomValues(
-        locationId,
-        { [STAFF_CONTACT_ID_KEY]: id },
-        { createMissing: true, exactMatchOnly: true }
-      );
-      if (failedKeys.length || missingKeys.length) {
-        console.warn("[Staff Contact] could not store staff contact ID", {
-          failedKeys,
-          missingKeys,
-        });
-      } else {
-        cachedStoredId = id;
-      }
-    },
   };
 }
 
@@ -539,12 +593,9 @@ export function syncStaffContact(
 
 export function resolveStaffContactForSend(
   locationId: string,
-  team: { email: string; phone: string; storedId?: string }
+  team: { email: string; phone: string }
 ): Promise<StaffContactRecord> {
-  return resolveStaffContactForSendWith(
-    createGhlStaffContactApi(locationId, { storedId: team.storedId }),
-    team
-  );
+  return resolveStaffContactForSendWith(createGhlStaffContactApi(locationId), team);
 }
 
 /**
