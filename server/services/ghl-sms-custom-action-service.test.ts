@@ -86,3 +86,40 @@ describe("custom value lookup matches how values are saved (#37/#38)", () => {
     expect(message).toBe("Your service is paused.");
   });
 });
+
+describe("standard contact fields that GHL leaves out when empty", () => {
+  const render = (template: string, contact: Record<string, unknown>) =>
+    renderSmsMessage(template, {
+      contact: { id: "c1", ...contact },
+      locationId: "LOC_1",
+      customValues: [],
+    });
+
+  it("uses 'there' for a missing first name instead of failing", () => {
+    expect(render("Hi {{contact.first_name}}, paused.", { email: "a@b.com" })).toBe(
+      "Hi there, paused."
+    );
+  });
+
+  it("leaves a missing last name blank", () => {
+    expect(render("[{{contact.last_name}}]", { firstName: "Jaylan" })).toBe("[]");
+  });
+
+  it("uses the stored first name when present", () => {
+    expect(render("Hi {{contact.first_name}}", { firstName: "Jaylan" })).toBe("Hi Jaylan");
+  });
+
+  it("falls back to splitting the full name", () => {
+    expect(
+      render("{{contact.first_name}}|{{contact.last_name}}", { contactName: "Jaylan Beahan" })
+    ).toBe("Jaylan|Beahan");
+  });
+
+  it("renders other empty standard fields as blank", () => {
+    expect(render("[{{contact.city}}][{{contact.company_name}}]", {})).toBe("[][]");
+  });
+
+  it("still fails for a field that does not exist", () => {
+    expect(() => render("{{contact.not_a_real_field}}", {})).toThrow(/not_a_real_field/);
+  });
+});

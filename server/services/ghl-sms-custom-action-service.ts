@@ -194,6 +194,7 @@ function getContactEmail(contact: ContactRecord): string {
 function getContactName(contact: ContactRecord): string {
   return (
     asText(contact.name) ||
+    asText(contact.contactName) ||
     [asText(contact.firstName), asText(contact.lastName)].filter(Boolean).join(" ")
   );
 }
@@ -205,7 +206,7 @@ function getContactFieldValue(
 ): string | undefined {
   const normalizedKey = normalizeTokenKey(key);
   if (normalizedKey === "name" || normalizedKey === "fullname") {
-    return getContactName(contact) || undefined;
+    return getContactName(contact);
   }
 
   const directValue = contact[key];
@@ -258,8 +259,39 @@ function getContactFieldValue(
     return value === undefined || value === null ? "" : String(value);
   }
 
+  // Standard GHL contact fields are left out of the API response when they
+  // are empty (e.g. a contact saved without a name). Render them blank instead
+  // of failing the SMS, except first name, which becomes "there" so greetings
+  // read "Hi there". First/last name fall back to splitting the full name.
+  if (normalizedKey === "firstname" || normalizedKey === "lastname") {
+    const parts = getContactName(contact).split(/\s+/).filter(Boolean);
+    if (normalizedKey === "firstname") return parts[0] ?? EMPTY_FIRST_NAME;
+    return parts.slice(1).join(" ");
+  }
+  if (STANDARD_CONTACT_FIELDS.has(normalizedKey)) return "";
+
   return undefined;
 }
+
+/** Used for {{contact.first_name}} when the contact has no name: "Hi there". */
+const EMPTY_FIRST_NAME = "there";
+
+/** Built-in GHL contact fields (normalized) that render blank when empty. */
+const STANDARD_CONTACT_FIELDS = new Set([
+  "email",
+  "phone",
+  "companyname",
+  "address1",
+  "address",
+  "city",
+  "state",
+  "postalcode",
+  "country",
+  "website",
+  "dateofbirth",
+  "source",
+  "timezone",
+]);
 
 function extractTokenKey(token: string): string {
   const customValueMatch = token.match(/^\{\{\s*custom_values\.([^}]+?)\s*\}\}$/i);
