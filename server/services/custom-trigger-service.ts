@@ -627,6 +627,16 @@ async function resolveWebhookToken(rawToken: string) {
   return rows[0];
 }
 
+/** Resolve a public /webhooks/<token> URL to its sub-account (404 if unknown). */
+export async function resolveCustomTriggerWebhook(rawToken: string): Promise<{
+  id: number;
+  locationId: string;
+  companyId: string | null;
+}> {
+  const row = await resolveWebhookToken(rawToken);
+  return { id: row.id, locationId: row.locationId, companyId: row.companyId ?? null };
+}
+
 function deliveryHeaders(accessToken: string): Record<string, string> {
   return {
     Accept: "application/json",

@@ -12,14 +12,16 @@ function safeEqual(provided: string, expected: string): boolean {
 import { getInstallation } from "../ghl-service.js";
 import {
   CustomTriggerHttpError,
-  deliverCustomTriggerPayload,
+  deliverCustomTriggerPayloadForLocation,
   ensureCustomTriggerWebhook,
+  resolveCustomTriggerWebhook,
   getCustomTriggerWebhookForLocation,
   recordCustomTriggerSubscription,
   rotateCustomTriggerWebhook,
   serializeBinding,
   type CustomTriggerSubscriptionPayload,
 } from "../services/custom-trigger-service.js";
+import { chooseForwardTarget, relayToN8n } from "../services/n8n-relay-service.js";
 
 const subscriptionSchema = z.object({
   triggerData: z
@@ -184,7 +186,27 @@ export function registerCustomTriggerRoutes(app: Express): void {
   app.post("/webhooks/:token", async (req: Request, res: Response) => {
     try {
       logIncomingCustomTriggerPayload(req);
-      const result = await deliverCustomTriggerPayload(req.params.token, req.body ?? {});
+      const body = req.body ?? {};
+      const webhook = await resolveCustomTriggerWebhook(req.params.token);
+
+      // GHL workflow Webhook actions (e.g. "Webhook - Create Quote") go to n8n.
+      if (chooseForwardTarget(body, webhook.locationId, req.query.forward) === "n8n") {
+        const relay = await relayToN8n(webhook.locationId, webhook.companyId, body);
+        if (!relay.ok) {
+          res.status(502).json({ success: false, code: "N8N_RELAY_FAILED", locationId: relay.locationId, n8nStatus: relay.status, message: "The payload was received, but n8n did not accept it." });
+          return;
+        }
+        res.status(202).json({ success: true, code: "FORWARDED_TO_N8N", locationId: relay.locationId, n8nStatus: relay.status });
+        return;
+      }
+
+      // Everything else (n8n, Sweep & Go, Zapier) starts GHL custom-trigger workflows.
+      const result = await deliverCustomTriggerPayloadForLocation(
+        webhook.locationId,
+        body,
+        webhook.id,
+        { excludeTriggerKey: ENV.n8nCustomTriggerKey }
+      );
       if (result.failed > 0) {
         res.status(502).json({ success: false, code: "PARTIAL_DELIVERY_FAILURE", ...result, message: "The payload was received, but one or more HighLevel workflow deliveries failed." });
         return;
