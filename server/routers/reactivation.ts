@@ -67,6 +67,7 @@ const CV = {
   image3: "image_3",
   image4: "image_4",
   image5: "image_5",
+  image6: "image_6",
   review1: "review_1",
   review1Photo: "review_1_photo",
   review1Name: "review_1_name",
@@ -237,7 +238,7 @@ const saveCustomValuesSettingsProcedure = locationProcedure
         [CV.image3]: img3,
         [CV.image4]: img4,
         [CV.image5]: img5,
-        image_6: img6,
+        [CV.image6]: img6,
         [CV.review1]: d.review1 ?? "",
         [CV.review1Name]: d.review1Name ?? "",
         [CV.review1Photo]: rev1Photo,
@@ -341,6 +342,9 @@ export const reactivationRouter = router({
           image3: get(CV.image3),
           image4: get(CV.image4),
           image5: get(CV.image5),
+          // Saved with the other gallery images; without loading it back the
+          // popup showed the placeholder and the next save overwrote it.
+          image6: get(CV.image6),
           review1: get(CV.review1),
           review1Photo: get(CV.review1Photo),
           review1Name: get(CV.review1Name),

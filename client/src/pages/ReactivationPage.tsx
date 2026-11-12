@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock3, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -137,9 +137,54 @@ export default function ReactivationPage(props: any = {}) {
 
   useOnboardingSaveHandler(embedded, handleSave);
 
+  // The option saved in GHL (reactivation_options). The tiles must always
+  // match it, so a click never leaves the screen showing an unsaved choice.
+  const savedOption: ReactivationOption =
+    settingsQuery.data?.reactivationOption ?? "Lite";
+  const quoteSavedRef = useRef(false);
+
+  // Lite has nothing else to fill in, so clicking its tile saves it at once.
+  const selectLite = async () => {
+    setSelectedOption("Lite");
+    if (savedOption === "Lite") return;
+    setIsSaving(true);
+    try {
+      await saveMutation.mutateAsync({
+        locationId,
+        reactivationOption: "Lite",
+        onetimeTiming: ONETIME_TIMING_LABELS[onetimeTiming],
+      });
+      showToast("Reactivation campaign set to Lite.");
+      await settingsQuery.refetch();
+    } catch (err) {
+      setSelectedOption(savedOption);
+      showToast(
+        `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        true
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Custom Quote & Link is saved by the quote popup's Save button.
+  const selectCustom = () => {
+    setSelectedOption("Custom Quote & Link");
+    quoteSavedRef.current = false;
+    setShowQuotePopup(true);
+  };
+
   const handleQuoteSaveSuccess = () => {
+    quoteSavedRef.current = true;
     setSelectedOption("Custom Quote & Link");
     settingsQuery.refetch();
+  };
+
+  // Closing the quote popup without saving puts the tile back on the option
+  // that is actually saved in GHL.
+  const handleQuotePopupOpenChange = (open: boolean) => {
+    setShowQuotePopup(open);
+    if (!open && !quoteSavedRef.current) setSelectedOption(savedOption);
   };
 
   // Redirect handlers for Email / SMS template buttons
@@ -234,10 +279,9 @@ export default function ReactivationPage(props: any = {}) {
                   <div
                     className={`rs-option-card reac-option-card ${isSelected ? "rs-option-selected" : ""}`}
                     onClick={() => {
-                      setSelectedOption(option);
-                      if (option === "Custom Quote & Link") {
-                        setShowQuotePopup(true);
-                      }
+                      if (isSaving) return;
+                      if (option === "Lite") void selectLite();
+                      else selectCustom();
                     }}
                   >
                     <div className="reac-option-title">{option}</div>
@@ -444,7 +488,7 @@ export default function ReactivationPage(props: any = {}) {
       {/* Reactivation Custom Quote Popup (Dedicated Reactivation Clone) */}
       <ReactivationQuotePopup
         open={showQuotePopup}
-        onOpenChange={setShowQuotePopup}
+        onOpenChange={handleQuotePopupOpenChange}
         locationId={locationId}
         reactivationOption={selectedOption}
         onetimeTiming={onetimeTiming}

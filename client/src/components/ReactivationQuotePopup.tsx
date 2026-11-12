@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOnboardingSaveHandler } from "@/components/OnboardingSaveContext";
 import { apiFetch } from "@/lib/ghlSession";
+import { toAbsoluteAssetUrl } from "@/lib/assetUrl";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -1028,7 +1029,7 @@ export default function ReactivationQuotePopup({
         q.image3 || prev.galleryImages[2],
         q.image4 || prev.galleryImages[3],
         q.image5 || prev.galleryImages[4],
-        (q as any).image6 || prev.galleryImages[5],
+        q.image6 || prev.galleryImages[5],
       ],
       testimonialHeadshots: [
         q.review1Photo || prev.testimonialHeadshots[0],
@@ -1052,10 +1053,14 @@ export default function ReactivationQuotePopup({
   }, [settingsQuery.data, open]);
 
   const handleSave = useCallback(async () => {
-    if (!formData.companyLogo) {
+    // The placeholder logo is not the company's logo: require a real upload.
+    if (!formData.companyLogo || formData.companyLogo === DEFAULT_SCOOPING_LOGO) {
       toast.error("Company logo must be uploaded/replaced.");
       return;
     }
+    // Placeholder images are app-relative paths; save them as full URLs so
+    // they still load on the quote page, in emails and in n8n.
+    const img = toAbsoluteAssetUrl;
 
     setIsSaving(true);
     try {
@@ -1064,33 +1069,33 @@ export default function ReactivationQuotePopup({
         reactivationOption: reactivationOption,
         onetimeTiming: ONETIME_TIMING_LABELS[onetimeTiming] || "Never",
         customQuoteData: {
-          businessLogo: formData.companyLogo ?? undefined,
+          businessLogo: img(formData.companyLogo),
           quoteTitle: formData.bioTitle || undefined,
           bioText: formData.bioDescription || undefined,
-          companyImage: formData.teamPhoto ?? undefined,
+          companyImage: img(formData.teamPhoto),
           offer2Title: formData.offers[0]?.name ?? "",
           offer2Description: formData.offers[0]?.description ?? "",
-          offer2Image: formData.offers[0]?.image ?? undefined,
+          offer2Image: img(formData.offers[0]?.image),
           sendQuoteAutomatically: true,
           tosLink: formData.tosLink || "",
           showCardSection: true,
-          image1: formData.galleryImages[0] ?? undefined,
-          image2: formData.galleryImages[1] ?? undefined,
-          image3: formData.galleryImages[2] ?? undefined,
-          image4: formData.galleryImages[3] ?? undefined,
-          image5: formData.galleryImages[4] ?? undefined,
-          image6: formData.galleryImages[5] ?? undefined,
+          image1: img(formData.galleryImages[0]),
+          image2: img(formData.galleryImages[1]),
+          image3: img(formData.galleryImages[2]),
+          image4: img(formData.galleryImages[3]),
+          image5: img(formData.galleryImages[4]),
+          image6: img(formData.galleryImages[5]),
           review1: formData.testimonialTexts[0] ?? undefined,
-          review1Photo: formData.testimonialHeadshots[0] ?? undefined,
+          review1Photo: img(formData.testimonialHeadshots[0]),
           review1Name: formData.testimonialNames[0] || undefined,
           review2: formData.testimonialTexts[1] ?? undefined,
-          review2Photo: formData.testimonialHeadshots[1] ?? undefined,
+          review2Photo: img(formData.testimonialHeadshots[1]),
           review2Name: formData.testimonialNames[1] || undefined,
           review3: formData.testimonialTexts[2] ?? undefined,
-          review3Photo: formData.testimonialHeadshots[2] ?? undefined,
+          review3Photo: img(formData.testimonialHeadshots[2]),
           review3Name: formData.testimonialNames[2] || undefined,
           review4: formData.testimonialTexts[3] ?? undefined,
-          review4Photo: formData.testimonialHeadshots[3] ?? undefined,
+          review4Photo: img(formData.testimonialHeadshots[3]),
           review4Name: formData.testimonialNames[3] || undefined,
         },
       });
