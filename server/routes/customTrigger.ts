@@ -21,7 +21,7 @@ import {
   serializeBinding,
   type CustomTriggerSubscriptionPayload,
 } from "../services/custom-trigger-service.js";
-import { chooseForwardTarget, relayToN8n } from "../services/n8n-relay-service.js";
+import { chooseForwardTarget, redactSecrets, relayToN8n } from "../services/n8n-relay-service.js";
 
 const subscriptionSchema = z.object({
   triggerData: z
@@ -84,7 +84,7 @@ function logIncomingCustomTriggerPayload(req: Request): void {
     receivedAt: new Date().toISOString(),
     contentType: req.headers["content-type"] ?? "unknown",
     contentLength: req.headers["content-length"] ?? "unknown",
-    payload: req.body ?? {},
+    payload: redactSecrets(req.body ?? {}),
   });
 }
 
@@ -193,7 +193,7 @@ export function registerCustomTriggerRoutes(app: Express): void {
       if (chooseForwardTarget(body, webhook.locationId, req.query.forward) === "n8n") {
         const relay = await relayToN8n(webhook.locationId, webhook.companyId, body);
         if (!relay.ok) {
-          res.status(502).json({ success: false, code: "N8N_RELAY_FAILED", locationId: relay.locationId, n8nStatus: relay.status, message: "The payload was received, but n8n did not accept it." });
+          res.status(502).json({ success: false, code: "N8N_RELAY_FAILED", locationId: relay.locationId, n8nStatus: relay.status, n8nReply: relay.reply, message: "The payload was received, but n8n did not accept it." });
           return;
         }
         res.status(202).json({ success: true, code: "FORWARDED_TO_N8N", locationId: relay.locationId, n8nStatus: relay.status });
