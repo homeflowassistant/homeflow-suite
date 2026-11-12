@@ -30,6 +30,9 @@ export const ENV = {
   zapierInviteUrl: process.env.ZAPIER_INVITE_URL ?? "",
   zapierKeyPrefix: process.env.ZAPIER_KEY_PREFIX ?? "zap_live_",
   n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
+  // n8n webhook (secret; set on Render) that receives GHL workflow "Webhook" actions relayed through
+  // each sub-account's /webhooks/<token> URL. Relay is off when unset.
+  ghlWorkflowN8nWebhookUrl: process.env.GHL_WORKFLOW_N8N_WEBHOOK_URL ?? "",
   customTriggerWebhookBaseUrl:
     process.env.CUSTOM_TRIGGER_WEBHOOK_BASE_URL ??
     process.env.APP_DOMAIN ??
