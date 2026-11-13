@@ -14,8 +14,10 @@ import {
   findCustomValueId,
   fetchAllCustomValues,
   addTagToContact,
+  campaignResetDeps,
   ensureGhlCustomValue,
 } from "../ghl-service.js";
+import { resetContactForCampaign } from "../services/campaign-reset-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
@@ -367,6 +369,14 @@ async function tagContactsByIds(
 
   for (let i = 0; i < contactIds.length; i++) {
     try {
+      // A contact still waiting in the Mass SMS queue is taken out first, so
+      // re-sending restarts it instead of sending the message twice.
+      await resetContactForCampaign(
+        locationId,
+        contactIds[i],
+        QUICK_SEND_TAG,
+        campaignResetDeps()
+      );
       await addTagToContact(locationId, contactIds[i], QUICK_SEND_TAG);
       tagged++;
     } catch (err) {

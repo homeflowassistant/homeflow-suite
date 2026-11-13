@@ -13,6 +13,10 @@ import { getDb } from "./db.js";
 import { ENV } from "./_core/env.js";
 import { ghlInstallations, type GHLInstallation } from "../drizzle/schema.js";
 import { INSTALL_CUSTOM_VALUE_DEFAULTS } from "./install-custom-value-defaults.js";
+import {
+  resetContactForCampaign,
+  type CampaignResetDeps,
+} from "./services/campaign-reset-service.js";
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
@@ -27,6 +31,15 @@ export const ACTIVE_TO_COMPLETED_TAGS: Record<string, string> = {
 
 export function getCompletedTagForActive(tagName: string): string | undefined {
   return ACTIVE_TO_COMPLETED_TAGS[tagName];
+}
+
+/** GHL helpers the campaign reset needs (passed in to avoid an import cycle). */
+export function campaignResetDeps(): CampaignResetDeps {
+  return {
+    getAccessToken: getValidAccessToken,
+    removeTag: removeTagFromContact,
+    getCustomFieldId: getCustomFieldIdByName,
+  };
 }
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -2185,17 +2198,15 @@ export async function processContact(
 
   if (!contact.dnd) {
     if (contact.tagName) {
-      const completedTag = getCompletedTagForActive(contact.tagName);
-      if (completedTag) {
-        try {
-          await removeTagFromContact(locationId, contactId, completedTag);
-        } catch (error) {
-          console.warn(
-            `[GHL] Failed to remove completed tag ${completedTag} before adding ${contact.tagName} for contact ${contactId}:`,
-            error
-          );
-        }
-      }
+      // Adding a contact again restarts the campaign: take it out of the
+      // campaign's workflows and clear the active/finished tags first, so the
+      // tag below is a fresh "tag added" event (client items 39 and 40).
+      await resetContactForCampaign(
+        locationId,
+        contactId,
+        contact.tagName,
+        campaignResetDeps()
+      );
 
       try {
         await addTagToContact(locationId, contactId, contact.tagName);
@@ -2208,6 +2219,8 @@ export async function processContact(
     }
 
     try {
+      // The trigger tag also only fires when newly added.
+      await removeTagFromContact(locationId, contactId, triggerTag).catch(() => undefined);
       await addTagToContact(locationId, contactId, triggerTag);
     } catch (error) {
       console.warn(
