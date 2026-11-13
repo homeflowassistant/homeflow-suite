@@ -65,7 +65,26 @@ export type N8nRelayResult = {
   ok: boolean;
   status: number;
   locationId: string;
+  reply?: string;
 };
+
+const SECRET_KEY_PATTERN =
+  /(authorization|api[_-]?key|access[_-]?token|secret|password|sg_authorization)/i;
+
+/** Copy of a payload with secret-looking values masked, for logging only. */
+export function redactSecrets(value: unknown, depth = 0): unknown {
+  if (depth > 6) return "[…]";
+  if (Array.isArray(value)) return value.map(v => redactSecrets(v, depth + 1));
+  if (!isRecord(value)) return value;
+  const out: JsonRecord = {};
+  for (const [key, v] of Object.entries(value)) {
+    out[key] =
+      SECRET_KEY_PATTERN.test(key) && typeof v === "string" && v
+        ? `[redacted ${v.length} chars]`
+        : redactSecrets(v, depth + 1);
+  }
+  return out;
+}
 
 export async function relayToN8n(
   locationId: string,
@@ -105,10 +124,19 @@ export async function relayToN8n(
       signal: AbortSignal.timeout(RELAY_TIMEOUT_MS),
     });
     if (!response.ok) {
+      // n8n's reply text says why (e.g. "webhook ... is not registered");
+      // the host shows whether it came from n8n or the proxy in front of it.
+      const reply = await response.text().catch(() => "");
       console.error("[n8n relay] n8n rejected the payload", {
         locationId,
         status: response.status,
+        host: new URL(url).host,
+        path: new URL(url).pathname,
+        server: response.headers.get("server"),
+        cfRay: response.headers.get("cf-ray"),
+        reply: reply.slice(0, 500),
       });
+      return { ok: false, status: response.status, locationId, reply: reply.slice(0, 500) };
     } else {
       console.info("[n8n relay] payload forwarded", {
         locationId,

@@ -76,11 +76,26 @@ describe("relayToN8n", () => {
     ENV.ghlWorkflowN8nWebhookUrl = TEST_URL;
     const rejected = await relayToN8n(LOC, null, {}, (async () =>
       new Response("no", { status: 404 })) as never);
-    expect(rejected).toEqual({ ok: false, status: 404, locationId: LOC });
+    expect(rejected).toEqual({ ok: false, status: 404, locationId: LOC, reply: "no" });
 
     const down = await relayToN8n(LOC, null, {}, (async () => {
       throw new Error("ECONNREFUSED");
     }) as never);
     expect(down).toEqual({ ok: false, status: 0, locationId: LOC });
+  });
+});
+
+describe("redactSecrets", () => {
+  it("masks secret-looking keys at any depth and keeps everything else", async () => {
+    const { redactSecrets } = await import("./services/n8n-relay-service.js");
+    const out = redactSecrets({
+      email: "a@b.c",
+      customData: { sg_authorization_key: "abcdef", quote_title: "Hi" },
+      headers: { Authorization: "Bearer x" },
+    }) as any;
+    expect(out.email).toBe("a@b.c");
+    expect(out.customData.quote_title).toBe("Hi");
+    expect(out.customData.sg_authorization_key).toBe("[redacted 6 chars]");
+    expect(out.headers.Authorization).toBe("[redacted 8 chars]");
   });
 });
