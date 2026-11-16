@@ -105,13 +105,11 @@ const TIMELINE_STEPS = [
   { day: "Day 26", label: "Email 6" },
   { day: "Day 60", label: "Email 7" },
   { day: "Day 90", label: "Email 8" },
-  { day: "Day 180", label: "Email 9" },
-  { day: "Day 270", label: "Email 10" },
-  { day: "Day 360", label: "Email 11" },
+  { day: "Day 180", label: "Email 9\n(Final)" },
 ];
 
 // First row: indices 0–5 (Day 1 through Day 26)
-// Second row: indices 6–10 (Day 60 through Day 360)
+// Second row: indices 6–8 (Day 60 through Day 180, the final email)
 const FIRST_ROW = TIMELINE_STEPS.slice(0, 6);
 const SECOND_ROW = TIMELINE_STEPS.slice(6);
 
@@ -614,7 +612,7 @@ export default function RequestScheduling(props: any = {}) {
               ))}
             </div>
 
-            {/* Second row: Day 60 → Day 90 → Day 180 → Day 270 → Day 360 */}
+            {/* Second row: Day 60 → Day 90 → Day 180 (final email) */}
             <div className="rs-timeline-row" style={{ marginTop: 12 }}>
               {SECOND_ROW.map((step, idx) => (
                 <div key={step.day} className="rs-timeline-row-inner">

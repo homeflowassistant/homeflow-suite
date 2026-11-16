@@ -88,6 +88,7 @@ export default function ReviewConfirm({
       let totalSuccessful = 0;
       let totalFailed = 0;
       let totalEnrolled = 0;
+      let totalSkipped = 0;
       const allErrors: Array<{ index: number; name: string; error: string }> =
         [];
       const staffNotices: Array<{ name: string; notice: string }> = [];
@@ -125,6 +126,7 @@ export default function ReviewConfirm({
         totalSuccessful += result.successful;
         totalFailed += result.failed;
         totalEnrolled += result.enrolled;
+        totalSkipped += result.skippedAlreadyInSequence ?? 0;
         allErrors.push(...result.errors);
         staffNotices.push(...(result.staffNotices ?? []));
 
@@ -157,6 +159,17 @@ export default function ReviewConfirm({
           description: `${totalSuccessful} succeeded, ${totalFailed} failed. ${totalEnrolled} enrolled in workflow.`,
           icon: <AlertCircle className="h-4 w-4" />,
         });
+      }
+
+      if (totalSkipped > 0) {
+        toast.info(
+          `${totalSkipped} contact${totalSkipped === 1 ? " is" : "s are"} already in this campaign`,
+          {
+            description:
+              "Contacts still in the sequence were not added again. They can be added again once they finish.",
+            duration: 10000,
+          }
+        );
       }
 
       // A row matched the team notification (Staff) contact — say so, since

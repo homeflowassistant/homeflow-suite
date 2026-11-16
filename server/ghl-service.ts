@@ -2186,7 +2186,7 @@ export async function addTagToContact(
 export async function processContact(
   locationId: string,
   contact: GHLContactData
-): Promise<{ contactId: string; enrolledInWorkflow: boolean }> {
+): Promise<{ contactId: string; enrolledInWorkflow: boolean; skippedAlreadyInSequence: boolean }> {
   console.log(
     `[GHL DEBUG] processContact received tagName: "${contact.tagName}" customFields: ${JSON.stringify(contact.customFields)}`
   );
@@ -2198,15 +2198,19 @@ export async function processContact(
 
   if (!contact.dnd) {
     if (contact.tagName) {
-      // Adding a contact again restarts the campaign: take it out of the
-      // campaign's workflows and clear the active/finished tags first, so the
-      // tag below is a fresh "tag added" event (client items 39 and 40).
-      await resetContactForCampaign(
+      // A contact still in the sequence is skipped, so it never gets the
+      // opening messages twice. A finished contact is reset, so the tag below
+      // is a fresh "tag added" event and the campaign starts again
+      // (client items 39 and 40).
+      const reset = await resetContactForCampaign(
         locationId,
         contactId,
         contact.tagName,
         campaignResetDeps()
       );
+      if (reset?.skipped) {
+        return { contactId, enrolledInWorkflow, skippedAlreadyInSequence: true };
+      }
 
       try {
         await addTagToContact(locationId, contactId, contact.tagName);
@@ -2230,7 +2234,7 @@ export async function processContact(
     }
   }
 
-  return { contactId, enrolledInWorkflow };
+  return { contactId, enrolledInWorkflow, skippedAlreadyInSequence: false };
 }
 
 // ─── GHL Custom Variable & Field Picker Metadata ─────────────────────

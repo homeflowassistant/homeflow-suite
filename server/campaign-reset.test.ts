@@ -58,7 +58,7 @@ describe("campaign reset before re-adding a contact", () => {
   it("40.1: a contact that already finished gets its tags and quote fields reset", async () => {
     const { calls, deps } = fakeGhl(["new lead finished"]);
     const result = await resetContactForCampaign(LOC, CONTACT, "new lead (via homeflow)", deps);
-    expect(result).toMatchObject({ wasActive: false, wasFinished: true, removedFromWorkflows: [] });
+    expect(result).toMatchObject({ skipped: false, wasActive: false, wasFinished: true, removedFromWorkflows: [] });
     expect(calls.some(c => c.url.includes("/workflow/"))).toBe(false);
     expect(deps.removeTag).toHaveBeenCalledWith(LOC, CONTACT, "new lead finished");
     const put = calls.find(c => c.method === "PUT");
@@ -69,33 +69,42 @@ describe("campaign reset before re-adding a contact", () => {
     ]);
   });
 
-  it("40.2: a contact still in Follow-Up is removed from its workflows, then the tag is cleared", async () => {
+  it("40.2: a contact still in Follow-Up is skipped, so it never gets the opening messages twice", async () => {
     const { calls, deps } = fakeGhl(["new lead (via homeflow)"]);
     const result = await resetContactForCampaign(LOC, CONTACT, "New Lead (via HomeFlow)", deps);
-    expect(result?.wasActive).toBe(true);
-    expect(result?.removedFromWorkflows).toHaveLength(4);
-    const removedIds = calls.filter(c => c.method === "DELETE").map(c => c.url.split("/workflow/")[1]);
-    expect(removedIds).toEqual(["wf-router", "wf-lite", "wf-sg", "wf-custom"]);
-    expect(deps.removeTag).toHaveBeenCalledWith(LOC, CONTACT, "new lead (via homeflow)");
+    expect(result).toMatchObject({ skipped: true, wasActive: true, removedFromWorkflows: [] });
+    expect(calls.map(c => c.method)).toEqual(["GET"]);
+    expect(deps.removeTag).not.toHaveBeenCalled();
   });
 
-  it("reports campaign workflows that this sub-account does not have", async () => {
-    const { deps } = fakeGhl(["homeflow: inactive customer"]);
-    const result = await resetContactForCampaign(LOC, CONTACT, "homeflow: inactive customer", deps);
-    expect(result?.removedFromWorkflows).toEqual(["1. HomeFlow: Reactivation Router"]);
-    expect(result?.workflowsNotFound).toEqual([
-      "HomeFlow: Reactivation Campaigns (Lite)",
-      "HomeFlow: Reactivation Custom-Link Drip Campaign",
-    ]);
+  it("Reactivation and Add-On also skip contacts still in the sequence", async () => {
+    for (const tag of ["homeflow: inactive customer", "add-on-campaign"]) {
+      const { calls, deps } = fakeGhl([tag]);
+      const result = await resetContactForCampaign(LOC, CONTACT, tag, deps);
+      expect(result?.skipped).toBe(true);
+      expect(calls.some(c => c.method === "DELETE" || c.method === "PUT")).toBe(false);
+    }
   });
 
-  it("Add-On and Quick Send do not touch the quote fields", async () => {
-    const { calls, deps } = fakeGhl(["add-on-campaign"]);
-    await resetContactForCampaign(LOC, CONTACT, "add-on-campaign", deps);
+  it("a contact with both tags counts as still in the sequence", async () => {
+    const { deps } = fakeGhl(["new lead (via homeflow)", "new lead finished"]);
+    expect((await resetContactForCampaign(LOC, CONTACT, "new lead (via homeflow)", deps))?.skipped).toBe(true);
+  });
+
+  it("Quick Send restarts a contact still in the queue instead of skipping it", async () => {
+    const { calls, deps } = fakeGhl(["quick-send"]);
+    const result = await resetContactForCampaign(LOC, CONTACT, "quick-send", deps);
+    expect(result).toMatchObject({ skipped: false, wasActive: true });
     expect(calls.some(c => c.method === "PUT")).toBe(false);
-    expect(calls.filter(c => c.method === "DELETE").map(c => c.url)).toEqual([
-      expect.stringContaining("/workflow/wf-addon"),
-    ]);
+    expect(deps.removeTag).toHaveBeenCalledWith(LOC, CONTACT, "quick-send");
+  });
+
+  it("Add-On after it finished is reset without touching the quote fields", async () => {
+    const { calls, deps } = fakeGhl(["add-on-campaign finished"]);
+    const result = await resetContactForCampaign(LOC, CONTACT, "add-on-campaign", deps);
+    expect(result).toMatchObject({ skipped: false, wasFinished: true });
+    expect(calls.some(c => c.method === "PUT")).toBe(false);
+    expect(deps.removeTag).toHaveBeenCalledWith(LOC, CONTACT, "add-on-campaign finished");
   });
 
   it("never throws, so the tag is still added when GHL is unreachable", async () => {
