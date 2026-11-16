@@ -377,9 +377,9 @@ const PAGE_DEFINITIONS: PageDefinition[] = [
   {
     id: "pricing",
     stepOrder: 2,
-    title: "Pricing",
+    title: "Pricing Set Up - For Follow-Up Custom Quotes Only",
     description:
-      "Initial, one-time, recurring, and premium-area pricing content.",
+      "Only needed if you use the Custom Quote and Link Option for Follow-ups.",
     route: "/pricing",
     required: true,
     requirements: PRICING_VALUES,
