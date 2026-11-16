@@ -338,7 +338,16 @@ export default function PricingPage(props: any = {}) {
       {/* ── Top page header ─────────────────────────────────────────── */}
       <div className="pricing-page-header homeflow-sticky-header">
         <div className="pricing-header-left">
-          <h1 className="pricing-page-title">Pricing Setup</h1>
+          <div className="pricing-title-block">
+            <h1 className="pricing-page-title">
+              Pricing Set Up - For Follow-Up Custom Quotes Only
+            </h1>
+            <p className="pricing-page-subtitle">
+              Fill out this section if you use the Custom Quote and Link Option
+              for Follow-ups. If you are not using Custom Quote follow-ups,
+              this section can be skipped.
+            </p>
+          </div>
           {!embedded && (
             <VideoHelpButton
               pageTitle="Pricing"

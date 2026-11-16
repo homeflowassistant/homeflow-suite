@@ -1618,12 +1618,12 @@ export async function updateCustomValuesOnInstall(
       {
         name: "teamnotification_new_lead_message",
         value:
-          "New Lead Received!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nGive them a call.",
+          "New Lead Received!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nAddress: {{contact.address1}}\nCity: {{contact.city}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nGive them a call.",
       },
       {
         name: "teamnotification_new_customer_message",
         value:
-          "New Customer Sign Up!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nCity: {{contact.address1}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nPlease assign them to a route.",
+          "New Customer Sign Up!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nAddress: {{contact.address1}}\nCity: {{contact.city}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nPlease assign them to a route.",
       },
       {
         name: "custom_failed_payment_message",

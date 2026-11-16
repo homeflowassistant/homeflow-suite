@@ -234,14 +234,14 @@ export default function AlertsNotificationsPage(props: any = {}) {
   const [teamNotifyNewLeadEnabled, setTeamNotifyNewLeadEnabled] =
     useState(true);
   const [teamNotifyNewLeadMessage, setTeamNotifyNewLeadMessage] = useState(
-    "New Lead Received:\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nCity: {{address}}\nDogs: {{dogs}}\nFrequency: {{frequency}}\nGive them a call!"
+    "New Lead Received!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nAddress: {{contact.address1}}\nCity: {{contact.city}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nGive them a call."
   );
 
   const [teamNotifyNewCustomerEnabled, setTeamNotifyNewCustomerEnabled] =
     useState(true);
   const [teamNotifyNewCustomerMessage, setTeamNotifyNewCustomerMessage] =
     useState(
-      "New Customer Sign Up!\nName:\nPhone:\nEmail:\nCity:\n\nPlease assign the customer to a route"
+      "New Customer Sign Up!\nName: {{contact.first_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nAddress: {{contact.address1}}\nCity: {{contact.city}}\nDogs: {{contact.number_of_dogs}}\nFrequency: {{contact.clean_up_frequency}}\nPlease assign them to a route."
     );
 
   const [teamNotifyPhone, setTeamNotifyPhone] = useState("");
