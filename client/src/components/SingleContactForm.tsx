@@ -76,6 +76,13 @@ export default function SingleContactForm({
             : "Contact created.",
         icon: <CheckCircle2 className="h-4 w-4 text-primary" />,
       });
+      if (result.skippedAlreadyInSequence) {
+        toast.info("Already in this campaign", {
+          description:
+            "This contact is still in the sequence, so it was not added again. It can be added again once it finishes.",
+          duration: 10000,
+        });
+      }
       if (result.staffNotice) {
         toast.warning("This is your team notification contact", {
           description: result.staffNotice,

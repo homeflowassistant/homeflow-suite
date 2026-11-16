@@ -2,14 +2,15 @@
  * Lets a contact be added to a campaign again (client items 39 and 40).
  *
  * GHL workflows start on "tag added", and a tag that is already on the contact
- * cannot be added again. Before the app adds a campaign tag, this resets the
+ * cannot be added again. Before the app adds a campaign tag, this checks the
  * contact for that campaign:
- *   1. still in the campaign (has the active tag) → remove it from the
- *      campaign's workflows, so it restarts instead of running twice;
- *   2. remove the active and finished tags;
- *   3. reset the quote fields the Custom-Link drips wait on, so they wait
- *      for the new quote instead of passing on the old one.
- * The caller then adds the active tag, which starts the campaign again.
+ *   - still in a sequence (has the active tag): Follow-Up, Reactivation and
+ *     Add-On are skipped (`skipped: true`), so a contact added again by
+ *     accident never gets the opening messages twice. Quick Send is a one-off
+ *     message, not a sequence, so it is taken out and sent again instead;
+ *   - finished: the finished tag is removed and the quote fields the
+ *     Custom-Link drips wait on are reset, so the caller's "add tag" starts
+ *     the campaign again from the beginning.
  */
 
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
@@ -27,6 +28,8 @@ export type CampaignDefinition = {
   /** Workflow names as created by the HomeFlow snapshot. */
   workflowNames: string[];
   resetQuoteFields: boolean;
+  /** What to do with a contact that is still in the sequence. */
+  whenActive: "skip" | "restart";
 };
 
 export const CAMPAIGNS: Record<string, CampaignDefinition> = {
@@ -40,6 +43,7 @@ export const CAMPAIGNS: Record<string, CampaignDefinition> = {
       "HomeFlow: Follow-Up Custom-Link Drip Campaign",
     ],
     resetQuoteFields: true,
+    whenActive: "skip",
   },
   "homeflow: inactive customer": {
     activeTag: "homeflow: inactive customer",
@@ -50,17 +54,20 @@ export const CAMPAIGNS: Record<string, CampaignDefinition> = {
       "HomeFlow: Reactivation Custom-Link Drip Campaign",
     ],
     resetQuoteFields: true,
+    whenActive: "skip",
   },
   "add-on-campaign": {
     activeTag: "add-on-campaign",
     finishedTag: "add-on-campaign finished",
     workflowNames: ["Add-On Services Drip"],
     resetQuoteFields: false,
+    whenActive: "skip",
   },
   "quick-send": {
     activeTag: "quick-send",
     workflowNames: ["Mass SMS Notification to List"],
     resetQuoteFields: false,
+    whenActive: "restart",
   },
 };
 
@@ -82,6 +89,8 @@ export type CampaignResetDeps = {
 };
 
 export type CampaignResetResult = {
+  /** The contact is still in the sequence and must not be added again. */
+  skipped: boolean;
   wasActive: boolean;
   wasFinished: boolean;
   removedFromWorkflows: string[];
@@ -229,6 +238,7 @@ async function resetQuoteFields(
 
 /**
  * Prepare a contact so that adding `activeTag` starts the campaign again.
+ * When the result says `skipped`, the caller must not add the tag.
  * Never throws: a failed step is logged, and the caller still adds the tag.
  */
 export async function resetContactForCampaign(
@@ -241,6 +251,7 @@ export async function resetContactForCampaign(
   if (!campaign) return null;
   const fetchImpl = deps.fetchImpl ?? fetch;
   const result: CampaignResetResult = {
+    skipped: false,
     wasActive: false,
     wasFinished: false,
     removedFromWorkflows: [],
@@ -256,6 +267,15 @@ export async function resetContactForCampaign(
 
     // A new contact, or one that was never in this campaign: nothing to reset.
     if (!result.wasActive && !result.wasFinished) return result;
+
+    // Still in the sequence: leave it where it is (client decision, 16 Nov).
+    if (result.wasActive && campaign.whenActive === "skip") {
+      result.skipped = true;
+      console.info("[Campaign reset] contact is still in the sequence; skipped", {
+        locationId, contactId, campaign: campaign.activeTag,
+      });
+      return result;
+    }
 
     if (result.wasActive) {
       try {

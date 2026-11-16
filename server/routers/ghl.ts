@@ -181,6 +181,7 @@ export const ghlRouter = router({
       let successful = 0;
       let failed = 0;
       let enrolled = 0;
+      let skippedAlreadyInSequence = 0;
       const errors: Array<{ index: number; name: string; error: string }> = [];
       const staffNotices: Array<{ index: number; name: string; notice: string }> =
         [];
@@ -220,6 +221,7 @@ export const ghlRouter = router({
           );
           successful++;
           if (result.enrolledInWorkflow) enrolled++;
+          if (result.skippedAlreadyInSequence) skippedAlreadyInSequence++;
           const notice = staffNoticeFor(team, contactData, input.dnd);
           if (notice) {
             staffNotices.push({
@@ -247,6 +249,7 @@ export const ghlRouter = router({
         successful,
         failed,
         enrolled,
+        skippedAlreadyInSequence,
         errors,
         staffNotices,
         total: input.contacts.length,
