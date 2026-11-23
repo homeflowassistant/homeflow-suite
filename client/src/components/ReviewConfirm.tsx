@@ -38,6 +38,11 @@ interface ReviewConfirmProps {
   fixedTag?: boolean;
   /** Indicates the flow context. "quick-add" surfaces Quick Add–specific messaging. */
   flowContext?: "quick-add";
+  /**
+   * Runs before any contact is created or tagged. Throwing stops the upload,
+   * so no contact is tagged (and no campaign starts) if this fails.
+   */
+  beforeUpload?: () => Promise<void>;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -49,6 +54,7 @@ export default function ReviewConfirm({
   tagName,
   fixedTag = false,
   flowContext,
+  beforeUpload,
   onBack,
   onComplete,
 }: ReviewConfirmProps) {
@@ -80,6 +86,10 @@ export default function ReviewConfirm({
     setProgress(0);
 
     try {
+      // e.g. Quick Send saves its message first: tagging starts the SMS
+      // workflow, which reads the saved message.
+      if (beforeUpload) await beforeUpload();
+
       // Apply mappings to get contact data
       const mappedContacts = applyMappings(parsedCSV, mapping);
 
