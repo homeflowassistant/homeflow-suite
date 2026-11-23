@@ -50,12 +50,15 @@ interface CSVUploadFlowProps {
   onFlowComplete?: () => void;
   /** Indicates the flow context (e.g. "quick-add" for the Quick Add page) */
   flowContext?: "quick-add";
+  /** Runs before any contact is uploaded; throwing stops the upload. */
+  beforeUpload?: () => Promise<void>;
 }
 
 export default function CSVUploadFlow({
   locationId,
   fixedTag,
   flowContext,
+  beforeUpload,
   onFlowComplete,
 }: CSVUploadFlowProps) {
   const [step, setStep] = useState<FlowStep>("upload");
@@ -174,6 +177,7 @@ export default function CSVUploadFlow({
                 tagName={selectedTag}
                 fixedTag={!!fixedTag}
                 flowContext={flowContext}
+                beforeUpload={beforeUpload}
                 onBack={handleBack}
                 onComplete={handleComplete}
               />

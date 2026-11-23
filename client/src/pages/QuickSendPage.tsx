@@ -140,11 +140,14 @@ function ContactSelectionModal({
   onClose,
   locationId,
   onConfirm,
+  onBeforeCsvUpload,
 }: {
   open: boolean;
   onClose: () => void;
   locationId: string;
   onConfirm: (contactIds: string[] | "all") => void;
+  /** Saves the message before CSV contacts are tagged with "quick-send". */
+  onBeforeCsvUpload: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<ModalTab>("contacts");
   const [allContacts, setAllContacts] = useState<GHLContact[]>([]);
@@ -432,6 +435,7 @@ function ContactSelectionModal({
                 locationId={locationId}
                 fixedTag="quick-send"
                 flowContext="quick-add"
+                beforeUpload={onBeforeCsvUpload}
                 onFlowComplete={() => onClose()}
               />
             </div>
@@ -564,6 +568,18 @@ export default function QuickSendPage(props: any = {}) {
     },
     [locationId, message, saveMutation, showToast]
   );
+
+  // CSV upload: save the message (no contacts) before the uploaded contacts
+  // are tagged, so the Mass SMS workflow sends this message and not an old
+  // one. Throws on failure, which stops the upload.
+  const saveMessageBeforeCsvUpload = useCallback(async () => {
+    await saveMutation.mutateAsync({
+      locationId,
+      message: message.trim(),
+      contactSelection: "selected",
+      contactIds: [],
+    });
+  }, [locationId, message, saveMutation]);
 
   // Missing locationId guard
   if (!locationId) {
@@ -768,6 +784,7 @@ export default function QuickSendPage(props: any = {}) {
           onClose={() => setShowModal(false)}
           locationId={locationId}
           onConfirm={handleSave}
+          onBeforeCsvUpload={saveMessageBeforeCsvUpload}
         />
       </div>
     </div>
